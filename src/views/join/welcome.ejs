@@ -1,0 +1,40 @@
+<div class="join-card join-card-wide">
+  <div class="success-mark"><%- icon('check') %></div>
+  <h1 class="center">Welcome to Chew, <%= user.first_name %>!</h1>
+  <p class="sub center">Your account is created and your back office is ready.</p>
+  <div class="id-display"><small>Your Affiliate ID</small><strong><%= user.affiliate_id %></strong></div>
+  <div class="flow-steps">
+    <div class="flow-step">
+      <span class="n">1</span>
+      <div>
+        <h3>Save your referral link</h3>
+        <p>Share it anywhere — every click is tracked to you.</p>
+        <div class="copy-field"><input id="ref-link" type="text" value="<%= link %>" readonly data-select aria-label="Your referral link"><button class="btn btn-green" type="button" data-copy data-copy-target="#ref-link"><%- icon('copy') %> Copy</button></div>
+        <div class="row" style="margin-top:.75rem;align-items:flex-start">
+          <div class="qr-box qr-sm"><%- qrSvg %></div>
+          <div class="stack" style="flex:1;min-width:160px">
+            <p class="mb-0 muted" style="font-size:.9rem">Your QR code opens the same link — great for flyers and in-person sharing.</p>
+            <a class="btn btn-light btn-sm" href="/office/qr/primary.png?download=1"><%- icon('download') %> Download QR</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <span class="n">2</span>
+      <div>
+        <h3>Download See It. Cook It.</h3>
+        <p>Get the app, then link it from your back office to complete activation.</p>
+        <%- include('../partials/store-badges', { quiet: true }) %>
+      </div>
+    </div>
+    <div class="flow-step">
+      <span class="n">3</span>
+      <div>
+        <h3>Open your back office</h3>
+        <p>Today’s 3 from the Content Kitchen, your links, training and real tracking are waiting.</p>
+        <a class="btn btn-cta btn-xl btn-block" href="/office">ENTER MY BACK OFFICE <%- icon('arrow') %></a>
+      </div>
+    </div>
+  </div>
+  <p class="fine center mb-0">We also emailed your Affiliate ID to <%= user.email %>.</p>
+</div>

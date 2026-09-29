@@ -1,0 +1,25 @@
+<h1>API keys</h1>
+<p class="page-intro">For the See It. Cook It. backend and commerce partners to report account links, activations and qualifying actions. See <code>docs/API.md</code>.</p>
+<% if (newKey) { %>
+<section class="card" style="border-color:var(--green-200)">
+  <div class="card-head"><h2>New key: <%= newKey.name %></h2></div>
+  <p><strong>Copy it now — it won’t be shown again.</strong></p>
+  <div class="key-reveal" id="new-key"><%= newKey.key %></div>
+  <p class="mt-1 mb-0"><button class="btn btn-green btn-sm" type="button" data-copy data-copy-target="#new-key"><%- icon('copy') %> Copy key</button></p>
+</section>
+<% } %>
+<form class="card form mt-1" method="post" action="/admin/api-keys" style="max-width:560px">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="field"><label for="name">Key name</label><input id="name" type="text" name="name" placeholder="e.g. See It. Cook It. production"></div>
+  <div><button class="btn btn-green" type="submit"><%- icon('key') %> Create key</button></div>
+</form>
+<div class="table-wrap mt-1"><table class="table">
+  <thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+    <% if (!keys.length) { %><tr><td colspan="6" class="table-empty">No keys yet.</td></tr><% } %>
+    <% keys.forEach(function (k) { %>
+    <tr style="<%= k.revoked_at ? 'opacity:.55' : '' %>"><td><%= k.name %></td><td class="mono"><%= k.prefix %>…</td><td><%= u.fmtDate(k.created_at) %><%= k.creator ? ' · ' + k.creator : '' %></td><td><%= k.last_used_at ? u.timeAgo(k.last_used_at) : 'Never' %></td><td><%= k.revoked_at ? 'Revoked' : 'Active' %></td>
+      <td class="actions"><% if (!k.revoked_at) { %><form class="inline-form" method="post" action="/admin/api-keys/<%= k.id %>/revoke" data-confirm="Revoke this key? Integrations using it will stop working."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-danger btn-xs" type="submit">Revoke</button></form><% } %></td></tr>
+    <% }) %>
+  </tbody>
+</table></div>

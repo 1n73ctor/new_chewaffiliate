@@ -1,0 +1,9 @@
+<section class="page-hero">
+  <div class="wrap">
+    <h1><%= page.title %></h1>
+    <p class="fine">Version <%= page.version || '—' %> · Last updated <%= u.fmtDate(page.updated_at) %></p>
+  </div>
+</section>
+<section class="section" style="padding-top:32px">
+  <div class="wrap"><article class="prose"><%- u.markdown(page.body) %></article></div>
+</section>

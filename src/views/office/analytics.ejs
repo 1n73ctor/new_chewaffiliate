@@ -1,0 +1,50 @@
+<% const s = summary; %>
+<div class="row-between">
+  <div><h1 class="page-title">Analytics</h1><p class="page-intro mb-0">Real tracked activity only. Link-preview bots and your own clicks are excluded.</p></div>
+  <nav class="pills" aria-label="Date range" style="padding:0">
+    <% ranges.forEach(function (d) { %><a class="pill <%= days === d ? 'on' : '' %>" href="?days=<%= d %>">Last <%= d %> days</a><% }) %>
+  </nav>
+</div>
+<div class="stats mt-1">
+  <div class="stat"><span class="label">Clicks</span><span class="value"><%= u.num(s.clicks) %></span><span class="meta"><%= u.num(s.uniqueVisitors) %> unique visitors</span></div>
+  <div class="stat"><span class="label">Referred sign-ups</span><span class="value"><%= u.num(s.signups) %></span><span class="meta"><%= s.clicks ? ((s.signups / s.clicks) * 100).toFixed(1) + '% of clicks' : '—' %></span></div>
+  <div class="stat"><span class="label">App activations</span><span class="value"><%= u.num(s.activations) %></span><span class="meta"><%= u.num(s.appDownloads) %> download clicks</span></div>
+  <div class="stat"><span class="label">Qualifying activity</span><span class="value"><%= u.num(s.qualifying) %></span><span class="meta">all qualifying events</span></div>
+</div>
+
+<section class="card mt-1">
+  <div class="card-head"><h2>Clicks per day</h2><span class="fine">last <%= days %> days</span></div>
+  <%- barChart(series, { unit: 'clicks', label: 'Clicks per day', empty: 'No clicks in this period yet. Share your link or a Content Kitchen post to see activity here.' }) %>
+</section>
+
+<div class="grid-2 mt-1">
+  <section class="card">
+    <div class="card-head"><h2>From click to result</h2></div>
+    <div class="funnel">
+      <div class="funnel-row"><span>Link clicks</span><strong><%= u.num(s.clicks) %></strong></div>
+      <div class="funnel-row"><span>Referred affiliates joined</span><strong><%= u.num(s.signups) %></strong></div>
+      <div class="funnel-row"><span>App download clicks</span><strong><%= u.num(s.appDownloads) %></strong></div>
+      <div class="funnel-row"><span>App accounts linked</span><strong><%= u.num(s.appLinked) %></strong></div>
+      <div class="funnel-row"><span>App activations</span><strong><%= u.num(s.activations) %></strong></div>
+      <div class="funnel-row"><span>Other qualifying actions &amp; purchases</span><strong><%= u.num((s.events.qualifying_action || 0) + (s.events.purchase || 0)) %></strong></div>
+    </div>
+  </section>
+  <%- include('../partials/breakdown', { heading: 'By source / channel', rows: bySource }) %>
+  <%- include('../partials/breakdown', { heading: 'By content', rows: byContent }) %>
+  <%- include('../partials/breakdown', { heading: 'By link', rows: byLink }) %>
+  <%- include('../partials/breakdown', { heading: 'By campaign', rows: byCampaign }) %>
+  <%- include('../partials/breakdown', { heading: 'By destination / product', rows: byDestination }) %>
+</div>
+
+<section class="mt-2">
+  <h2 style="font-size:1.1rem">Recent results</h2>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>When</th><th>Result</th><th>Content</th><th>Source</th><th>Destination</th></tr></thead>
+    <tbody>
+      <% if (!recent.length) { %><tr><td colspan="5" class="table-empty">No results yet.</td></tr><% } %>
+      <% recent.forEach(function (e) { %>
+      <tr><td class="nowrap"><%= u.timeAgo(e.created_at) %></td><td><%= eventTypes[e.type] || e.type %></td><td><%= e.content_title || '—' %></td><td><%= e.source || '—' %></td><td><%= e.destination_label || e.destination_key || '—' %></td></tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+</section>

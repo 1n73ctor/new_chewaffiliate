@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<%- include('../partials/head', { noindex: true }) %>
+</head>
+<body class="office-body">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="office-top">
+  <div class="wrap bar" style="max-width:1400px">
+    <%- include('../partials/logo', { href: '/office' }) %>
+    <div class="tools">
+      <span class="aff-chip" title="Your Affiliate ID"><%- icon('user') %><%= user.affiliate_id %></span>
+      <% if (isStaff) { %><a class="icon-btn" href="/admin" title="Admin" aria-label="Admin"><%- icon('shield') %></a><% } %>
+      <a class="icon-btn" href="/" title="View public site" aria-label="View public site"><%- icon('globe') %></a>
+      <a class="icon-btn" href="/help" title="Help" aria-label="Help"><%- icon('help') %></a>
+      <form class="inline-form" method="post" action="/signout"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="icon-btn" type="submit" title="Sign out" aria-label="Sign out"><%- icon('logout') %></button></form>
+    </div>
+  </div>
+</header>
+<div class="office-shell">
+  <% const items = [['dashboard','/office','Dashboard','dashboard'],['content','/office/content-kitchen','Content Kitchen','kitchen'],['links','/office/links','My Links','link'],['ways','/office/ways-to-earn','Ways to Earn','grid'],['analytics','/office/analytics','Analytics','chart'],['commissions','/office/commissions','Commissions','dollar'],['training','/office/training','Training','training'],['resources','/office/resources','Resources','resources'],['app','/office/see-it-cook-it','See It. Cook It.','phone'],['account','/office/account','Account','user']]; %>
+  <nav class="office-nav" aria-label="Back office">
+    <ul>
+      <% items.forEach(function (i) { const on = locals.nav === i[0]; %>
+      <li><a href="<%= i[1] %>" class="<%= on ? 'on' : '' %>"<%= on ? ' aria-current=page' : '' %>><%- icon(i[3]) %><%= i[2] %></a></li>
+      <% }) %>
+    </ul>
+  </nav>
+  <main id="main" class="office-main">
+    <% if (flash && flash.length) { %><div class="wrap"><% flash.forEach(function (f) { %><div class="alert alert-<%= f.type %>" role="status"><%- icon(f.type === 'error' ? 'x' : f.type === 'success' ? 'check' : 'bell') %><div><%= f.message %></div></div><% }) %></div><% } %>
+    <div class="wrap"><%- body %></div>
+  </main>
+</div>
+<script src="/js/app.js?v=<%= assetVersion %>" defer></script>
+</body>
+</html>

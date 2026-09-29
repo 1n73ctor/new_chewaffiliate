@@ -1,0 +1,7 @@
+<% if (flash && flash.length) { %>
+<div class="wrap flash-wrap">
+  <% flash.forEach(function (f) { %>
+  <div class="alert alert-<%= f.type %>" role="<%= f.type === 'error' ? 'alert' : 'status' %>"><%- icon(f.type === 'error' ? 'x' : f.type === 'success' ? 'check' : 'bell') %><div><%= f.message %></div></div>
+  <% }) %>
+</div>
+<% } %>

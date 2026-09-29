@@ -1,0 +1,38 @@
+<% const navLinks = [['/how-it-works','How It Works'],['/ways-to-earn','Ways to Earn'],['/see-it-cook-it','See It. Cook It.'],['/resources','Resources'],['/help','Help']]; %>
+<% const signedAffiliate = user && user.status === 'active' && user.affiliate_id; %>
+<header class="site-header">
+  <div class="wrap header-bar">
+    <details class="mobile-menu">
+      <summary class="icon-btn" aria-label="Open menu"><span class="i-open"><%- icon('menu') %></span><span class="i-close"><%- icon('x') %></span></summary>
+      <nav class="mobile-nav" aria-label="Mobile">
+        <form action="/search" role="search"><div class="search-field"><input type="search" name="q" placeholder="Search Chew" aria-label="Search"><button type="submit" aria-label="Search"><%- icon('search') %></button></div></form>
+        <% navLinks.forEach(function (l) { %><a href="<%= l[0] %>"><%= l[1] %> <%- icon('arrow') %></a><% }) %>
+        <% if (signedAffiliate) { %>
+          <a class="btn btn-green btn-lg" href="/office">Go to my back office</a>
+        <% } else if (isStaff) { %>
+          <a class="btn btn-green btn-lg" href="/admin">Admin</a>
+        <% } else { %>
+          <a class="btn btn-outline btn-lg" href="/signin">Sign In</a>
+        <% } %>
+      </nav>
+    </details>
+    <%- include('logo') %>
+    <nav class="main-nav" aria-label="Main">
+      <% navLinks.forEach(function (l) { %><a href="<%= l[0] %>" class="<%= currentPath === l[0] ? 'on' : '' %>"<%= currentPath === l[0] ? ' aria-current=page' : '' %>><%= l[1] %></a><% }) %>
+    </nav>
+    <form class="header-search" action="/search" role="search">
+      <div class="search-field"><input type="search" name="q" placeholder="Search Chew" aria-label="Search" value="<%= locals.q || '' %>"><button type="submit" aria-label="Search"><%- icon('search') %></button></div>
+    </form>
+    <div class="header-actions">
+      <a class="icon-btn search-toggle" href="/search" aria-label="Search"><%- icon('search') %></a>
+      <% if (signedAffiliate) { %>
+        <a class="btn btn-green" href="/office">Back Office</a>
+      <% } else if (isStaff) { %>
+        <a class="btn btn-green" href="/admin">Admin</a>
+      <% } else { %>
+        <a class="btn btn-outline btn-signin" href="/signin">Sign In</a>
+        <a class="btn btn-cta" href="/join">JOIN FREE</a>
+      <% } %>
+    </div>
+  </div>
+</header>

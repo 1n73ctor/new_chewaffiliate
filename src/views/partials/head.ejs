@@ -1,0 +1,14 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title><%= title ? `${title} · ${site.site_name}` : `${site.site_name} Affiliate Program — Free to Join` %></title>
+<meta name="description" content="<%= description || 'Join the Chew Network Affiliate Program free. No purchase required. Get your Affiliate ID, the Content Kitchen, training and real tracking.' %>">
+<meta name="theme-color" content="#0e4d2c">
+<meta name="csrf-token" content="<%= csrfToken %>">
+<meta property="og:site_name" content="<%= site.site_name %>">
+<meta property="og:title" content="<%= title || 'Turn the Trillion Dollar World of Food Into Opportunity.' %>">
+<meta property="og:description" content="<%= description || 'Join the Chew Network Affiliate Program — 100% free, no purchase required.' %>">
+<meta property="og:image" content="<%= baseUrl %>/img/food/veggie-bowl.webp">
+<meta name="twitter:card" content="summary_large_image">
+<% if (locals.noindex) { %><meta name="robots" content="noindex"><% } %>
+<link rel="icon" href="/img/logo-mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/app.css?v=<%= assetVersion %>">

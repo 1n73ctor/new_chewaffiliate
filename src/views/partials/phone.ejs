@@ -1,0 +1,14 @@
+<div class="phone <%= locals.size || '' %>" role="img" aria-label="See It. Cook It. app showing a recipe found from a photo of <%= dish %>">
+  <div class="phone-notch"></div>
+  <div class="phone-screen">
+    <img src="<%= img %>" alt="" <%= locals.eager ? 'fetchpriority=high' : 'loading=lazy' %> decoding="async">
+    <div class="phone-status"><span>SEE IT. COOK IT.</span></div>
+    <div class="scan-frame"><i></i><i></i><i></i><i></i></div>
+    <div class="phone-card">
+      <span class="chip">✓ Recipe found</span>
+      <strong><%= dish %></strong>
+      <span class="muted"><%= meta %></span>
+      <span class="phone-play">▶ Watch it cook</span>
+    </div>
+  </div>
+</div>

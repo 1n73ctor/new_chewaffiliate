@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<%- include('../partials/head', { noindex: true }) %>
+</head>
+<body class="join-body">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="join-header">
+  <div class="wrap">
+    <%- include('../partials/logo') %>
+    <span class="aside">
+      <% if (user && user.status !== 'active') { %>
+        <form class="inline-form" method="post" action="/signout"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="link-btn" type="submit">Sign out</button></form>
+      <% } else if (!user && currentPath !== '/signin') { %>
+        Already an affiliate? <a href="/signin"><b>Sign In</b></a>
+      <% } else if (!user) { %>
+        New here? <a href="/join"><b>Join free</b></a>
+      <% } %>
+    </span>
+  </div>
+</header>
+<main id="main" class="join-main">
+  <div class="wrap">
+    <% if (locals.step) { const steps = ['Register', 'Verify', 'Agreement', 'Welcome']; %>
+    <ol class="stepper<%= step >= 3 ? ' wide' : '' %>" aria-label="Signup progress">
+      <% steps.forEach(function (label, i) { const n = i + 1; %>
+      <li class="<%= n < step ? 'done' : n === step ? 'current' : '' %>"<%= n === step ? ' aria-current=step' : '' %>><%= n %>. <%= label %></li>
+      <% }) %>
+    </ol>
+    <% } %>
+    <% if (flash && flash.length) { %><div style="max-width:560px;margin:0 auto"><% flash.forEach(function (f) { %><div class="alert alert-<%= f.type %>" role="status"><%- icon(f.type === 'error' ? 'x' : f.type === 'success' ? 'check' : 'bell') %><div><%= f.message %></div></div><% }) %></div><% } %>
+    <%- body %>
+  </div>
+</main>
+<footer class="join-footer">
+  <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/affiliate-agreement">Affiliate Agreement</a> · <a href="/earnings-disclosure">Earnings Disclosure</a> · <a href="/help#contact">Support</a>
+</footer>
+<script src="/js/app.js?v=<%= assetVersion %>" defer></script>
+</body>
+</html>

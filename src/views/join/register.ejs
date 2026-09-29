@@ -1,0 +1,49 @@
+<% const err = (k) => errors[k] ? `<p class="error" id="err-${k}">${u.esc(errors[k])}</p>` : ''; const cls = (k) => 'field' + (errors[k] ? ' has-error' : ''); %>
+<div class="join-card">
+  <h1>Join Chew free</h1>
+  <p class="sub">Get your Affiliate ID and full back office in about a minute. <strong>No purchase required.</strong></p>
+  <% if (sponsor) { %>
+  <div class="sponsor-note"><%- icon('users') %><span>You were invited by <strong><%= sponsor.name %></strong> · <span class="mono"><%= sponsor.affiliate_id %></span></span></div>
+  <% } %>
+  <% if (Object.keys(errors).length) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div>Please check the highlighted fields.</div></div><% } %>
+  <form class="form" method="post" action="/join" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="form-row two">
+      <div class="<%= cls('first_name') %>"><label for="first_name">First name</label><input id="first_name" type="text" name="first_name" autocomplete="given-name" value="<%= form.first_name || '' %>" required><%- err('first_name') %></div>
+      <div class="<%= cls('last_name') %>"><label for="last_name">Last name</label><input id="last_name" type="text" name="last_name" autocomplete="family-name" value="<%= form.last_name || '' %>" required><%- err('last_name') %></div>
+    </div>
+    <div class="<%= cls('email') %>"><label for="email">Email</label><input id="email" type="email" name="email" autocomplete="email" inputmode="email" autocapitalize="off" value="<%= form.email || '' %>" required><%- err('email') %></div>
+    <div class="form-row two">
+      <div class="<%= cls('mobile') %>"><label for="mobile">Mobile</label><input id="mobile" type="tel" name="mobile" autocomplete="tel" inputmode="tel" value="<%= form.mobile || '' %>" required><%- err('mobile') %></div>
+      <div class="<%= cls('country') %>"><label for="country">Country</label>
+        <select id="country" name="country" autocomplete="country" required>
+          <% countries.forEach(function (c) { %><option value="<%= c.code %>" <%= form.country === c.code ? 'selected' : '' %>><%= c.name %></option><% }) %>
+        </select><%- err('country') %></div>
+    </div>
+    <div class="<%= cls('password') %>"><label for="password">Password</label>
+      <div class="pw-wrap"><input id="password" type="password" name="password" autocomplete="new-password" minlength="8" required aria-describedby="pw-hint"><button class="pw-toggle" type="button" aria-pressed="false">Show</button></div>
+      <p class="hint" id="pw-hint">At least 8 characters.</p><%- err('password') %></div>
+
+    <details class="disclosure" <%= (form.referral_code && !sponsor) || errors.referral_code || form.hear_about ? 'open' : '' %>>
+      <summary><%= sponsor ? 'Referral details' : 'Were you referred? (optional)' %></summary>
+      <div class="form">
+        <div class="<%= cls('referral_code') %>"><label for="referral_code">Referrer’s Affiliate ID</label><input id="referral_code" type="text" name="referral_code" autocapitalize="characters" value="<%= form.referral_code || '' %>" placeholder="e.g. CHW7K3M9Q"><%- err('referral_code') %></div>
+        <div class="field"><label for="hear_about">How did you hear about Chew?</label>
+          <select id="hear_about" name="hear_about"><option value="">Choose one (optional)</option><% hearAbout.forEach(function (h) { %><option <%= form.hear_about === h ? 'selected' : '' %>><%= h %></option><% }) %></select></div>
+      </div>
+    </details>
+
+    <div class="check-group">
+      <p class="group-label">Required</p>
+      <label class="check-row"><input type="checkbox" name="terms" value="1" <%= form.terms ? 'checked' : '' %> required><span>I agree to the <a href="/terms" target="_blank">Terms of Use</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</span></label>
+      <%- err('terms') %>
+      <p class="group-label" style="margin-top:.4rem">Optional — you can change these anytime</p>
+      <label class="check-row"><input type="checkbox" name="marketing_consent" value="1" <%= form.marketing_consent ? 'checked' : '' %>><span>Email me Chew news, new opportunities and tips.</span></label>
+      <label class="check-row"><input type="checkbox" name="sms_consent" value="1" <%= form.sms_consent ? 'checked' : '' %>><span>Text me Chew updates. Msg &amp; data rates may apply. Reply STOP to opt out.</span></label>
+      <%- err('sms_consent') %>
+    </div>
+
+    <button class="btn btn-cta btn-xl btn-block" type="submit">CREATE MY FREE ACCOUNT <%- icon('arrow') %></button>
+    <p class="free-note"><%- icon('lock') %> Free forever to join · No payment details · No purchase required</p>
+  </form>
+</div>

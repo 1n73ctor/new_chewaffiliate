@@ -1,0 +1,32 @@
+<p class="fine"><a href="/admin/tickets">← Support tickets</a></p>
+<h1>#<%= t.id %> · <%= t.subject %></h1>
+<p class="page-intro"><%= t.topic %> · received <%= u.fmtDateTime(t.created_at) %> · <span class="badge <%= t.status === 'open' ? 'badge-soon' : 'badge-grey' %>"><%= C.TICKET_STATUSES[t.status] %></span></p>
+<div class="grid-2" style="align-items:start">
+  <div class="stack">
+    <section class="card"><div class="card-head"><h2>Message</h2></div><p style="white-space:pre-wrap" class="mb-0"><%= t.message %></p></section>
+    <section class="card"><div class="card-head"><h2>History</h2></div>
+      <% if (!notes.length) { %><p class="muted mb-0">No replies or notes yet.</p><% } %>
+      <ul class="timeline"><% notes.forEach(function (n) { %><li><div class="meta"><%= n.author || 'Staff' %> · <%= u.fmtDateTime(n.created_at) %></div><p><%= n.body %></p></li><% }) %></ul>
+    </section>
+    <% if (can('tickets.manage')) { %>
+    <form class="card form" method="post" action="/admin/tickets/<%= t.id %>">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="field"><label for="reply">Reply to <%= t.email %></label><textarea id="reply" name="reply" placeholder="Your reply is emailed to the requester"></textarea></div>
+      <div class="field"><label for="note">Internal note</label><input id="note" type="text" name="note" placeholder="Visible to staff only"></div>
+      <div class="form-row two">
+        <div class="field"><label for="status">Status</label><select id="status" name="status"><% Object.entries(C.TICKET_STATUSES).forEach(function ([k, v]) { %><option value="<%= k %>" <%= t.status === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
+        <div class="field"><label for="assigned_to">Assigned to</label><select id="assigned_to" name="assigned_to"><option value="">Unassigned</option><% staff.forEach(function (s) { %><option value="<%= s.id %>" <%= t.assigned_to === s.id ? 'selected' : '' %>><%= s.first_name %> <%= s.last_name %></option><% }) %></select></div>
+      </div>
+      <div><button class="btn btn-green btn-lg" type="submit">Save</button></div>
+    </form>
+    <% } %>
+  </div>
+  <section class="card">
+    <div class="card-head"><h2>Requester</h2></div>
+    <dl class="dl"><dt>Name</dt><dd><%= t.name %></dd><dt>Email</dt><dd><%= t.email %></dd></dl>
+    <% if (account) { %>
+      <hr><p class="mb-0"><strong>Matching account</strong><br><%= account.first_name %> <%= account.last_name %> · <span class="mono"><%= account.affiliate_id || '—' %></span> · <%= C.USER_STATUSES[account.status] %></p>
+      <% if (can('affiliates.view')) { %><p class="mt-1 mb-0"><a class="btn btn-light btn-sm" href="/admin/affiliates/<%= account.id %>">Open affiliate record</a></p><% } %>
+    <% } else { %><p class="muted mb-0">No account uses this email.</p><% } %>
+  </section>
+</div>

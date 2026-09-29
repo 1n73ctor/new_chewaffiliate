@@ -1,0 +1,27 @@
+<h1>Settings</h1>
+<p class="page-intro">Everything here is live the moment you save — no code deployment needed.</p>
+<nav class="pills" aria-label="Sections"><% groups.forEach(function (g) { %><a class="pill" href="#<%= g.id %>"><%= g.title.replace(/ \(.*\)$/, '') %></a><% }) %></nav>
+<div class="stack" style="max-width:820px">
+  <% groups.forEach(function (g) { %>
+  <form class="card form settings-group" id="<%= g.id %>" method="post" action="/admin/settings">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="_group" value="<%= g.id %>">
+    <div class="card-head"><h2><%= g.title %></h2></div>
+    <% if (g.id === 'reward') { %><p class="notice mb-0">The proposed free credit / share / stake reward stays configurable here — not hard-coded — until management and counsel finalize the exact legal and economic structure and terminology. While off, nothing is shown to affiliates and no rewards are recorded.</p><% } %>
+    <% if (g.id === 'app') { %><p class="fine mb-0">Store buttons across the site go through tracked redirects (<code>/go/app/ios</code>, <code>/go/app/android</code>) so every download click keeps its affiliate attribution.</p><% } %>
+    <% g.fields.forEach(function (f) { const v = values[f.key] == null ? '' : values[f.key]; const e = errors[f.key]; %>
+      <% if (f.type === 'checkbox') { %>
+        <label class="check-row"><input type="checkbox" name="<%= f.key %>" value="1" <%= v === '1' ? 'checked' : '' %>><span><strong><%= f.label %></strong><% if (f.help) { %><br><span class="fine"><%= f.help %></span><% } %></span></label>
+      <% } else { %>
+        <div class="field <%= e ? 'has-error' : '' %>"><label for="s-<%= f.key %>"><%= f.label %></label>
+          <% if (f.type === 'textarea') { %><textarea id="s-<%= f.key %>" name="<%= f.key %>"><%= v %></textarea>
+          <% } else { %><input id="s-<%= f.key %>" type="<%= f.type === 'number' ? 'number' : f.type === 'email' ? 'email' : 'text' %>" name="<%= f.key %>" value="<%= v %>"><% } %>
+          <% if (f.help) { %><p class="hint"><%= f.help %></p><% } %>
+          <% if (e) { %><p class="error"><%= e %></p><% } %>
+        </div>
+      <% } %>
+    <% }) %>
+    <div><button class="btn btn-green" type="submit">Save <%= g.title.replace(/ \(.*\)$/, '').toLowerCase() %></button></div>
+  </form>
+  <% }) %>
+</div>

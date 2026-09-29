@@ -1,0 +1,65 @@
+<h1 class="page-title">My Links</h1>
+<p class="page-intro">Every link and QR code is tracked to you. Make a separate link for each place you share to see what works.</p>
+
+<section class="card">
+  <div class="card-head"><h2>Primary referral link</h2><span class="fine"><%= u.num(primaryClicks) %> clicks all time</span></div>
+  <div class="row" style="align-items:flex-start">
+    <div style="flex:1;min-width:240px" class="stack">
+      <div class="copy-field"><input id="primary" type="text" value="<%= primaryLink %>" readonly data-select aria-label="Primary referral link"><button class="btn btn-green" type="button" data-copy data-copy-target="#primary"><%- icon('copy') %> Copy</button></div>
+      <details class="disclosure"><summary>Quick tagging without creating a link</summary>
+        <p class="fine mb-0">Add <code>?s=instagram</code> (source), <code>&amp;c=campaign-slug</code> (campaign) or <code>&amp;d=join</code> (destination) to your primary link — e.g. <code><%= primaryLink %>?s=whatsapp</code></p>
+      </details>
+    </div>
+    <div style="text-align:center"><div class="qr-box qr-sm"><%- qrSvg %></div><a class="fine" href="/office/qr/primary.png?download=1">PNG</a> · <a class="fine" href="/office/qr/primary.svg?download=1">SVG</a></div>
+  </div>
+</section>
+
+<% if (created) { %>
+<section class="card mt-1" id="new-link" style="border-color:var(--green-200);background:var(--green-50)">
+  <div class="card-head"><h2>Your new link</h2></div>
+  <div class="copy-field"><input id="new" type="text" value="<%= created.url %>" readonly data-select aria-label="New tracked link"><button class="btn btn-green" type="button" data-copy data-copy-target="#new"><%- icon('copy') %> Copy</button></div>
+</section>
+<% } %>
+
+<section class="card mt-1">
+  <div class="card-head"><h2>Create a tracked link</h2></div>
+  <form class="form" method="post" action="/office/links">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="form-row two">
+      <div class="field"><label for="destination_key">Send people to</label><select id="destination_key" name="destination_key" required><% destinations.forEach(function (d) { %><option value="<%= d.key %>"><%= d.label %></option><% }) %></select></div>
+      <div class="field"><label for="source">Where you’ll share it</label><select id="source" name="source"><option value="">Anywhere</option><% sources.forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }) %></select></div>
+    </div>
+    <div class="form-row two">
+      <div class="field"><label for="campaign_id">Campaign (optional)</label><select id="campaign_id" name="campaign_id"><option value="">None</option><% campaigns.forEach(function (c) { %><option value="<%= c.id %>"><%= c.name %></option><% }) %></select></div>
+      <div class="field"><label for="label">Label (optional)</label><input id="label" type="text" name="label" maxlength="80" placeholder="e.g. Instagram bio"></div>
+    </div>
+    <div><button class="btn btn-green btn-lg" type="submit"><%- icon('plus') %> Create link</button></div>
+  </form>
+</section>
+
+<section class="mt-2">
+  <h2 style="font-size:1.1rem">All my links</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Link</th><th>Goes to</th><th>Source</th><th>Campaign / content</th><th class="num">Clicks</th><th class="num">Results</th><th></th></tr></thead>
+      <tbody>
+        <% if (!links.length) { %><tr><td colspan="7" class="table-empty">No tracked links yet. Create one above, or use “Get My Link” in the Content Kitchen.</td></tr><% } %>
+        <% links.forEach(function (l) { %>
+        <tr style="<%= l.active ? '' : 'opacity:.55' %>">
+          <td><strong><%= l.label || l.code %></strong><br><span class="mono fine"><%= l.url.replace(/^https?:\/\//, '') %></span></td>
+          <td><%= l.destination_label || l.destination_key %></td>
+          <td><%= l.source || '—' %></td>
+          <td><%= l.campaign_name || '' %><%= l.campaign_name && l.content_title ? ' · ' : '' %><%= l.content_title || (l.campaign_name ? '' : '—') %></td>
+          <td class="num"><%= u.num(l.clicks) %></td>
+          <td class="num"><%= u.num(l.results) %></td>
+          <td class="actions">
+            <button class="btn btn-light btn-xs" type="button" data-copy="<%= l.url %>">Copy</button>
+            <a class="btn btn-light btn-xs" href="/office/qr/<%= l.code %>.png?download=1">QR</a>
+            <form class="inline-form" method="post" action="/office/links/<%= l.code %>/toggle"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-ghost btn-xs" type="submit"><%= l.active ? 'Pause' : 'Resume' %></button></form>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>

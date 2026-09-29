@@ -1,0 +1,55 @@
+<% const err = (k) => errors[k] ? `<p class="error">${u.esc(errors[k])}</p>` : ''; %>
+<h1 class="page-title">Account</h1>
+<p class="page-intro">Affiliate ID <span class="mono"><strong><%= me.affiliate_id %></strong></span> · Member since <%= u.fmtDate(me.agreement_accepted_at || me.created_at) %></p>
+<div class="grid-2" style="align-items:start">
+  <div class="stack">
+    <section class="card">
+      <div class="card-head"><h2>Profile</h2></div>
+      <form class="form" method="post" action="/office/account/profile">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="form-row two">
+          <div class="field <%= errors.first_name ? 'has-error' : '' %>"><label for="first_name">First name</label><input id="first_name" type="text" name="first_name" value="<%= me.first_name %>" autocomplete="given-name"><%- err('first_name') %></div>
+          <div class="field <%= errors.last_name ? 'has-error' : '' %>"><label for="last_name">Last name</label><input id="last_name" type="text" name="last_name" value="<%= me.last_name %>" autocomplete="family-name"><%- err('last_name') %></div>
+        </div>
+        <div class="field"><label>Email</label><input type="email" value="<%= me.email %>" disabled><p class="hint">To change your email, <a href="/help#contact">contact support</a>.</p></div>
+        <div class="form-row two">
+          <div class="field <%= errors.mobile ? 'has-error' : '' %>"><label for="mobile">Mobile</label><input id="mobile" type="tel" name="mobile" value="<%= me.mobile || '' %>" autocomplete="tel"><%- err('mobile') %></div>
+          <div class="field"><label for="country">Country</label><select id="country" name="country"><% countries.forEach(function (c) { %><option value="<%= c.code %>" <%= me.country === c.code ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+        </div>
+        <div><button class="btn btn-green" type="submit">Save profile</button></div>
+      </form>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Password</h2></div>
+      <form class="form" method="post" action="/office/account/password">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field <%= errors.current_password ? 'has-error' : '' %>"><label for="current_password">Current password</label><input id="current_password" type="password" name="current_password" autocomplete="current-password"><%- err('current_password') %></div>
+        <div class="field <%= errors.new_password ? 'has-error' : '' %>"><label for="new_password">New password</label><div class="pw-wrap"><input id="new_password" type="password" name="new_password" autocomplete="new-password" minlength="8"><button class="pw-toggle" type="button">Show</button></div><%- err('new_password') %></div>
+        <div><button class="btn btn-green" type="submit">Update password</button></div>
+      </form>
+    </section>
+  </div>
+  <div class="stack">
+    <section class="card" id="preferences">
+      <div class="card-head"><h2>Communication preferences</h2></div>
+      <p class="muted" style="font-size:.9rem">Optional and separate from your account terms. Account and security messages are always sent.</p>
+      <form class="form" method="post" action="/office/account/preferences">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="check-row"><input type="checkbox" name="marketing_consent" value="1" <%= me.marketing_consent ? 'checked' : '' %>><span><strong>Marketing emails</strong><br><span class="fine"><%= me.marketing_consent ? 'Opted in ' + u.fmtDate(me.marketing_consent_at) : (me.marketing_consent_at ? 'Opted out ' + u.fmtDate(me.marketing_consent_at) : 'Not opted in') %></span></span></label>
+        <label class="check-row"><input type="checkbox" name="sms_consent" value="1" <%= me.sms_consent ? 'checked' : '' %>><span><strong>Text messages</strong><br><span class="fine"><%= me.sms_consent ? 'Opted in ' + u.fmtDate(me.sms_consent_at) : (me.sms_consent_at ? 'Opted out ' + u.fmtDate(me.sms_consent_at) : 'Not opted in') %></span></span></label>
+        <div><button class="btn btn-green" type="submit">Save preferences</button></div>
+      </form>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Your agreement</h2></div>
+      <dl class="dl">
+        <dt>Affiliate Agreement</dt><dd>Version <%= me.agreement_version || '—' %> · accepted <%= u.fmtDateTime(me.agreement_accepted_at) %></dd>
+        <dt>Terms &amp; Privacy</dt><dd>Accepted <%= u.fmtDate(me.terms_accepted_at) %></dd>
+        <dt>Email verified</dt><dd><%= me.email_verified_at ? u.fmtDate(me.email_verified_at) : '—' %></dd>
+        <dt>Phone verified</dt><dd><%= me.phone_verified_at ? u.fmtDate(me.phone_verified_at) : 'Not verified' %></dd>
+        <dt>Referred by</dt><dd><%= sponsor ? sponsor.first_name + ' ' + sponsor.last_name.charAt(0) + '. (' + sponsor.affiliate_id + ')' : '—' %></dd>
+      </dl>
+      <p class="fine mt-1 mb-0"><a href="/affiliate-agreement">Read the agreement</a> · Want to close your account? <a href="/help#contact">Contact support</a>.</p>
+    </section>
+  </div>
+</div>

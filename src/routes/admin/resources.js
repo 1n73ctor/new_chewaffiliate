@@ -1,0 +1,242 @@
+'use strict';
+// Declarative admin resources rendered by the generic CRUD views.
+// Only columns declared here are ever read from forms or written to SQL.
+const db = require('../../db');
+const { PATHWAY_STATUSES } = require('../../lib/constants');
+const { EVENT_TYPES } = require('../../lib/tracking');
+
+const opts = (sql) => () => db.all(sql).map((r) => [String(r.v), r.l]);
+const yesNo = [
+  ['1', 'Yes'],
+  ['0', 'No'],
+];
+
+module.exports = {
+  pathways: {
+    title: '125+ Ways — Pathways',
+    singular: 'pathway',
+    table: 'pathways',
+    perm: 'pathways.manage',
+    order: '(SELECT sort FROM pathway_categories c WHERE c.id = category_id), sort, id',
+    search: ['title', 'summary'],
+    filters: ['category_id', 'status'],
+    inline: 'status',
+    perPage: 50,
+    intro: 'Only pathways marked “Available Now” are presented as currently active earning opportunities on the public site and in the back office.',
+    columns: ['title', 'category_id', 'status', 'sort'],
+    fields: [
+      { name: 'title', label: 'Title', required: true },
+      { name: 'category_id', label: 'Category', type: 'select', required: true, options: opts('SELECT id AS v, name AS l FROM pathway_categories ORDER BY sort') },
+      {
+        name: 'status',
+        label: 'Availability status',
+        type: 'select',
+        required: true,
+        options: () => Object.entries(PATHWAY_STATUSES).map(([k, v]) => [k, v.label]),
+      },
+      { name: 'summary', label: 'Short description', type: 'textarea' },
+      { name: 'details', label: 'More details (Markdown)', type: 'markdown' },
+      { name: 'cta_label', label: 'Button label (optional)' },
+      { name: 'cta_url', label: 'Button URL (optional)', type: 'url' },
+      { name: 'sort', label: 'Sort order', type: 'number' },
+    ],
+    touch: true,
+  },
+  pathway_categories: {
+    title: '125+ Ways — Categories',
+    singular: 'category',
+    table: 'pathway_categories',
+    perm: 'pathways.manage',
+    order: 'sort, id',
+    columns: ['name', 'slug', 'sort'],
+    fields: [
+      { name: 'name', label: 'Name', required: true },
+      { name: 'slug', label: 'URL slug', type: 'slug', from: 'name' },
+      { name: 'tagline', label: 'Tagline' },
+      { name: 'image', label: 'Image URL', type: 'url', help: 'e.g. /img/food/pizza.webp or an uploaded image URL' },
+      { name: 'icon', label: 'Icon name', help: 'database, share, cpu, chef, store, utensils, film, network…' },
+      { name: 'sort', label: 'Sort order', type: 'number' },
+    ],
+  },
+  announcements: {
+    title: 'Announcements',
+    singular: 'announcement',
+    table: 'announcements',
+    perm: 'announcements.manage',
+    order: 'pinned DESC, id DESC',
+    search: ['title', 'body'],
+    columns: ['title', 'published', 'pinned', 'publish_on', 'expires_on'],
+    fields: [
+      { name: 'title', label: 'Title', required: true },
+      { name: 'body', label: 'Message', type: 'textarea' },
+      { name: 'link_url', label: 'Link URL (optional)', type: 'url' },
+      { name: 'link_label', label: 'Link label' },
+      { name: 'publish_on', label: 'Show from', type: 'date' },
+      { name: 'expires_on', label: 'Hide after', type: 'date' },
+      { name: 'pinned', label: 'Pin to top', type: 'checkbox' },
+      { name: 'published', label: 'Published', type: 'checkbox' },
+    ],
+  },
+  campaigns: {
+    title: 'Campaigns',
+    singular: 'campaign',
+    table: 'campaigns',
+    perm: 'campaigns.manage',
+    order: 'active DESC, id DESC',
+    search: ['name', 'slug'],
+    columns: ['name', 'slug', 'destination_key', 'active', 'ends_on'],
+    intro: 'Affiliates can attach an active campaign to their tracked links; use ?c=<slug> on a primary link too.',
+    fields: [
+      { name: 'name', label: 'Name', required: true },
+      { name: 'slug', label: 'Slug (used in links)', type: 'slug', from: 'name' },
+      { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'destination_key', label: 'Default destination', type: 'select', options: opts('SELECT key AS v, label AS l FROM destinations WHERE active = 1 ORDER BY sort') },
+      { name: 'starts_on', label: 'Starts', type: 'date' },
+      { name: 'ends_on', label: 'Ends', type: 'date' },
+      { name: 'active', label: 'Active', type: 'checkbox', default: 1 },
+    ],
+  },
+  destinations: {
+    title: 'Destinations & products',
+    singular: 'destination',
+    table: 'destinations',
+    perm: 'campaigns.manage',
+    order: 'sort, id',
+    columns: ['label', 'key', 'kind', 'url', 'active'],
+    intro: 'Where tracked links can send visitors. “site” = a page on this site (path), “app” = See It. Cook It. store redirect (ios / android / auto), “external” = a partner or product URL.',
+    fields: [
+      { name: 'label', label: 'Label', required: true },
+      { name: 'key', label: 'Key', type: 'slug', from: 'label' },
+      {
+        name: 'kind',
+        label: 'Kind',
+        type: 'select',
+        required: true,
+        options: () => [
+          ['site', 'Page on this site'],
+          ['app', 'See It. Cook It. app store'],
+          ['external', 'External / product URL'],
+        ],
+      },
+      { name: 'url', label: 'Path or URL', required: true, help: 'site: /path · app: ios, android or auto · external: https://…' },
+      { name: 'sort', label: 'Sort order', type: 'number' },
+      { name: 'active', label: 'Active', type: 'checkbox', default: 1 },
+    ],
+    validate: (v) => {
+      if (v.kind === 'site' && !/^\/(?!\/)/.test(v.url)) return 'Site destinations must be a path starting with /.';
+      if (v.kind === 'app' && !['ios', 'android', 'auto'].includes(v.url)) return 'App destinations must be ios, android or auto.';
+      if (v.kind === 'external' && !/^https:\/\//.test(v.url)) return 'External destinations must start with https://.';
+      return null;
+    },
+  },
+  content_categories: {
+    title: 'Content Kitchen — Categories',
+    singular: 'category',
+    table: 'content_categories',
+    perm: 'content.manage',
+    order: 'sort, name',
+    columns: ['name', 'slug', 'sort'],
+    fields: [
+      { name: 'name', label: 'Name', required: true },
+      { name: 'slug', label: 'Slug', type: 'slug', from: 'name' },
+      { name: 'sort', label: 'Sort order', type: 'number' },
+    ],
+  },
+  training_modules: {
+    title: 'Training — Modules',
+    singular: 'module',
+    table: 'training_modules',
+    perm: 'training.manage',
+    order: 'sort, id',
+    columns: ['title', 'published', 'sort'],
+    fields: [
+      { name: 'title', label: 'Title', required: true },
+      { name: 'summary', label: 'Summary', type: 'textarea' },
+      { name: 'sort', label: 'Sort order', type: 'number' },
+      { name: 'published', label: 'Published', type: 'checkbox', default: 1 },
+    ],
+  },
+  training_lessons: {
+    title: 'Training — Lessons',
+    singular: 'lesson',
+    table: 'training_lessons',
+    perm: 'training.manage',
+    order: '(SELECT sort FROM training_modules m WHERE m.id = module_id), sort, id',
+    search: ['title', 'body'],
+    filters: ['module_id'],
+    columns: ['title', 'module_id', 'minutes', 'published', 'sort'],
+    fields: [
+      { name: 'title', label: 'Title', required: true },
+      { name: 'module_id', label: 'Module', type: 'select', required: true, options: opts('SELECT id AS v, title AS l FROM training_modules ORDER BY sort') },
+      { name: 'summary', label: 'Summary' },
+      { name: 'video_url', label: 'Video URL (YouTube, Vimeo or .mp4)', type: 'url' },
+      { name: 'minutes', label: 'Minutes', type: 'number' },
+      { name: 'body', label: 'Lesson content (Markdown)', type: 'markdown' },
+      { name: 'sort', label: 'Sort order', type: 'number' },
+      { name: 'published', label: 'Published', type: 'checkbox', default: 1 },
+    ],
+  },
+  resources: {
+    title: 'Resources',
+    singular: 'resource',
+    table: 'resources',
+    perm: 'training.manage',
+    order: 'category, sort, id',
+    search: ['title', 'description'],
+    columns: ['title', 'category', 'audience', 'published'],
+    fields: [
+      { name: 'title', label: 'Title', required: true },
+      { name: 'description', label: 'Description', type: 'textarea' },
+      { name: 'category', label: 'Group' },
+      { name: 'url', label: 'Link (page, file or URL)', type: 'url', required: true },
+      {
+        name: 'audience',
+        label: 'Who can see it',
+        type: 'select',
+        options: () => [
+          ['public', 'Everyone (public Resources page)'],
+          ['affiliate', 'Affiliates only (back office)'],
+        ],
+      },
+      { name: 'sort', label: 'Sort order', type: 'number' },
+      { name: 'published', label: 'Published', type: 'checkbox', default: 1 },
+    ],
+  },
+  faqs: {
+    title: 'Help — FAQs',
+    singular: 'FAQ',
+    table: 'faqs',
+    perm: 'pages.manage',
+    order: 'sort, id',
+    search: ['question', 'answer'],
+    columns: ['question', 'category', 'published', 'sort'],
+    fields: [
+      { name: 'question', label: 'Question', required: true },
+      { name: 'answer', label: 'Answer', type: 'textarea', required: true },
+      { name: 'category', label: 'Group' },
+      { name: 'sort', label: 'Sort order', type: 'number' },
+      { name: 'published', label: 'Published', type: 'checkbox', default: 1 },
+    ],
+  },
+  commission_rules: {
+    title: 'Commission rules',
+    singular: 'rule',
+    table: 'commission_rules',
+    perm: 'commissions.manage',
+    order: 'active DESC, event_type, id',
+    columns: ['name', 'event_type', 'amount_cents', 'percent_bps', 'active'],
+    intro: 'When a tracked event matches an active rule, a Pending commission is added to the referring affiliate’s ledger. Rules start inactive — set amounts once management approves them.',
+    fields: [
+      { name: 'name', label: 'Name', required: true },
+      { name: 'event_type', label: 'Qualifying event', type: 'select', required: true, options: () => Object.entries(EVENT_TYPES).filter(([k]) => k !== 'app_download_clicked') },
+      { name: 'amount_cents', label: 'Fixed amount', type: 'money' },
+      { name: 'percent_bps', label: 'Percent of event value', type: 'percent' },
+      { name: 'currency', label: 'Currency', default: 'USD' },
+      { name: 'description', label: 'Description shown to affiliates', type: 'textarea' },
+      { name: 'active', label: 'Active', type: 'checkbox' },
+    ],
+    touch: true,
+  },
+};
+
+module.exports.yesNo = yesNo;

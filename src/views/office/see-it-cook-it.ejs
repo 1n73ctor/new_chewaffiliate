@@ -1,0 +1,51 @@
+<h1 class="page-title">See It. Cook It.</h1>
+<p class="page-intro">Capture food. Get the recipe. Watch it come to life. Activate the app on your account, then share it.</p>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Activation</h2><span class="badge <%= activation.activated ? 'badge-live' : 'badge-soon' %>"><%= activation.activated ? 'Activated' : activation.completed + ' of ' + activation.total + ' done' %></span></div>
+    <ol class="activation-steps">
+      <% activation.steps.forEach(function (st, i) { %>
+      <li class="<%= st.done ? 'done' : '' %>"><span class="dot"><%- st.done ? icon('check') : i + 1 %></span><div><strong><%= st.label %></strong><span class="sub"><%= st.done ? 'Done ' + u.fmtDateTime(st.at) : st.detail %></span></div></li>
+      <% }) %>
+    </ol>
+    <h3 class="mt-1" style="font-size:1rem">1 · Download</h3>
+    <%- include('../partials/store-badges', { quiet: true }) %>
+    <% if (!storesReady.ios || !storesReady.android) { %><p class="fine" style="margin-top:.5rem"><%= !storesReady.ios && !storesReady.android ? 'Store listings are coming soon.' : (!storesReady.ios ? 'The App Store listing is coming soon.' : 'The Google Play listing is coming soon.') %></p><% } %>
+
+    <h3 class="mt-1" style="font-size:1rem" id="link-code">2 · Link your Chew account</h3>
+    <% if (user.app_linked_at) { %>
+      <p class="mb-0"><span class="badge badge-live">Linked</span> <span class="fine"><%= u.fmtDateTime(user.app_linked_at) %></span></p>
+    <% } else if (linkCode) { %>
+      <p class="muted" style="font-size:.92rem">Open the app and enter this code, or sign in to the app with <strong><%= user.email %></strong>.</p>
+      <div class="link-code" aria-label="Link code"><%= linkCode %></div>
+      <div class="row mt-1"><a class="btn btn-green" href="<%= deepLink %>">Open in the app</a><button class="btn btn-light" type="button" data-copy="<%= linkCode %>"><%- icon('copy') %> Copy code</button></div>
+      <p class="fine">Expires <%= u.fmtDateTime(linkCodeExpires) %>. Refresh this page after linking to see your status.</p>
+    <% } else { %>
+      <p class="muted" style="font-size:.92rem">Sign in to the app with <strong><%= user.email %></strong>, or get a one-time link code.</p>
+      <form method="post" action="/office/see-it-cook-it/link-code"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-green" type="submit"><%- icon('key') %> Get my link code</button></form>
+    <% } %>
+
+    <h3 class="mt-1" style="font-size:1rem">3 · Complete activation in the app</h3>
+    <p class="muted mb-0" style="font-size:.92rem"><%= user.app_activated_at ? 'Activation complete — thank you!' : 'Finish the in-app activation step. Your profile updates automatically when the app confirms it.' %></p>
+  </section>
+
+  <div class="stack">
+    <% if (reward) { %>
+    <section class="card" style="border-color:var(--orange-100);background:var(--orange-50)">
+      <div class="card-head"><h2><%- icon('gift') %> <%= reward.reward_label %></h2><% if (activation.reward) { %><span class="badge badge-soon"><%= activation.reward.status %></span><% } %></div>
+      <% if (reward.reward_amount) { %><p class="mb-0" style="font-size:1.2rem;font-weight:800"><%= reward.reward_amount %> <%= reward.reward_unit %></p><% } %>
+      <% if (reward.reward_description) { %><p class="muted mb-0"><%= reward.reward_description %></p><% } %>
+    </section>
+    <% } %>
+    <section class="card">
+      <div class="card-head"><h2>Share the app</h2></div>
+      <p class="muted" style="font-size:.92rem">Your tracked app link sends each person to the right store for their phone and records the download click to you.</p>
+      <div class="copy-field"><input id="app-link" type="text" value="<%= appLinkUrl %>" readonly data-select aria-label="Your app link"><button class="btn btn-green" type="button" data-copy data-copy-target="#app-link"><%- icon('copy') %> Copy</button></div>
+      <div class="row mt-1" style="align-items:flex-start">
+        <div class="qr-box qr-sm"><%- appQrSvg %></div>
+        <div class="stack" style="flex:1;min-width:150px"><button class="btn btn-light btn-sm" type="button" data-share="<%= appLinkUrl %>" data-share-title="See It. Cook It."><%- icon('share') %> Share</button><a class="btn btn-light btn-sm" href="/office/qr/<%= appLinkCode %>.png?download=1"><%- icon('download') %> Download QR</a></div>
+      </div>
+    </section>
+  </div>
+</div>

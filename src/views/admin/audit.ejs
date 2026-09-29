@@ -1,0 +1,11 @@
+<h1>Audit log</h1>
+<p class="page-intro">Every admin change: who, what and when.</p>
+<form class="toolbar" method="get"><div class="field"><label for="q">Action prefix or target ID</label><input id="q" type="search" name="q" value="<%= q %>" placeholder="e.g. affiliate. or commission."></div><button class="btn btn-light" type="submit">Filter</button></form>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Detail</th></tr></thead>
+  <tbody>
+    <% if (!rows.length) { %><tr><td colspan="5" class="table-empty">No entries.</td></tr><% } %>
+    <% rows.forEach(function (r) { %><tr><td class="nowrap"><%= u.fmtDateTime(r.created_at) %></td><td><%= r.first_name ? r.first_name + ' ' + r.last_name : 'System' %></td><td class="mono"><%= r.action %></td><td><%= r.target_type || '' %> <%= r.target_id || '' %></td><td class="fine" style="max-width:420px;overflow-wrap:anywhere"><%= (r.detail || '').slice(0, 300) %></td></tr><% }) %>
+  </tbody>
+</table></div>
+<%- include('../partials/pager', { pg: pg, base: q ? '?q=' + encodeURIComponent(q) + '&' : '?' }) %>

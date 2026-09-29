@@ -1,0 +1,56 @@
+<% const manage = can('commissions.manage'); const back = new URLSearchParams(Object.entries({ status: status, affiliate: affiliate }).filter(([, v]) => v)).toString(); %>
+<div class="row-between">
+  <div><h1>Commission ledger</h1><p class="page-intro mb-0">Entries are created automatically from real tracked events that match an active <a href="/admin/m/commission_rules">commission rule</a> (<%= activeRules %> active).</p></div>
+</div>
+<div class="stats mt-1">
+  <% Object.entries(C.COMMISSION_STATUSES).forEach(function ([k, v]) { const t = totals[k] || { n: 0, cents: 0 }; %>
+  <a class="stat" href="?status=<%= k %>" style="text-decoration:none;color:inherit"><span class="label"><%= v %></span><span class="value"><%= u.money(t.cents) %></span><span class="meta"><%= t.n %> entries</span></a>
+  <% }) %>
+</div>
+<form class="toolbar" method="get">
+  <div class="field"><label for="st">Status</label><select id="st" name="status"><option value="">All</option><% Object.entries(C.COMMISSION_STATUSES).forEach(function ([k, v]) { %><option value="<%= k %>" <%= status === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
+  <div class="field"><label for="aff">Affiliate ID</label><input id="aff" type="text" name="affiliate" value="<%= affiliate %>"></div>
+  <button class="btn btn-light" type="submit">Filter</button>
+</form>
+<% if (manage) { %><form id="bulk" method="post" action="/admin/commissions/status"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="<%= back %>"></form><% } %>
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><% if (manage) { %><th><input type="checkbox" data-check-all=".c-cb" aria-label="Select all"></th><% } %><th>Date</th><th>Affiliate</th><th>Description</th><th>Source event</th><th>Status</th><th class="num">Amount</th></tr></thead>
+    <tbody>
+      <% if (!rows.length) { %><tr><td colspan="7" class="table-empty">No commission entries<%= status ? ' with this status' : '' %>.</td></tr><% } %>
+      <% rows.forEach(function (c) { %>
+      <tr>
+        <% if (manage) { %><td><input class="c-cb" type="checkbox" name="ids" value="<%= c.id %>" form="bulk" aria-label="Select entry"></td><% } %>
+        <td class="nowrap"><%= u.fmtDate(c.created_at) %></td>
+        <td><span class="mono"><%= c.affiliate_id %></span><br><span class="fine"><%= c.first_name %> <%= c.last_name %></span></td>
+        <td><%= c.description %><% if (c.note) { %><br><span class="fine"><%= c.note %></span><% } %></td>
+        <td><%= c.event_type ? (eventTypes[c.event_type] || c.event_type) + ' #' + c.event_id : 'Manual' %></td>
+        <td><span class="badge <%= c.status === 'paid' || c.status === 'approved' ? 'badge-live' : c.status === 'reversed' ? 'badge-red' : 'badge-soon' %>"><%= C.COMMISSION_STATUSES[c.status] %></span></td>
+        <td class="num"><%= u.money(c.amount_cents, c.currency) %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% if (manage && rows.length) { %>
+<div class="toolbar">
+  <div class="field"><label for="to">Move selected to</label><select id="to" name="to" form="bulk"><option value="approved">Approved</option><option value="paid">Paid</option><option value="reversed">Reversed</option></select></div>
+  <button class="btn btn-green" type="submit" form="bulk" data-confirm="Change the status of the selected entries?">Apply</button>
+  <p class="fine" style="align-self:center;margin:0">Allowed: Pending → Approved/Reversed · Approved → Paid/Reversed · Paid → Reversed. Every change is audited.</p>
+</div>
+<% } %>
+<%- include('../partials/pager', { pg: pg, base: '?' + (back ? back + '&' : '') }) %>
+<% if (manage) { %>
+<section class="card mt-2" style="max-width:720px">
+  <div class="card-head"><h2>Manual adjustment</h2></div>
+  <form class="form" method="post" action="/admin/commissions/adjust" data-confirm="Add this adjustment to the ledger?">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="form-row two">
+      <div class="field"><label for="adj-aff">Affiliate ID</label><input id="adj-aff" type="text" name="affiliate_id" required></div>
+      <div class="field"><label for="adj-amt">Amount (negative for a clawback)</label><input id="adj-amt" type="text" name="amount" inputmode="decimal" placeholder="10.00" required></div>
+    </div>
+    <div class="field"><label for="adj-note">Reason (required, shown to the affiliate)</label><input id="adj-note" type="text" name="note" required></div>
+    <div><button class="btn btn-light" type="submit">Add as Pending</button></div>
+  </form>
+</section>
+<% } %>

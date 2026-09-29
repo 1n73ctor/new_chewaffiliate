@@ -1,0 +1,17 @@
+<h1 class="page-title">Training</h1>
+<p class="page-intro">Short, step-by-step lessons. <%= progress.done %> of <%= progress.total %> complete.</p>
+<div class="progress" style="max-width:420px" role="progressbar" aria-valuenow="<%= progress.pct %>" aria-valuemin="0" aria-valuemax="100" aria-label="Training progress"><i style="width:<%= progress.pct %>%"></i></div>
+<% if (progress.next) { %><p class="mt-1"><a class="btn btn-green" href="/office/training/<%= progress.next.id %>">Continue: <%= progress.next.title %> →</a></p><% } %>
+<div class="grid-2 mt-1">
+  <% modules.forEach(function (m) { %>
+  <section class="card">
+    <div class="card-head"><h2><%= m.title %></h2><span class="badge <%= m.done === m.lessons.length && m.lessons.length ? 'badge-live' : 'badge-grey' %>"><%= m.done %>/<%= m.lessons.length %></span></div>
+    <% if (m.summary) { %><p class="muted" style="font-size:.92rem"><%= m.summary %></p><% } %>
+    <ul class="lesson-list">
+      <% m.lessons.forEach(function (l) { %>
+      <li class="<%= l.done ? 'done' : '' %>"><a href="/office/training/<%= l.id %>"><span class="tick"><%- icon('check') %></span><span><strong style="font-weight:600"><%= l.title %></strong><% if (l.summary) { %><br><span class="fine"><%= l.summary %></span><% } %></span><span class="fine nowrap"><%= l.minutes ? l.minutes + ' min' : '' %></span></a></li>
+      <% }) %>
+    </ul>
+  </section>
+  <% }) %>
+</div>

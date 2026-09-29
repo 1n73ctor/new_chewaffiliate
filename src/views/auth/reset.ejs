@@ -1,0 +1,15 @@
+<div class="join-card">
+  <% if (!valid) { %>
+    <h1>This link has expired</h1>
+    <p class="sub">Reset links work once and expire after 60 minutes.</p>
+    <a class="btn btn-green btn-lg" href="/forgot-password">Send a new link</a>
+  <% } else { %>
+    <h1>Choose a new password</h1>
+    <% if (error) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div><%= error %></div></div><% } %>
+    <form class="form" method="post" action="/reset-password/<%= token %>">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="field"><label for="password">New password</label><div class="pw-wrap"><input id="password" type="password" name="password" autocomplete="new-password" minlength="8" required autofocus><button class="pw-toggle" type="button" aria-pressed="false">Show</button></div><p class="hint">At least 8 characters.</p></div>
+      <button class="btn btn-green btn-xl btn-block" type="submit">SAVE PASSWORD</button>
+    </form>
+  <% } %>
+</div>

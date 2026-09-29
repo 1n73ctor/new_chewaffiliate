@@ -1,0 +1,6 @@
+<h1>Legal pages</h1>
+<p class="page-intro">The footer documents: Terms, Privacy, Affiliate Agreement, Promotional Guidelines and Earnings Disclosure.</p>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Page</th><th>URL</th><th>Version</th><th>Last updated</th><th></th></tr></thead>
+  <tbody><% pages.forEach(function (p) { %><tr><td><a href="/admin/pages/<%= p.slug %>"><%= p.title %></a></td><td><a class="mono fine" href="/<%= p.slug %>" target="_blank">/<%= p.slug %></a></td><td><%= p.version || '—' %></td><td><%= u.fmtDate(p.updated_at) %><%= p.editor ? ' · ' + p.editor : '' %></td><td class="actions"><a class="btn btn-light btn-xs" href="/admin/pages/<%= p.slug %>">Edit</a></td></tr><% }) %></tbody>
+</table></div>

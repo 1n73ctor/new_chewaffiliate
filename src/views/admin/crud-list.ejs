@@ -1,0 +1,67 @@
+<%
+  const fmt = (f, v) => {
+    if (!f) return v == null ? '' : v;
+    if (f.type === 'checkbox') return v ? '✓' : '—';
+    if (f.type === 'select') return (maps[f.name] || {})[String(v)] || (v == null ? '—' : v);
+    if (f.type === 'money') return u.money(v);
+    if (f.type === 'percent') return (v || 0) / 100 + '%';
+    return v == null || v === '' ? '—' : v;
+  };
+  const backParams = new URLSearchParams(); if (q.search) backParams.set('q', q.search); (r.filters || []).forEach(k => { if (q[k]) backParams.set(k, q[k]); }); if (pg.page > 1) backParams.set('page', pg.page);
+  const back = backParams.toString();
+  const pagerBase = '?' + (() => { const p = new URLSearchParams(backParams); p.delete('page'); const s = p.toString(); return s ? s + '&' : ''; })();
+%>
+<div class="row-between">
+  <div><h1><%= r.title %></h1><p class="page-intro mb-0"><%= u.num(pg.total) %> <%= r.singular %><%= pg.total === 1 ? '' : 's' %></p></div>
+  <a class="btn btn-green" href="/admin/m/<%= r.key %>/new"><%- icon('plus') %> New <%= r.singular %></a>
+</div>
+<% if (r.intro) { %><p class="notice mt-1"><%= r.intro %></p><% } %>
+<% if (r.search || filterFields.length) { %>
+<form class="toolbar" method="get">
+  <% if (r.search) { %><div class="field"><label for="q">Search</label><input id="q" type="search" name="q" value="<%= q.search %>"></div><% } %>
+  <% filterFields.forEach(function (f) { %>
+  <div class="field"><label for="f-<%= f.name %>"><%= f.label %></label><select id="f-<%= f.name %>" name="<%= f.name %>" data-autosubmit><option value="">All</option><% f.options.forEach(function (o) { %><option value="<%= o[0] %>" <%= String(q[f.name]) === String(o[0]) ? 'selected' : '' %>><%= o[1] %></option><% }) %></select></div>
+  <% }) %>
+  <button class="btn btn-light" type="submit">Filter</button>
+  <% if (back) { %><a class="btn btn-ghost" href="/admin/m/<%= r.key %>">Clear</a><% } %>
+</form>
+<% } %>
+
+<% if (inlineField) { %><form id="bulk" method="post" action="/admin/m/<%= r.key %>/bulk"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="<%= back %>"></form><% } %>
+<div class="table-wrap mt-1">
+  <table class="table">
+    <thead><tr>
+      <% if (inlineField) { %><th><input type="checkbox" aria-label="Select all" data-check-all=".bulk-cb"></th><% } %>
+      <% r.columns.forEach(function (c) { const f = fieldsByName[c]; %><th class="<%= f && (f.type === 'number' || f.type === 'money') ? 'num' : '' %>"><%= f ? f.label : c %></th><% }) %>
+      <th></th>
+    </tr></thead>
+    <tbody>
+      <% if (!rows.length) { %><tr><td colspan="<%= r.columns.length + 2 %>" class="table-empty">Nothing here yet.</td></tr><% } %>
+      <% rows.forEach(function (row) { %>
+      <tr>
+        <% if (inlineField) { %><td><input class="bulk-cb" type="checkbox" name="ids" value="<%= row.id %>" form="bulk" aria-label="Select row"></td><% } %>
+        <% r.columns.forEach(function (c, ci) { const f = fieldsByName[c]; %>
+        <td class="<%= f && (f.type === 'number' || f.type === 'money') ? 'num' : '' %>">
+          <% if (inlineField && c === inlineField.name) { %>
+            <form class="inline-form" method="post" action="/admin/m/<%= r.key %>/<%= row.id %>/inline"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="<%= back %>">
+              <select class="status-select" name="value" data-autosubmit aria-label="<%= inlineField.label %>"><% inlineField.options.forEach(function (o) { %><option value="<%= o[0] %>" <%= String(row[c]) === String(o[0]) ? 'selected' : '' %>><%= o[1] %></option><% }) %></select>
+              <noscript><button class="btn btn-xs btn-light" type="submit">Save</button></noscript>
+            </form>
+          <% } else if (ci === 0) { %>
+            <a href="/admin/m/<%= r.key %>/<%= row.id %>"><%= fmt(f, row[c]) %></a>
+          <% } else { %><%= fmt(f, row[c]) %><% } %>
+        </td>
+        <% }) %>
+        <td class="actions"><a class="btn btn-light btn-xs" href="/admin/m/<%= r.key %>/<%= row.id %>">Edit</a></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% if (inlineField && rows.length) { %>
+<div class="toolbar">
+  <div class="field"><label for="bulk-value">Set <%= inlineField.label.toLowerCase() %> for selected</label><select id="bulk-value" name="value" form="bulk"><% inlineField.options.forEach(function (o) { %><option value="<%= o[0] %>"><%= o[1] %></option><% }) %></select></div>
+  <button class="btn btn-green" type="submit" form="bulk">Apply to selected</button>
+</div>
+<% } %>
+<%- include('../partials/pager', { pg: pg, base: pagerBase }) %>

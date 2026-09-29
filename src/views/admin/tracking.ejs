@@ -1,0 +1,82 @@
+<% const s = summary; const withView = (v) => { const p = new URLSearchParams(qs); p.set('view', v); p.delete('page'); return '?' + p.toString(); }; const pagerBase = (() => { const p = new URLSearchParams(qs); p.delete('page'); const t = p.toString(); return '?' + (t ? t + '&' : ''); })(); %>
+<div class="row-between">
+  <div><h1>Tracking report</h1><p class="page-intro mb-0"><strong>WHO → WHAT CONTENT → WHAT SOURCE → WHAT LINK → WHAT PRODUCT → WHAT RESULT</strong></p></div>
+  <a class="btn btn-light" href="?<%= qs %><%= qs ? '&' : '' %>format=csv"><%- icon('download') %> Export CSV</a>
+</div>
+
+<nav class="pills mt-1" aria-label="Range"><% [7, 30, 90].forEach(function (d) { %><a class="pill <%= days === d ? 'on' : '' %>" href="?days=<%= d %>&view=<%= f.view %>">Program · last <%= d %> days</a><% }) %></nav>
+<div class="stats">
+  <div class="stat"><span class="label">Clicks</span><span class="value"><%= u.num(s.clicks) %></span><span class="meta"><%= u.num(s.uniqueVisitors) %> unique</span></div>
+  <div class="stat"><span class="label">Referred sign-ups</span><span class="value"><%= u.num(s.signups) %></span></div>
+  <div class="stat"><span class="label">App download clicks</span><span class="value"><%= u.num(s.appDownloads) %></span><span class="meta"><%= u.num(s.activations) %> activations</span></div>
+  <div class="stat"><span class="label">Qualifying</span><span class="value"><%= u.num(s.qualifying) %></span></div>
+</div>
+<section class="card mt-1"><div class="card-head"><h2>Clicks per day</h2></div><%- barChart(series, { unit: 'clicks', label: 'Program clicks per day', empty: 'No clicks in this period.' }) %></section>
+<div class="grid-2 mt-1">
+  <%- include('../partials/breakdown', { heading: 'By source / channel', rows: bySource }) %>
+  <%- include('../partials/breakdown', { heading: 'By content', rows: byContent }) %>
+  <%- include('../partials/breakdown', { heading: 'By campaign', rows: byCampaign }) %>
+  <%- include('../partials/breakdown', { heading: 'By destination / product', rows: byDestination }) %>
+</div>
+
+<h2 class="mt-2" style="font-size:1.15rem">Detail</h2>
+<nav class="pills" aria-label="View"><a class="pill <%= f.view === 'clicks' ? 'on' : '' %>" href="<%= withView('clicks') %>">Clicks</a><a class="pill <%= f.view === 'results' ? 'on' : '' %>" href="<%= withView('results') %>">Results (events)</a></nav>
+<form class="toolbar" method="get">
+  <input type="hidden" name="view" value="<%= f.view %>">
+  <div class="field"><label for="from">From</label><input id="from" type="date" name="from" value="<%= f.from %>"></div>
+  <div class="field"><label for="to">To</label><input id="to" type="date" name="to" value="<%= f.to %>"></div>
+  <div class="field"><label for="affiliate">Affiliate ID</label><input id="affiliate" type="text" name="affiliate" value="<%= f.affiliate %>" placeholder="CHW…"></div>
+  <div class="field"><label for="content">Content</label><select id="content" name="content"><option value="">Any</option><% contents.forEach(function (c) { %><option value="<%= c.id %>" <%= f.content === c.id ? 'selected' : '' %>><%= c.title %></option><% }) %></select></div>
+  <div class="field"><label for="source">Source</label><select id="source" name="source"><option value="">Any</option><% sources.forEach(function (x) { %><option value="<%= x[0] %>" <%= f.source === x[0] ? 'selected' : '' %>><%= x[1] %></option><% }) %></select></div>
+  <div class="field"><label for="campaign">Campaign</label><select id="campaign" name="campaign"><option value="">Any</option><% campaigns.forEach(function (c) { %><option value="<%= c.id %>" <%= f.campaign === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+  <div class="field"><label for="destination">Destination</label><select id="destination" name="destination"><option value="">Any</option><% destinations.forEach(function (d) { %><option value="<%= d.key %>" <%= f.destination === d.key ? 'selected' : '' %>><%= d.label %></option><% }) %></select></div>
+  <% if (f.view === 'results') { %>
+  <div class="field"><label for="type">Result</label><select id="type" name="type"><option value="">Any</option><% Object.entries(eventTypes).forEach(function ([k, v]) { %><option value="<%= k %>" <%= f.type === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
+  <% } else { %>
+  <label class="check-row" style="align-self:center"><input type="checkbox" name="converted" value="1" <%= f.converted ? 'checked' : '' %>><span>Only clicks with a result</span></label>
+  <label class="check-row" style="align-self:center"><input type="checkbox" name="bots" value="1" <%= f.bots ? 'checked' : '' %>><span>Include bots &amp; self-clicks</span></label>
+  <% } %>
+  <button class="btn btn-green" type="submit">Apply</button>
+  <a class="btn btn-ghost" href="?view=<%= f.view %>">Reset</a>
+</form>
+
+<div class="table-wrap">
+  <table class="table">
+    <% if (f.view === 'clicks') { %>
+    <thead><tr><th>When</th><th>Who</th><th>What content</th><th>What source</th><th>What link</th><th>What product</th><th>What result</th></tr></thead>
+    <tbody>
+      <% if (!rows.length) { %><tr><td colspan="7" class="table-empty">No clicks match.</td></tr><% } %>
+      <% rows.forEach(function (r) { %>
+      <tr style="<%= r.is_bot || r.is_self ? 'opacity:.55' : '' %>">
+        <td class="nowrap"><%= u.fmtDateTime(r.created_at) %></td>
+        <td><span class="mono"><%= r.affiliate_id %></span><br><span class="fine"><%= r.affiliate_name %></span></td>
+        <td><%= r.content || '—' %><% if (r.campaign) { %><br><span class="fine"><%= r.campaign %></span><% } %></td>
+        <td><%= sourceLabel(r.source) %><%= r.is_bot ? ' · bot' : r.is_self ? ' · self' : '' %></td>
+        <td><%= r.link_label || '—' %><% if (r.link_code) { %><br><span class="mono fine"><%= r.link_code %></span><% } %></td>
+        <td><%= r.destination || '—' %></td>
+        <td><%= r.results ? r.results.split(', ').map(t => eventTypes[t] || t).join(', ') : '—' %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+    <% } else { %>
+    <thead><tr><th>When</th><th>What result</th><th>Who (credited)</th><th>What content</th><th>What source</th><th>What link</th><th>What product</th><th class="num">Value</th><th>Origin</th></tr></thead>
+    <tbody>
+      <% if (!rows.length) { %><tr><td colspan="9" class="table-empty">No results match.</td></tr><% } %>
+      <% rows.forEach(function (r) { %>
+      <tr>
+        <td class="nowrap"><%= u.fmtDateTime(r.created_at) %></td>
+        <td><strong><%= eventTypes[r.type] || r.type %></strong><% if (r.subject_affiliate_id) { %><br><span class="fine">by <span class="mono"><%= r.subject_affiliate_id %></span></span><% } %></td>
+        <td><% if (r.affiliate_id) { %><span class="mono"><%= r.affiliate_id %></span><br><span class="fine"><%= r.affiliate_name %></span><% } else { %><span class="fine">Unattributed</span><% } %></td>
+        <td><%= r.content || '—' %><% if (r.campaign) { %><br><span class="fine"><%= r.campaign %></span><% } %></td>
+        <td><%= sourceLabel(r.source) %></td>
+        <td><%= r.link_label || r.link_code || '—' %></td>
+        <td><%= r.destination || '—' %></td>
+        <td class="num"><%= r.value_cents != null ? u.money(r.value_cents, r.currency || 'USD') : '—' %></td>
+        <td><%= r.origin %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+    <% } %>
+  </table>
+</div>
+<%- include('../partials/pager', { pg: pg, base: pagerBase }) %>

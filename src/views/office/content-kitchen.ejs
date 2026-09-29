@@ -1,0 +1,30 @@
+<div class="kitchen-hero">
+  <h1 class="page-title">Content Kitchen™</h1>
+  <p class="tagline">We cook the content. You serve it.</p>
+</div>
+
+<section class="t3-banner">
+  <h2><%- icon('flame') %> TODAY’S 3 — Fresh Out of the Kitchen</h2>
+  <p>Chosen by the Chew team. Start here when you’re short on time.</p>
+  <% if (todays3.length) { %>
+  <div class="t3-grid"><% todays3.forEach(function (a, i) { %><%- include('../partials/asset-card', { a: a, rank: i + 1 }) %><% }) %></div>
+  <% } else { %><p class="mb-0 muted">Today’s picks are being plated. Check back soon.</p><% } %>
+</section>
+
+<div class="kitchen-filters">
+  <nav class="pills" aria-label="Content categories">
+    <a class="pill <%= !category ? 'on' : '' %>" href="/office/content-kitchen">All</a>
+    <% categories.forEach(function (c) { %><a class="pill <%= category && category.id === c.id ? 'on' : '' %>" href="/office/content-kitchen?category=<%= c.slug %>"><%= c.name %> <span class="count"><%= c.n %></span></a><% }) %>
+  </nav>
+  <form action="/office/content-kitchen" role="search">
+    <% if (category) { %><input type="hidden" name="category" value="<%= category.slug %>"><% } %>
+    <div class="search-field"><input type="search" name="q" value="<%= q %>" placeholder="Search content" aria-label="Search content"><button type="submit" aria-label="Search"><%- icon('search') %></button></div>
+  </form>
+</div>
+
+<% if (!assets.length) { %>
+  <div class="empty mt-1"><%- icon('kitchen') %><h3>Nothing here yet</h3><p><%= q ? 'No assets match your search.' : 'New content for this category is on its way.' %></p></div>
+<% } else { %>
+  <div class="asset-grid mt-1"><% assets.forEach(function (a) { %><%- include('../partials/asset-card', { a: a, rank: null }) %><% }) %></div>
+<% } %>
+<p class="fine mt-2">Always add a disclosure like #ad or #affiliate — see the <a href="/promotional-guidelines">Promotional Guidelines</a>. Usage status shows which assets you’ve already used.</p>

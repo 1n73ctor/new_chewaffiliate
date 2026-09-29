@@ -1,0 +1,36 @@
+<% const tone = (s) => s === 'active' ? 'badge-live' : s.startsWith('pending') ? 'badge-soon' : 'badge-red';
+   const qp = new URLSearchParams(); if (q) qp.set('q', q); if (status) qp.set('status', status); const base = '?' + (qp.toString() ? qp.toString() + '&' : ''); %>
+<div class="row-between">
+  <div><h1>Affiliates</h1><p class="page-intro mb-0">Search by name, email, mobile or Affiliate ID.</p></div>
+  <% if (can('affiliates.manage')) { %><a class="btn btn-light" href="/admin/affiliates?<%= qp.toString() %><%= qp.toString() ? '&' : '' %>format=csv"><%- icon('download') %> Export CSV</a><% } %>
+</div>
+<nav class="pills mt-1" aria-label="Filter by status">
+  <a class="pill <%= !status ? 'on' : '' %>" href="?<%= q ? 'q=' + encodeURIComponent(q) : '' %>">All</a>
+  <% Object.entries(C.USER_STATUSES).forEach(function ([k, v]) { %><a class="pill <%= status === k ? 'on' : '' %>" href="?status=<%= k %><%= q ? '&q=' + encodeURIComponent(q) : '' %>"><%= v %> <span class="count"><%= statusCounts[k] || 0 %></span></a><% }) %>
+</nav>
+<form class="toolbar" method="get">
+  <% if (status) { %><input type="hidden" name="status" value="<%= status %>"><% } %>
+  <div class="field" style="flex:1;max-width:420px"><label for="q">Search</label><input id="q" type="search" name="q" value="<%= q %>" placeholder="Name, email, mobile or CHW…"></div>
+  <button class="btn btn-green" type="submit"><%- icon('search') %> Search</button>
+</form>
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Affiliate</th><th>Affiliate ID</th><th>Status</th><th>Country</th><th>Sponsor</th><th class="num">Referrals</th><th>App</th><th>Joined</th></tr></thead>
+    <tbody>
+      <% if (!rows.length) { %><tr><td colspan="8" class="table-empty">No affiliates match.</td></tr><% } %>
+      <% rows.forEach(function (a) { %>
+      <tr>
+        <td><a href="/admin/affiliates/<%= a.id %>"><%= a.first_name %> <%= a.last_name %></a><br><span class="fine"><%= a.email %></span></td>
+        <td class="mono"><%= a.affiliate_id || '—' %></td>
+        <td><span class="badge <%= tone(a.status) %>"><%= C.USER_STATUSES[a.status] %></span></td>
+        <td><%= a.country || '—' %></td>
+        <td class="mono"><%= a.sponsor_affiliate_id || '—' %></td>
+        <td class="num"><%= a.referrals %></td>
+        <td><%= a.app_activated_at ? '✓ Activated' : a.app_linked_at ? 'Linked' : '—' %></td>
+        <td class="nowrap"><%= u.fmtDate(a.created_at) %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/pager', { pg: pg, base: base }) %>

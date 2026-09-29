@@ -1,0 +1,22 @@
+<h1>Tracked links</h1>
+<p class="page-intro">Every link affiliates have created. Disable a link to stop it tracking (visitors go to the homepage).</p>
+<form class="toolbar" method="get"><div class="field"><label for="q">Link code or Affiliate ID</label><input id="q" type="search" name="q" value="<%= q %>"></div><button class="btn btn-green" type="submit">Find</button><% if (q) { %><a class="btn btn-ghost" href="/admin/links">Clear</a><% } %></form>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Link</th><th>Affiliate</th><th>Destination</th><th>Source</th><th>Campaign / content</th><th class="num">Clicks</th><th>Created</th><th></th></tr></thead>
+  <tbody>
+    <% if (!rows.length) { %><tr><td colspan="8" class="table-empty">No tracked links.</td></tr><% } %>
+    <% rows.forEach(function (l) { %>
+    <tr style="<%= l.active ? '' : 'opacity:.55' %>">
+      <td><strong><%= l.label || l.code %></strong><br><span class="mono fine"><%= l.code %></span></td>
+      <td><span class="mono"><%= l.affiliate_id %></span><br><span class="fine"><%= l.first_name %> <%= l.last_name %></span></td>
+      <td><%= l.destination_label || l.destination_key %></td>
+      <td><%= sourceLabel(l.source) %></td>
+      <td><%= [l.campaign_name, l.content_title].filter(Boolean).join(' · ') || '—' %></td>
+      <td class="num"><%= l.clicks %></td>
+      <td class="nowrap"><%= u.fmtDate(l.created_at) %></td>
+      <td class="actions"><form class="inline-form" method="post" action="/admin/links/<%= l.id %>/toggle"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="q" value="<%= q %>"><button class="btn btn-xs <%= l.active ? 'btn-danger' : 'btn-light' %>" type="submit"><%= l.active ? 'Disable' : 'Enable' %></button></form></td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table></div>
+<%- include('../partials/pager', { pg: pg, base: q ? '?q=' + encodeURIComponent(q) + '&' : '?' }) %>

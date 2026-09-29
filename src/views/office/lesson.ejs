@@ -1,0 +1,14 @@
+<p class="fine"><a href="/office/training">← Training</a> · <%= lesson.module_title %></p>
+<article class="card" style="max-width:860px">
+  <h1 class="page-title"><%= lesson.title %></h1>
+  <p class="fine"><%= lesson.minutes ? lesson.minutes + ' min' : '' %><%= done ? ' · ✓ Completed' : '' %></p>
+  <% if (video && video.type === 'iframe') { %><div class="video-frame"><iframe src="<%= video.src %>" title="<%= lesson.title %>" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
+  <% } else if (video && video.type === 'video') { %><div class="video-frame"><video src="<%= video.src %>" controls playsinline preload="metadata"></video></div>
+  <% } else if (video) { %><p><a class="btn btn-light" href="<%= video.src %>" target="_blank" rel="noopener"><%- icon('play') %> Watch the video</a></p><% } %>
+  <div class="prose"><%- bodyHtml %></div>
+  <hr>
+  <div class="row-between">
+    <% if (prevId) { %><a class="btn btn-light" href="/office/training/<%= prevId %>">← Previous</a><% } else { %><span></span><% } %>
+    <form method="post" action="/office/training/<%= lesson.id %>/complete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-green btn-lg" type="submit"><%= done ? (nextId ? 'Next lesson →' : 'Back to training') : (nextId ? 'Mark complete & continue →' : 'Mark complete') %></button></form>
+  </div>
+</article>

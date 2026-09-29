@@ -1,0 +1,39 @@
+<section class="hero seeit" style="padding-bottom:56px">
+  <div class="wrap seeit-grid">
+    <div class="seeit-visual"><%- include('../partials/phone', { img: '/img/food/pasta-salad.webp', dish: 'Pesto Farfalle Salad', meta: '20 min · 4 servings · Easy', size: 'phone-lg', eager: true }) %></div>
+    <div>
+      <p class="eyebrow eyebrow-orange">The Chew app</p>
+      <h1 class="display" style="font-size:clamp(2.2rem,6vw,3.4rem)">See It. Cook It.</h1>
+      <p class="lead"><strong>Capture food. Get the recipe. Watch it come to life.</strong></p>
+      <% if (storeUnavailable) { %>
+      <div class="alert alert-info" role="status"><%- icon('bell') %><div>The <%= storeUnavailable === 'ios' ? 'App Store' : 'Google Play' %> listing is coming soon. Check back shortly — your affiliate attribution is saved on this device.</div></div>
+      <% } %>
+      <div class="feature-cards">
+        <div class="feature-card"><span class="num"><%- icon('camera') %></span><div><h3>Take a Photo</h3><p>Snap any dish — a restaurant plate, a friend’s dinner, a photo in your feed.</p></div></div>
+        <div class="feature-card"><span class="num"><%- icon('book') %></span><div><h3>Get the Recipe</h3><p>Chew’s food AI identifies the dish and builds the recipe.</p></div></div>
+        <div class="feature-card"><span class="num"><%- icon('play') %></span><div><h3>See It Cook</h3><p>Watch the recipe come to life, step by step.</p></div></div>
+      </div>
+      <div id="download"><%- include('../partials/store-badges') %></div>
+    </div>
+  </div>
+</section>
+<section class="section" style="padding-top:40px">
+  <div class="wrap grid-2" style="max-width:980px">
+    <div class="card">
+      <h2 style="font-size:1.25rem">For Chew affiliates</h2>
+      <p>Download the app, then link it to your Chew account from <strong>Back Office → See It. Cook It.</strong> Your activation status updates automatically once you complete the in-app activation step.</p>
+      <ol class="activation-steps">
+        <li><span class="dot">1</span><div><strong>Download</strong><span class="sub">App Store or Google Play</span></div></li>
+        <li><span class="dot">2</span><div><strong>Link or recognize your Chew account</strong><span class="sub">Sign in or enter your link code</span></div></li>
+        <li><span class="dot">3</span><div><strong>Complete activation</strong><span class="sub">Finish the required in-app step</span></div></li>
+        <li><span class="dot">4</span><div><strong>Profile updated</strong><span class="sub">Your back office shows you as activated</span></div></li>
+      </ol>
+      <p class="mt-1 mb-0"><a class="btn btn-green" href="<%= user && user.affiliate_id ? '/office/see-it-cook-it' : '/join' %>"><%= user && user.affiliate_id ? 'Open activation in my back office' : 'Join free to get started' %></a></p>
+    </div>
+    <div class="card">
+      <h2 style="font-size:1.25rem">Sharing the app</h2>
+      <p>Every affiliate gets a tracked app link and QR code. When someone downloads through it, the download click is recorded against the affiliate who shared it — and, where the stores support it, the install carries that attribution too.</p>
+      <p class="mb-0 muted">Download buttons on this site keep the attribution of the affiliate link that brought the visitor here.</p>
+    </div>
+  </div>
+</section>

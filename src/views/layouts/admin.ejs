@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<%- include('../partials/head', { noindex: true }) %>
+</head>
+<body class="admin-body">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="admin-top">
+  <div class="bar" style="padding:0 16px">
+    <%- include('../partials/logo', { href: '/admin' }) %>
+    <span class="role-chip"><%= locals.roleLabel || 'Staff' %></span>
+    <div class="tools">
+      <% if (user.affiliate_id) { %><a class="btn btn-light btn-sm" href="/office">My back office</a><% } %>
+      <a class="icon-btn" href="/" title="View site" aria-label="View site"><%- icon('globe') %></a>
+      <form class="inline-form" method="post" action="/signout"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="icon-btn" type="submit" title="Sign out" aria-label="Sign out"><%- icon('logout') %></button></form>
+    </div>
+  </div>
+</header>
+<div class="admin-shell">
+  <aside class="admin-side" id="admin-side">
+    <button class="admin-menu-toggle" type="button" data-toggle="admin-side" aria-expanded="false"><%- icon('menu') %> Admin menu</button>
+    <nav aria-label="Admin">
+      <% (locals.adminNav || []).forEach(function (s) { %>
+        <% if (s.section) { %><h4><%= s.section %></h4><% } %>
+        <% s.items.forEach(function (i) { const on = locals.nav === i.key; %>
+          <a href="<%= i.href %>" class="<%= on ? 'on' : '' %>"<%= on ? ' aria-current=page' : '' %>><%- icon(i.icon) %><%= i.label %><% if (i.key === 'tickets' && locals.openTickets) { %><span class="count"><%= openTickets %></span><% } %></a>
+        <% }) %>
+      <% }) %>
+    </nav>
+  </aside>
+  <main id="main" class="admin-main">
+    <% if (flash && flash.length) { flash.forEach(function (f) { %><div class="alert alert-<%= f.type %>" role="status"><%- icon(f.type === 'error' ? 'x' : f.type === 'success' ? 'check' : 'bell') %><div><%= f.message %></div></div><% }) } %>
+    <%- body %>
+  </main>
+</div>
+<script src="/js/app.js?v=<%= assetVersion %>" defer></script>
+</body>
+</html>

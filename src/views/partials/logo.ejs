@@ -1,0 +1,6 @@
+<a class="logo" href="<%= locals.href || '/' %>" aria-label="<%= site.site_name %> home">
+  <% if (site.logo_url) { %><img class="logo-custom" src="<%= site.logo_url %>" alt="<%= site.site_name %>"><% } else { %>
+  <img src="/img/logo-mark.svg" alt="" width="34" height="34">
+  <span class="logo-word"><b>CHEW</b><span>NETWORK</span></span>
+  <% } %>
+</a>

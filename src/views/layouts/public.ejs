@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+<%- include('../partials/head') %>
+</head>
+<body class="<%= bodyClass %>">
+<a class="skip-link" href="#main">Skip to content</a>
+<%- include('../partials/site-header') %>
+<main id="main">
+<%- include('../partials/flash') %>
+<%- body %>
+</main>
+<%- include('../partials/site-footer') %>
+<script src="/js/app.js?v=<%= assetVersion %>" defer></script>
+</body>
+</html>

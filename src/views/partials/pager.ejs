@@ -1,0 +1,7 @@
+<% if (pg.pages > 1) { const base = locals.base || '?'; %>
+<nav class="pager" aria-label="Pagination">
+  <% if (pg.page > 1) { %><a class="btn btn-light btn-sm" href="<%= base %>page=<%= pg.page - 1 %>">← Previous</a><% } %>
+  <span>Page <%= pg.page %> of <%= pg.pages %> · <%= u.num(pg.total) %> total</span>
+  <% if (pg.page < pg.pages) { %><a class="btn btn-light btn-sm" href="<%= base %>page=<%= pg.page + 1 %>">Next →</a><% } %>
+</nav>
+<% } %>

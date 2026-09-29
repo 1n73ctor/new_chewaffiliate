@@ -1,0 +1,144 @@
+<%
+  // Homepage build order (blueprint §14): 01 eyebrow · 02 headline · 03 free line · 04 CTA ·
+  // 05 benefit strip · 06 See It. Cook It. · 07 125+ Ways · 08 Back Office · 09 How It Works ·
+  // 10 final CTA · 11 footer (layout)
+  const bullets = String(site.hero_bullets || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const benefits = String(site.benefit_strip || '').split(/\r?\n/).map(l => l.split('|').map(s => s.trim())).filter(b => b[0]);
+  const benefitIcons = ['office', 'kitchen', 'training', 'chart', 'grid'];
+  const signedIn = user && user.status === 'active' && user.affiliate_id;
+  const ctaHref = signedIn ? '/office' : '/join';
+%>
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow"><%= site.hero_eyebrow %></p>
+      <h1 class="hero-title"><%= site.hero_headline %></h1>
+      <p class="free-line"><span>100% Free</span><span class="dot" aria-hidden="true"></span><span>No purchase required</span></p>
+      <p class="hero-sub"><%= site.hero_subtext %></p>
+      <ul class="checklist">
+        <% bullets.forEach(function (b) { %><li><span class="check"><%- icon('check') %></span><span><%= b %></span></li><% }) %>
+      </ul>
+      <div class="hero-cta">
+        <% if (signedIn) { %>
+          <a class="btn btn-cta btn-xl" href="/office">GO TO MY BACK OFFICE <%- icon('arrow') %></a>
+        <% } else { %>
+          <a class="btn btn-cta btn-xl" href="/join"><%= String(site.hero_cta_label || 'Join Chew Free').toUpperCase() %> <%- icon('arrow') %></a>
+          <p class="hero-signin">Already an affiliate? <a href="/signin">Sign In</a></p>
+        <% } %>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <img class="hero-photo" src="/img/food/veggie-bowl.webp" alt="A colorful bowl of fresh vegetables, avocado and chickpeas" width="1100" height="733" fetchpriority="high" decoding="async">
+      <div class="hero-visual-inner">
+        <%- include('../partials/phone', { img: '/img/food/pasta-salad.webp', dish: 'Pesto Farfalle Salad', meta: '20 min · 4 servings · Easy', eager: true }) %>
+        <%- include('../partials/store-badges', { quiet: true }) %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="benefits" aria-label="What you get">
+  <div class="wrap benefit-row">
+    <% benefits.forEach(function (b, i) { %>
+    <div class="benefit">
+      <span class="benefit-ico"><%- icon(benefitIcons[i] || 'sparkle') %></span>
+      <div><strong><%= b[0] %></strong><span class="sub"><%= b[1] || '' %></span></div>
+    </div>
+    <% }) %>
+  </div>
+</section>
+
+<section class="section seeit" id="see-it-cook-it">
+  <div class="wrap seeit-grid">
+    <div class="seeit-visual">
+      <%- include('../partials/phone', { img: '/img/food/salad-dark.webp', dish: 'Greek Salad with Feta', meta: '15 min · 2 servings · No cook', size: 'phone-lg' }) %>
+    </div>
+    <div>
+      <p class="eyebrow eyebrow-orange">The Chew app</p>
+      <h2 class="display">See It. Cook It.</h2>
+      <p class="lead"><strong>Capture food. Get the recipe. Watch it come to life.</strong></p>
+      <div class="feature-cards">
+        <div class="feature-card"><span class="num"><%- icon('camera') %></span><div><h3>Take a Photo</h3><p>Point your camera at any dish — at home, at a restaurant, on your feed.</p></div></div>
+        <div class="feature-card"><span class="num"><%- icon('book') %></span><div><h3>Get the Recipe</h3><p>Ingredients and step-by-step instructions, instantly.</p></div></div>
+        <div class="feature-card"><span class="num"><%- icon('play') %></span><div><h3>See It Cook</h3><p>Watch the recipe come to life as a cooking video.</p></div></div>
+      </div>
+      <%- include('../partials/store-badges') %>
+      <p class="fine" style="margin-top:.75rem"><a href="/see-it-cook-it">Learn more about See It. Cook It. →</a></p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="ways">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow"><%= site.ways_count_label %> Ways to Participate</p>
+      <h2>One food ecosystem. Many ways to take part.</h2>
+      <p>Browse eight areas of the Chew ecosystem. Every pathway is clearly labeled so you always know what’s available now and what’s coming.</p>
+    </div>
+    <div class="category-grid">
+      <% categories.forEach(function (c) { %>
+      <a class="cat-card" href="/ways-to-earn?category=<%= c.slug %>#results">
+        <img src="<%= c.image %>" alt="" loading="lazy" decoding="async" width="640" height="480">
+        <div class="cat-body">
+          <h3><%- icon(c.icon || 'grid') %><%= c.name %></h3>
+          <p><%= c.tagline %></p>
+          <span class="cat-meta"><%= c.total %> pathways<% if (c.available) { %> · <%= c.available %> available now<% } %></span>
+        </div>
+      </a>
+      <% }) %>
+    </div>
+    <p class="center mt-2"><a class="btn btn-cta btn-lg" href="/ways-to-earn">EXPLORE ALL <%= site.ways_count_label %> WAYS <%- icon('arrow') %></a></p>
+  </div>
+</section>
+
+<section class="section section-soft" id="back-office">
+  <div class="wrap op-grid">
+    <div>
+      <p class="eyebrow">Your Affiliate Back Office</p>
+      <h2>Simple on the outside. The power of Chew is revealed after login.</h2>
+      <p class="lead">Everything you need in one place — created automatically the moment you join.</p>
+      <ul class="feature-list">
+        <li><span class="fi"><%- icon('qr') %></span><div><strong>Your Affiliate ID, link &amp; QR code</strong><span class="sub">Ready on your dashboard from day one.</span></div></li>
+        <li><span class="fi"><%- icon('kitchen') %></span><div><strong>Content Kitchen™ &amp; Today’s 3</strong><span class="sub">Fresh, approved posts — copy the caption, get your link, share.</span></div></li>
+        <li><span class="fi"><%- icon('chart') %></span><div><strong>Analytics &amp; commissions</strong><span class="sub">Real clicks, referrals and qualifying activity — nothing made up.</span></div></li>
+        <li><span class="fi"><%- icon('training') %></span><div><strong>Training &amp; resources</strong><span class="sub">Short lessons that get you confident fast.</span></div></li>
+      </ul>
+      <a class="btn btn-outline btn-lg" href="<%= ctaHref %>"><%= signedIn ? 'Open my back office' : 'Get my back office — free' %></a>
+    </div>
+    <div class="op-mock" aria-hidden="true">
+      <div class="op-bar"><i></i><i></i><i></i><span>chew.network/office</span></div>
+      <div class="op-body">
+        <div class="op-side"><span class="on">Dashboard</span><span>Content Kitchen</span><span>My Links</span><span>Ways to Earn</span><span>Analytics</span><span>Commissions</span><span>Training</span><span>See It. Cook It.</span></div>
+        <div class="op-main">
+          <div class="op-card op-row"><div><b>Your Affiliate ID</b><span class="op-id">CHW•••••</span><div class="op-link" style="margin-top:.4rem">chew.network/a/CHW•••••</div></div><div class="op-qr"></div></div>
+          <div class="op-card"><b>🔥 Today’s 3 — Fresh out of the kitchen</b><div class="op-thumbs"><img src="/img/food/pancakes.webp" alt="" loading="lazy"><img src="/img/food/grain-bowl.webp" alt="" loading="lazy"><img src="/img/food/pizza.webp" alt="" loading="lazy"></div></div>
+          <div class="op-card"><b>Training progress</b><div class="op-progress"><i></i></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how-it-works">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">How It Works</p>
+      <h2>From “hello” to your first share in minutes.</h2>
+    </div>
+    <ol class="steps">
+      <% [['Join', 'Create your free account — about a minute.'], ['Get your ID', 'Your unique Affiliate ID is created automatically.'], ['Access your tools', 'Back office, links, QR code and Content Kitchen.'], ['Learn', 'Quick lessons on sharing the right way.'], ['Share', 'Post Today’s 3 and share See It. Cook It.'], ['Track', 'See real clicks, referrals and results.']].forEach(function (s, i, all) { %>
+      <li class="step"><span class="step-num"><%= i + 1 %></span><div><h3><%= s[0] %></h3><p><%= s[1] %></p></div><% if (i < all.length - 1) { %><span class="step-arrow" aria-hidden="true"><%- icon('arrow') %></span><% } %></li>
+      <% }) %>
+    </ol>
+    <p class="center mt-2"><a href="/how-it-works">See the full walkthrough →</a></p>
+  </div>
+</section>
+
+<section class="final-cta">
+  <div class="wrap">
+    <h2><%= site.final_cta_headline %></h2>
+    <p><%= site.final_cta_text %></p>
+    <a class="btn btn-cta btn-xl" href="<%= ctaHref %>"><%= signedIn ? 'GO TO MY BACK OFFICE' : 'JOIN FREE' %> <%- icon('arrow') %></a>
+    <p class="fine">100% free · No purchase required · No payment details</p>
+  </div>
+</section>

@@ -1,0 +1,34 @@
+<section class="page-hero">
+  <div class="wrap">
+    <h1>Search</h1>
+    <form action="/search" role="search" style="max-width:620px"><div class="search-field"><input type="search" name="q" value="<%= q %>" placeholder="Search pathways, help and documents" aria-label="Search" autofocus><button type="submit" aria-label="Search"><%- icon('search') %></button></div></form>
+    <% if (q) { %><p class="mt-1 mb-0"><%= total %> result<%= total === 1 ? '' : 's' %> for “<%= q %>”</p><% } %>
+  </div>
+</section>
+<section class="section" style="padding-top:16px">
+  <div class="wrap" style="max-width:860px">
+    <% if (q && q.length < 2) { %><p class="muted">Type at least two characters.</p><% } %>
+    <% if (q && q.length >= 2 && !total) { %><div class="empty"><%- icon('search') %><h3>No results</h3><p>Try a different word, or <a href="/help#contact">ask support</a>.</p></div><% } %>
+    <% if (results.pathways.length) { %>
+    <div class="result-group"><h2>Ways to participate</h2><div class="path-list">
+      <% results.pathways.forEach(function (p) { %>
+      <a class="path-item <%= p.status === 'available' ? 'is-live' : '' %>" href="/ways-to-earn?category=<%= p.category_slug %>#results" style="text-decoration:none;color:inherit"><div><span class="path-cat"><%= p.category_name %></span><h3><%= p.title %></h3><p><%= p.summary %></p></div><%- include('../partials/pathway-badge', { status: p.status }) %></a>
+      <% }) %>
+    </div></div>
+    <% } %>
+    <% if (results.faqs.length) { %>
+    <div class="result-group"><h2>Help</h2>
+      <% results.faqs.forEach(function (f) { %><details class="faq"><summary><%= f.question %></summary><div class="faq-a"><%- u.markdown(f.answer) %></div></details><% }) %>
+    </div>
+    <% } %>
+    <% if (results.resources.length || results.pages.length) { %>
+    <div class="result-group"><h2>Documents</h2><div class="res-list">
+      <% results.pages.forEach(function (p) { %><a class="res-item" href="/<%= p.slug %>"><span class="ri"><%- icon('book') %></span><div><strong><%= p.title %></strong><span class="sub"><%= u.plainText(p.body, 140) %></span></div></a><% }) %>
+      <% results.resources.forEach(function (r) { %><a class="res-item" href="<%= r.url %>"><span class="ri"><%- icon('resources') %></span><div><strong><%= r.title %></strong><span class="sub"><%= r.description %></span></div></a><% }) %>
+    </div></div>
+    <% } %>
+    <% if (!q) { %>
+    <p class="muted">Popular: <a href="/search?q=free">free</a> · <a href="/search?q=app">app</a> · <a href="/search?q=chef">Chef Pepe</a> · <a href="/search?q=restaurant">restaurants</a> · <a href="/search?q=commission">commissions</a></p>
+    <% } %>
+  </div>
+</section>

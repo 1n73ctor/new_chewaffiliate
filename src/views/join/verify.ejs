@@ -1,0 +1,22 @@
+<div class="join-card">
+  <h1>Check your <%= channel === 'sms' ? 'phone' : 'email' %></h1>
+  <p class="sub">We sent a 6-digit code to <strong><%= channel === 'sms' ? user.mobile : user.email %></strong>. Enter it below to verify your account.</p>
+  <% if (error) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div><%= error %></div></div><% } %>
+  <form class="form" method="post" action="/join/verify">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="field"><label for="code">Verification code</label>
+      <input id="code" class="code-input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="••••••" required autofocus data-otp>
+    </div>
+    <button class="btn btn-cta btn-xl btn-block" type="submit">VERIFY <%- icon('arrow') %></button>
+  </form>
+  <hr>
+  <div class="stack">
+    <p class="mb-0 muted">Didn’t get it? Check spam, or:</p>
+    <div class="row">
+      <form class="inline-form" method="post" action="/join/verify/resend"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="channel" value="email"><button class="btn btn-light btn-sm" type="submit"><%- icon('mail') %> Email me a new code</button></form>
+      <% if (canSms) { %><form class="inline-form" method="post" action="/join/verify/resend"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="channel" value="sms"><button class="btn btn-light btn-sm" type="submit"><%- icon('phone') %> Text me a code instead</button></form><% } %>
+    </div>
+    <form method="post" action="/join/restart"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="link-btn fine" type="submit">Wrong email? Start over</button></form>
+    <% if (!isProd) { %><p class="fine mb-0">Development: codes are logged to the server console and shown at <a href="/dev/outbox" target="_blank">/dev/outbox</a>.</p><% } %>
+  </div>
+</div>

@@ -1,0 +1,16 @@
+<h1>Support tickets</h1>
+<p class="page-intro">Requests from the Help page. Replies are emailed to the requester.</p>
+<nav class="pills" aria-label="Status">
+  <% Object.entries(C.TICKET_STATUSES).forEach(function ([k, v]) { %><a class="pill <%= status === k ? 'on' : '' %>" href="?status=<%= k %>"><%= v %> <span class="count"><%= counts[k] || 0 %></span></a><% }) %>
+  <a class="pill <%= !status ? 'on' : '' %>" href="?status=all">All</a>
+</nav>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>#</th><th>Subject</th><th>From</th><th>Topic</th><th>Assigned</th><th>Status</th><th>Received</th></tr></thead>
+  <tbody>
+    <% if (!rows.length) { %><tr><td colspan="7" class="table-empty">No tickets here. 🎉</td></tr><% } %>
+    <% rows.forEach(function (t) { %>
+    <tr><td><%= t.id %></td><td><a href="/admin/tickets/<%= t.id %>"><%= t.subject %></a></td><td><%= t.name %><br><span class="fine"><%= t.email %><%= t.affiliate_id ? ' · ' + t.affiliate_id : '' %></span></td><td><%= t.topic %></td><td><%= t.assignee || '—' %></td><td><span class="badge <%= t.status === 'open' ? 'badge-soon' : t.status === 'closed' ? 'badge-grey' : 'badge-dev' %>"><%= C.TICKET_STATUSES[t.status] %></span></td><td class="nowrap"><%= u.timeAgo(t.created_at) %></td></tr>
+    <% }) %>
+  </tbody>
+</table></div>
+<%- include('../partials/pager', { pg: pg, base: '?status=' + (status || 'all') + '&' }) %>

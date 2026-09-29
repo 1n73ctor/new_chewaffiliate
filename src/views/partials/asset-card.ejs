@@ -1,0 +1,20 @@
+<% const plats = String(a.platforms || '').split(',').map(s => s.trim()).filter(Boolean); %>
+<article class="asset" data-asset="<%= a.id %>">
+  <a class="asset-thumb" href="/office/content-kitchen/<%= a.id %>" aria-label="Preview <%= a.title %>">
+    <img src="<%= a.thumb_path || '/img/logo-mark.svg' %>" alt="" loading="lazy" decoding="async">
+    <span class="badge badge-<%= a.usage.tone %>" data-usage><%= a.usage.label %></span>
+    <% if (locals.rank) { %><span class="rank" aria-label="Today’s pick <%= rank %>"><%= rank %></span><% } %>
+    <% if (a.media_type !== 'image') { %><span class="badge media-type"><%= a.media_type === 'video' ? '▶ Video' : 'Document' %></span><% } %>
+  </a>
+  <div class="asset-body">
+    <h3><a href="/office/content-kitchen/<%= a.id %>"><%= a.title %></a></h3>
+    <% if (plats.length) { %><div class="asset-meta"><strong>Best on:</strong> <%= plats.join(' · ') %></div><% } %>
+    <% if (a.category_name) { %><div class="asset-meta"><%= a.category_name %></div><% } %>
+  </div>
+  <div class="asset-actions">
+    <a class="btn btn-light" href="/office/content-kitchen/<%= a.id %>"><%- icon('eye') %> Preview</a>
+    <form method="post" action="/office/content-kitchen/<%= a.id %>/caption" data-ajax="caption"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-light" type="submit"><%- icon('copy') %> Copy Caption</button></form>
+    <form method="post" action="/office/content-kitchen/<%= a.id %>/link" data-ajax="link"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-green" type="submit"><%- icon('link') %> Get My Link</button></form>
+    <a class="btn btn-light" href="/office/content-kitchen/<%= a.id %>/download"><%- icon('download') %> Download</a>
+  </div>
+</article>

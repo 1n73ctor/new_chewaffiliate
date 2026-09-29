@@ -1,0 +1,36 @@
+<p class="fine"><a href="/admin/m/<%= r.key %>">← <%= r.title %></a></p>
+<h1><%= title %></h1>
+<% if (errors._) { %><div class="alert alert-error"><%- icon('x') %><div><%= errors._ %></div></div><% } %>
+<div class="card" style="max-width:820px">
+  <form class="form" method="post" action="/admin/m/<%= r.key %><%= row.id ? '/' + row.id : '' %>" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <% fields.forEach(function (f) {
+         let v = row[f.name];
+         if (f.type === 'money') v = v != null && v !== '' ? (Number(v) / 100).toFixed(2) : '';
+         if (f.type === 'percent') v = v != null && v !== '' ? Number(v) / 100 : '';
+         const id = 'f-' + f.name; const e = errors[f.name]; %>
+      <% if (f.type === 'checkbox') { %>
+        <label class="check-row"><input type="checkbox" name="<%= f.name %>" value="1" <%= Number(v) ? 'checked' : '' %>><span><strong><%= f.label %></strong><% if (f.help) { %><br><span class="fine"><%= f.help %></span><% } %></span></label>
+      <% } else { %>
+      <div class="field <%= e ? 'has-error' : '' %>">
+        <label for="<%= id %>"><%= f.label %><%= f.required ? ' *' : '' %></label>
+        <% if (f.type === 'textarea' || f.type === 'markdown') { %>
+          <textarea id="<%= id %>" name="<%= f.name %>" class="<%= f.type === 'markdown' ? 'code' : '' %>" style="<%= f.type === 'markdown' ? 'min-height:220px' : '' %>"><%= v || '' %></textarea>
+          <% if (f.type === 'markdown') { %><p class="hint">Markdown: # Heading, **bold**, *italic*, - lists, [link](https://…)</p><% } %>
+        <% } else if (f.type === 'select') { %>
+          <select id="<%= id %>" name="<%= f.name %>"><% if (!f.required) { %><option value="">—</option><% } %><% f.options.forEach(function (o) { %><option value="<%= o[0] %>" <%= String(v) === String(o[0]) ? 'selected' : '' %>><%= o[1] %></option><% }) %></select>
+        <% } else { %>
+          <input id="<%= id %>" type="<%= f.type === 'number' || f.type === 'percent' ? 'number' : f.type === 'date' ? 'date' : 'text' %>" <%= f.type === 'percent' ? 'step=0.01 min=0 max=100' : '' %> <%= f.type === 'money' ? 'inputmode=decimal' : '' %> name="<%= f.name %>" value="<%= v == null ? '' : v %>" <%= f.type === 'slug' ? 'placeholder=auto' : '' %>>
+        <% } %>
+        <% if (f.help) { %><p class="hint"><%= f.help %></p><% } %>
+        <% if (e) { %><p class="error"><%= e %></p><% } %>
+      </div>
+      <% } %>
+    <% }) %>
+    <div class="row"><button class="btn btn-green btn-lg" type="submit">Save</button><a class="btn btn-ghost" href="/admin/m/<%= r.key %>">Cancel</a></div>
+  </form>
+  <% if (row.id) { %>
+  <hr>
+  <form method="post" action="/admin/m/<%= r.key %>/<%= row.id %>/delete" data-confirm="Delete this <%= r.singular %>? This can’t be undone."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-danger btn-sm" type="submit"><%- icon('trash') %> Delete <%= r.singular %></button></form>
+  <% } %>
+</div>

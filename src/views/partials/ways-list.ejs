@@ -1,0 +1,67 @@
+<%
+  // Shared by /ways-to-earn and /office/ways-to-earn.
+  const base = locals.baseHref || '/ways-to-earn';
+  const qs = (o) => { const p = new URLSearchParams(); if (o.category) p.set('category', o.category); if (o.status) p.set('status', o.status); const s = p.toString(); return base + (s ? '?' + s : '') + '#results'; };
+  const catSlug = locals.category ? category.slug : '';
+%>
+<div class="status-legend" aria-label="What each status means">
+  <% Object.entries(C.PATHWAY_STATUSES).forEach(function ([k, st]) { %>
+  <div class="legend-item"><span class="badge badge-<%= st.tone %>"><%= st.label %> · <%= statusCounts[k] || 0 %></span><span><%= st.note %></span></div>
+  <% }) %>
+</div>
+<p class="notice mt-1"><strong>Only pathways marked “Available Now” are active earning opportunities today.</strong> Everything else is announced, in development or run through a partner, and may change. Chew does not guarantee any earnings — see the <a href="/earnings-disclosure">Earnings Disclosure</a>.</p>
+
+<% if (!locals.status || status === 'available') { %>
+<div class="available-box mt-2">
+  <h2><%- icon('check') %> Available now</h2>
+  <% if (available.length) { %>
+  <div class="path-list">
+    <% available.forEach(function (p) { %>
+    <div class="path-item is-live">
+      <div>
+        <span class="path-cat"><%= p.category_name %></span>
+        <h3><%= p.title %></h3>
+        <p><%= p.summary %></p>
+        <% if (p.cta_url) { %><p style="margin-top:.5rem"><a class="btn btn-green btn-sm" href="<%= p.cta_url %>"><%= p.cta_label || 'Get started' %></a></p><% } %>
+      </div>
+      <span class="badge badge-live">Available Now</span>
+    </div>
+    <% }) %>
+  </div>
+  <% } else { %><p class="mb-0 muted">No pathways are open right now. Check back soon.</p><% } %>
+</div>
+<% } %>
+
+<div id="results" style="scroll-margin-top:80px">
+  <div class="pills" role="navigation" aria-label="Filter by category">
+    <a class="pill <%= !catSlug ? 'on' : '' %>" href="<%= qs({ status: locals.status }) %>">All categories</a>
+    <% categories.forEach(function (c) { %><a class="pill <%= catSlug === c.slug ? 'on' : '' %>" href="<%= qs({ category: c.slug, status: locals.status }) %>"><%= c.name %> <span class="count"><%= c.total %></span></a><% }) %>
+  </div>
+  <div class="pills" role="navigation" aria-label="Filter by status">
+    <a class="pill <%= !locals.status ? 'on' : '' %>" href="<%= qs({ category: catSlug }) %>">Any status</a>
+    <% Object.entries(C.PATHWAY_STATUSES).forEach(function ([k, st]) { %><a class="pill <%= locals.status === k ? 'on' : '' %>" href="<%= qs({ category: catSlug, status: k }) %>"><%= st.label %></a><% }) %>
+  </div>
+  <% if (!grouped.length) { %>
+    <div class="empty"><%- icon('search') %><h3>No pathways match</h3><p>Try another category or status.</p></div>
+  <% } %>
+  <% grouped.forEach(function (c) { %>
+  <section class="cat-section" id="<%= c.slug %>">
+    <div class="cat-section-head">
+      <img src="<%= c.image %>" alt="" loading="lazy" width="56" height="56">
+      <div><h2><%= c.name %></h2><p><%= c.tagline %></p></div>
+    </div>
+    <div class="path-list">
+      <% c.items.forEach(function (p) { const live = p.status === 'available'; %>
+      <div class="path-item <%= live ? 'is-live' : 'is-muted' %>">
+        <div>
+          <h3><%= p.title %></h3>
+          <p><%= p.summary %></p>
+          <% if (live && p.cta_url) { %><p style="margin-top:.5rem"><a class="btn btn-green btn-sm" href="<%= p.cta_url %>"><%= p.cta_label || 'Get started' %></a></p><% } %>
+        </div>
+        <%- include('pathway-badge', { status: p.status }) %>
+      </div>
+      <% }) %>
+    </div>
+  </section>
+  <% }) %>
+</div>

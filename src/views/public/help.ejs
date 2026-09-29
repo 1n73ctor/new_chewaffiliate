@@ -1,0 +1,36 @@
+<section class="page-hero">
+  <div class="wrap">
+    <p class="eyebrow">Help &amp; Support</p>
+    <h1>How can we help?</h1>
+    <p>Quick answers below — or send our affiliate support team a message.</p>
+    <form action="/search" role="search" style="max-width:520px"><div class="search-field"><input type="search" name="q" placeholder="Search help, pathways and documents" aria-label="Search"><button type="submit" aria-label="Search"><%- icon('search') %></button></div></form>
+  </div>
+</section>
+<section class="section" style="padding-top:32px">
+  <div class="wrap grid-2" style="align-items:start">
+    <div>
+      <% groups.forEach(function (g) { %>
+      <h2 style="font-size:1.05rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:1.25rem 0 .6rem"><%= g.name %></h2>
+      <% g.items.forEach(function (f) { %>
+      <details class="faq"><summary><%= f.question %></summary><div class="faq-a"><%- u.markdown(f.answer) %></div></details>
+      <% }) %>
+      <% }) %>
+    </div>
+    <div class="card" id="contact" style="scroll-margin-top:80px">
+      <h2 style="font-size:1.3rem">Contact support</h2>
+      <p class="muted">We reply by email. Include your Affiliate ID if you have one.</p>
+      <form class="form" method="post" action="/help/contact" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="form-row two">
+          <div class="field <%= errors.name ? 'has-error' : '' %>"><label for="c-name">Name</label><input id="c-name" type="text" name="name" autocomplete="name" value="<%= form.name || (user ? user.first_name + ' ' + user.last_name : '') %>" required><% if (errors.name) { %><p class="error"><%= errors.name %></p><% } %></div>
+          <div class="field <%= errors.email ? 'has-error' : '' %>"><label for="c-email">Email</label><input id="c-email" type="email" name="email" autocomplete="email" value="<%= form.email || (user ? user.email : '') %>" required><% if (errors.email) { %><p class="error"><%= errors.email %></p><% } %></div>
+        </div>
+        <div class="field"><label for="c-topic">Topic</label><select id="c-topic" name="topic"><% topics.forEach(function (t) { %><option <%= form.topic === t ? 'selected' : '' %>><%= t %></option><% }) %></select></div>
+        <div class="field <%= errors.subject ? 'has-error' : '' %>"><label for="c-subject">Subject</label><input id="c-subject" type="text" name="subject" value="<%= form.subject || '' %>" required><% if (errors.subject) { %><p class="error"><%= errors.subject %></p><% } %></div>
+        <div class="field <%= errors.message ? 'has-error' : '' %>"><label for="c-message">How can we help?</label><textarea id="c-message" name="message" required><%= form.message || '' %></textarea><% if (errors.message) { %><p class="error"><%= errors.message %></p><% } %></div>
+        <button class="btn btn-green btn-lg btn-block" type="submit">Send message</button>
+        <p class="fine mb-0">Or email <a href="mailto:<%= site.support_email %>"><%= site.support_email %></a>.</p>
+      </form>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,50 @@
+<p class="fine"><a href="/office/content-kitchen">← Content Kitchen</a></p>
+<div class="asset-preview">
+  <div>
+    <div class="asset-media">
+      <% if (asset.media_type === 'video' && asset.file_path) { %>
+        <video src="<%= asset.file_path %>" poster="<%= asset.thumb_path || '' %>" controls playsinline preload="metadata"></video>
+      <% } else { %>
+        <img src="<%= asset.file_path && asset.media_type === 'image' ? asset.file_path : asset.thumb_path %>" alt="<%= asset.title %>">
+      <% } %>
+    </div>
+    <% if (asset.external_url) { %><p class="fine mt-1">Media hosted at <a href="<%= asset.external_url %>" target="_blank" rel="noopener">external link</a>.</p><% } %>
+  </div>
+  <div class="stack">
+    <div>
+      <div class="row"><span class="badge badge-<%= asset.usage.tone %>"><%= asset.usage.label %></span><% if (asset.category_name) { %><span class="chip"><%= asset.category_name %></span><% } %></div>
+      <h1 class="page-title" style="margin-top:.6rem"><%= asset.title %></h1>
+      <% if (asset.description) { %><p class="muted"><%= asset.description %></p><% } %>
+      <% if (asset.platformList.length) { %><p class="mb-0"><strong>Recommended for:</strong></p><div class="chip-row" style="margin-top:.35rem"><% asset.platformList.forEach(function (p) { %><span class="chip"><%= p %></span><% }) %></div><% } %>
+    </div>
+
+    <section class="card card-tight" id="caption">
+      <div class="card-head"><h2>Caption</h2></div>
+      <% if (captionFilled) { %>
+        <textarea id="caption-text" class="caption-box" readonly><%= captionFilled %></textarea>
+        <button class="btn btn-green btn-block mt-1" type="button" data-copy data-copy-target="#caption-text"><%- icon('copy') %> Copy caption</button>
+      <% } else { %>
+        <div class="caption-box"><%= String(asset.caption || 'No caption for this asset.').replace('{link}', '[your link]') %></div>
+        <form method="post" action="/office/content-kitchen/<%= asset.id %>/caption" data-ajax="caption" class="mt-1"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-green btn-block" type="submit"><%- icon('copy') %> Copy Caption (with my link)</button></form>
+      <% } %>
+    </section>
+
+    <section class="card card-tight" id="share">
+      <div class="card-head"><h2>Get My Link</h2></div>
+      <% if (link) { %>
+        <div class="copy-field"><input id="asset-link" type="text" value="<%= link.url %>" readonly data-select aria-label="Your tracked link"><button class="btn btn-green" type="button" data-copy data-copy-target="#asset-link"><%- icon('copy') %> Copy</button></div>
+        <p class="fine mt-1 mb-0">Tracked to you, this asset<%= link.source ? ' and ' + link.source : '' %>. <a href="/office/qr/<%= link.code %>.png?download=1">Download QR</a></p>
+      <% } else { %>
+        <form class="form" method="post" action="/office/content-kitchen/<%= asset.id %>/link">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field"><label for="source">Where will you post it?</label>
+            <select id="source" name="source"><option value="">Anywhere / not sure</option><% sources.forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }) %></select>
+            <p class="hint">A separate link per channel shows you what works best.</p></div>
+          <button class="btn btn-green btn-block" type="submit"><%- icon('link') %> Get My Link</button>
+        </form>
+      <% } %>
+    </section>
+
+    <a class="btn btn-light btn-lg btn-block" href="/office/content-kitchen/<%= asset.id %>/download"><%- icon('download') %> Download <%= asset.media_type === 'video' ? 'video' : asset.media_type === 'document' ? 'file' : 'image' %></a>
+  </div>
+</div>

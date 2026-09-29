@@ -1,0 +1,42 @@
+<h1 class="page-title">Commissions</h1>
+<p class="page-intro">Recorded only from real tracked qualifying activity that matches the program rules in effect, and reviewed before approval.</p>
+<div class="stats">
+  <div class="stat"><span class="label">Pending review</span><span class="value"><%= u.money(summary.pending) %></span></div>
+  <div class="stat"><span class="label">Approved</span><span class="value"><%= u.money(summary.approved) %></span></div>
+  <div class="stat"><span class="label">Paid</span><span class="value"><%= u.money(summary.paid) %></span></div>
+  <div class="stat"><span class="label">Reversed</span><span class="value"><%= u.money(summary.reversed) %></span></div>
+</div>
+
+<section class="card mt-1">
+  <div class="card-head"><h2>Current program rules</h2></div>
+  <% if (!rules.length) { %>
+    <p class="mb-0 muted">No commission rules are active yet. When Chew management publishes rules they will appear here, and matching activity will be added to your ledger automatically. See the <a href="/earnings-disclosure">Earnings Disclosure</a>.</p>
+  <% } else { %>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Rule</th><th>Qualifying event</th><th class="num">Amount</th></tr></thead><tbody>
+      <% rules.forEach(function (r) { %><tr><td><strong><%= r.name %></strong><% if (r.description) { %><br><span class="fine"><%= r.description %></span><% } %></td><td><%= eventTypes[r.event_type] || r.event_type %></td><td class="num"><%= r.amount_cents ? u.money(r.amount_cents, r.currency) : '' %><%= r.amount_cents && r.percent_bps ? ' + ' : '' %><%= r.percent_bps ? (r.percent_bps / 100) + '%' : '' %></td></tr><% }) %>
+    </tbody></table></div>
+  <% } %>
+</section>
+
+<% if (rewards.length) { %>
+<section class="card mt-1">
+  <div class="card-head"><h2>Rewards</h2></div>
+  <% rewards.forEach(function (r) { %><p class="mb-0"><strong><%= r.label %></strong> <%= r.amount || '' %> <%= r.unit || '' %> · <span class="badge badge-soon"><%= r.status %></span> · <span class="fine"><%= u.fmtDate(r.created_at) %></span></p><% }) %>
+</section>
+<% } %>
+
+<section class="mt-2">
+  <div class="row-between"><h2 style="font-size:1.1rem;margin:0">Ledger</h2>
+    <nav class="pills" style="padding:0" aria-label="Filter by status"><a class="pill <%= !status ? 'on' : '' %>" href="/office/commissions">All</a><% Object.entries(C.COMMISSION_STATUSES).forEach(function ([k, v]) { %><a class="pill <%= status === k ? 'on' : '' %>" href="?status=<%= k %>"><%= v %></a><% }) %></nav>
+  </div>
+  <div class="table-wrap mt-1"><table class="table">
+    <thead><tr><th>Date</th><th>Description</th><th>From activity</th><th>Status</th><th class="num">Amount</th></tr></thead>
+    <tbody>
+      <% if (!rows.length) { %><tr><td colspan="5" class="table-empty">No commission entries<%= status ? ' with this status' : ' yet' %>.</td></tr><% } %>
+      <% rows.forEach(function (c) { %>
+      <tr><td class="nowrap"><%= u.fmtDate(c.created_at) %></td><td><%= c.description || '—' %><% if (c.note) { %><br><span class="fine"><%= c.note %></span><% } %></td><td><%= c.event_type ? (eventTypes[c.event_type] || c.event_type) + ' · ' + u.fmtDate(c.event_at) : 'Adjustment' %></td>
+        <td><span class="badge <%= c.status === 'paid' || c.status === 'approved' ? 'badge-live' : c.status === 'reversed' ? 'badge-red' : 'badge-soon' %>"><%= C.COMMISSION_STATUSES[c.status] %></span></td><td class="num"><%= u.money(c.amount_cents, c.currency) %></td></tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+</section>

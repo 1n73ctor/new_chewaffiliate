@@ -1,0 +1,10 @@
+<h1 class="page-title">Resources</h1>
+<p class="page-intro">Program documents and your sharing toolkit.</p>
+<% const groups = {}; resources.forEach(function (r) { (groups[r.category || 'General'] = groups[r.category || 'General'] || []).push(r); }); %>
+<div style="max-width:860px">
+<% Object.keys(groups).forEach(function (g) { %>
+  <h2 style="font-size:1rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:1.5rem"><%= g %></h2>
+  <div class="res-list"><% groups[g].forEach(function (r) { %><a class="res-item" href="<%= r.url %>"><span class="ri"><%- icon(r.audience === 'affiliate' ? 'lock' : 'book') %></span><div><strong><%= r.title %></strong><span class="sub"><%= r.description %></span></div><span class="go"><%- icon('arrow') %></span></a><% }) %></div>
+<% }) %>
+  <div class="panel-green mt-2"><strong>Need help?</strong> <a href="/help#contact">Contact affiliate support</a> — we reply by email.</div>
+</div>

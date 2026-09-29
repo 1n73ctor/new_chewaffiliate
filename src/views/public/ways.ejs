@@ -1,0 +1,16 @@
+<section class="page-hero">
+  <div class="wrap">
+    <p class="eyebrow"><%= site.ways_count_label %> Ways to Participate</p>
+    <h1>Every way to take part in the Chew ecosystem</h1>
+    <p><%= total %> pathways across food data, content, AI, Chef Pepe, commerce, restaurants, media and network growth — each one clearly labeled so you know exactly what’s live.</p>
+  </div>
+</section>
+<section class="section" style="padding-top:28px">
+  <div class="wrap">
+    <%- include('../partials/ways-list') %>
+    <div class="panel-green mt-2 row-between">
+      <div><strong>Ready to start with what’s available now?</strong><br><span class="muted">Joining is free — no purchase required.</span></div>
+      <a class="btn btn-cta btn-lg" href="<%= user && user.affiliate_id ? '/office' : '/join' %>"><%= user && user.affiliate_id ? 'Go to my back office' : 'JOIN FREE' %></a>
+    </div>
+  </div>
+</section>

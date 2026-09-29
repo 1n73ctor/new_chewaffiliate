@@ -1,0 +1,17 @@
+<div class="join-card">
+  <% if (sent) { %>
+    <div class="success-mark"><%- icon('mail') %></div>
+    <h1 class="center">Check your email</h1>
+    <p class="sub center">If an account exists for that email, we’ve sent a link to reset your password. It expires in 60 minutes.</p>
+    <p class="center"><a class="btn btn-light" href="/signin">Back to sign in</a></p>
+  <% } else { %>
+    <h1>Reset your password</h1>
+    <p class="sub">Enter the email you joined with and we’ll send you a reset link.</p>
+    <form class="form" method="post" action="/forgot-password">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="field"><label for="email">Email</label><input id="email" type="email" name="email" autocomplete="email" inputmode="email" required autofocus></div>
+      <button class="btn btn-green btn-xl btn-block" type="submit">SEND RESET LINK</button>
+    </form>
+    <p class="center mt-1 mb-0"><a href="/signin">Back to sign in</a></p>
+  <% } %>
+</div>

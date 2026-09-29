@@ -1,0 +1,5 @@
+<div class="store-badges" id="<%= locals.id || '' %>">
+  <a class="store-badge" href="<%= locals.iosHref || '/go/app/ios' %>" rel="nofollow"><%- icon('apple') %><span><small>Download on the</small>App Store</span></a>
+  <a class="store-badge" href="<%= locals.androidHref || '/go/app/android' %>" rel="nofollow"><%- icon('googleplay') %><span><small>GET IT ON</small>Google Play</span></a>
+</div>
+<% if (!site.app_store_url_ios && !site.app_store_url_android && !locals.quiet) { %><p class="fine" style="margin-top:.5rem">Store listings are coming soon — tap a button to be taken to the latest details.</p><% } %>
