@@ -1,16 +1,11 @@
 'use strict';
-// Starter content. Every item is editable in Admin. Legal pages are DRAFTS
-// for counsel to replace before launch.
-
-const DRAFT = '> Draft for review by Chew Network management and counsel. Edit in Admin → Pages before launch.';
+// Starter content. Every item is editable in Admin (legal pages: Admin → Legal pages).
 
 const pages = [
   {
     slug: 'terms',
     title: 'Terms of Use',
-    body: `${DRAFT}
-
-Welcome to the Chew Network affiliate website. By creating an account or using this site you agree to these Terms of Use.
+    body: `Welcome to the Chew Network affiliate website. By creating an account or using this site you agree to these Terms of Use.
 
 # Your account
 - You must provide accurate information and keep your password secure.
@@ -35,9 +30,7 @@ Questions? Visit [Help & Support](/help).`,
   {
     slug: 'privacy',
     title: 'Privacy Policy',
-    body: `${DRAFT}
-
-This policy explains what information the Chew Network affiliate website collects and how it is used.
+    body: `This policy explains what information the Chew Network affiliate website collects and how it is used.
 
 # What we collect
 - **Account details:** name, email, mobile number, country and password (stored as a secure hash).
@@ -64,9 +57,7 @@ You can update your details in the back office, or contact support to request ac
   {
     slug: 'affiliate-agreement',
     title: 'Affiliate Agreement',
-    body: `${DRAFT}
-
-This Affiliate Agreement is between you and Chew Network (“Chew”). Please read it before creating your account.
+    body: `This Affiliate Agreement is between you and Chew Network (“Chew”). Please read it before creating your account.
 
 # 1. The program
 The Chew Network Affiliate Program lets you share Chew products, apps and content using links and tools provided in your back office.
@@ -104,9 +95,7 @@ Chew may update this agreement. We will tell you about material changes; the ver
   {
     slug: 'promotional-guidelines',
     title: 'Promotional Guidelines',
-    body: `${DRAFT}
-
-Chew is a consumer technology platform. Promote it the way you would recommend any product you genuinely like.
+    body: `Chew is a consumer technology platform. Promote it the way you would recommend any product you genuinely like.
 
 # Do
 - Use Content Kitchen assets and captions as provided, or write your own honest posts.
@@ -129,9 +118,7 @@ Ask support before you post.`,
   {
     slug: 'earnings-disclosure',
     title: 'Earnings Disclosure',
-    body: `${DRAFT}
-
-Joining the Chew Network Affiliate Program is free and no purchase is required.
+    body: `Joining the Chew Network Affiliate Program is free and no purchase is required.
 
 **Chew does not guarantee that you will earn any money.** Any commissions or rewards depend on the program rules in effect, real tracked qualifying activity, and review by Chew. Many affiliates earn nothing.
 

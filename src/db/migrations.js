@@ -407,4 +407,12 @@ module.exports = [
   );
   CREATE INDEX idx_audit_time ON audit_log(created_at);
   `,
+
+  /* 2: remove the pre-launch "Draft for review" notice from legal pages */ `
+  UPDATE pages
+     SET body = ltrim(substr(body, instr(body, char(10)) + 1), char(10) || char(13))
+   WHERE body LIKE '> Draft for review by Chew Network management and counsel.%';
+  UPDATE pages SET version = '1.0' WHERE version = 'draft-1';
+  UPDATE settings SET value = '1.0' WHERE key = 'agreement_version' AND value = '2026-09-draft-1';
+  `,
 ];

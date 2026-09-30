@@ -198,7 +198,7 @@ test/            end-to-end tests
 
 These are decisions, not code. Everything is editable in Admin.
 
-1. **Legal pages are drafts.** Counsel should replace Terms, Privacy, Affiliate Agreement, Promotional Guidelines and Earnings Disclosure (Admin → Legal pages), then bump the agreement version (Settings → Signup).
+1. **Legal pages** (Terms, Privacy, Affiliate Agreement, Promotional Guidelines, Earnings Disclosure) are starter text. Edit them in Admin → Legal pages, and bump the agreement version in Settings → Signup whenever the agreement changes.
 2. **Pathway statuses are placeholders.** Only three pathways this build supports are marked *Available Now*: Share Content Kitchen Posts, Share See It. Cook It., Refer New Affiliates. Confirm every status in Admin → Pathways.
 3. **App-store URLs** are blank until the listings are live. Until then the buttons show "coming soon".
 4. **Commission rules** start empty and inactive. Add them once amounts are approved.

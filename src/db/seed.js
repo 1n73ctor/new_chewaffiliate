@@ -36,7 +36,7 @@ function ensureBaseData() {
       });
     }
     if (!count('pages')) {
-      for (const p of C.pages) db.run('INSERT INTO pages (slug, title, body, version) VALUES (?, ?, ?, ?)', p.slug, p.title, p.body, 'draft-1');
+      for (const p of C.pages) db.run('INSERT INTO pages (slug, title, body, version) VALUES (?, ?, ?, ?)', p.slug, p.title, p.body, '1.0');
     }
     if (!count('faqs')) {
       C.faqs.forEach(([q, a, cat], i) => db.run('INSERT INTO faqs (question, answer, category, sort) VALUES (?, ?, ?, ?)', q, a, cat, i + 1));
@@ -163,7 +163,7 @@ function seedDemo() {
         `INSERT INTO users (affiliate_id, first_name, last_name, email, mobile, country, password_hash, role, status,
                             email_verified_at, terms_accepted_at, agreement_version, agreement_accepted_at)
          VALUES (?, 'Demo', 'Affiliate', 'affiliate@chew.local', '+15555550100', 'US', ?, 'affiliate', 'active',
-                 datetime('now'), datetime('now'), 'draft-1', datetime('now'))`,
+                 datetime('now'), datetime('now'), '1.0', datetime('now'))`,
         generateAffiliateId(),
         hashPassword(demoPassword),
       );

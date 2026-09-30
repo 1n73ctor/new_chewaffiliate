@@ -94,7 +94,7 @@ const GROUPS = [
     id: 'signup',
     title: 'Signup',
     fields: [
-      { key: 'agreement_version', label: 'Current Affiliate Agreement version', default: '2026-09-draft-1', help: 'Recorded with each acceptance. Change it when the agreement text changes.' },
+      { key: 'agreement_version', label: 'Current Affiliate Agreement version', default: '1.0', help: 'Recorded with each acceptance. Change it when the agreement text changes.' },
       { key: 'sms_verification', label: 'Offer verification by text message', type: 'checkbox', default: '1' },
     ],
   },

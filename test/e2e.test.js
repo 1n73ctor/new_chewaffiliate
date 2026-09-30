@@ -151,6 +151,11 @@ test('all public pages render', async () => {
     assert.equal(r.status, 200, p);
   }
   assert.equal((await c.get('/does-not-exist')).status, 404);
+  // No pre-launch draft notices on the public legal pages
+  for (const p of ['/terms', '/privacy', '/affiliate-agreement', '/promotional-guidelines', '/earnings-disclosure']) {
+    const { text } = await c.get(p);
+    assert.ok(!/draft/i.test(text), `${p} should not mention a draft`);
+  }
 });
 
 test('125+ ways page separates live pathways from future ones', async () => {
