@@ -1,0 +1,44 @@
+# Production stack for a VPS: the app + Caddy (automatic HTTPS via Let's Encrypt).
+#   1. cp .env.example .env   and fill in DOMAIN, SESSION_SECRET, ADMIN_*, SMTP_*
+#   2. docker compose up -d --build
+# Data (database + uploads) persists in the "chew-data" volume.
+
+services:
+  app:
+    build: .
+    image: chew-affiliate:latest
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATA_DIR: /app/data
+      BASE_URL: https://${DOMAIN:?Set DOMAIN in .env}
+      TRUST_PROXY: "1"
+    volumes:
+      - chew-data:/app/data
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  chew-data:
+  caddy-data:
+  caddy-config:

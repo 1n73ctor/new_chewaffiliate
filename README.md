@@ -47,6 +47,75 @@ Run behind HTTPS. Cookies are `Secure` in production. Back up `data/` (the datab
 
 Management edits core content in **Admin → Settings**, with no deployment: homepage copy, benefit strip, app-store URLs, the attribution window, the activation reward and the agreement version.
 
+## Deploy on a VPS with Docker (e.g. GoDaddy VPS)
+
+`docker-compose.yml` runs two containers:
+
+- **app**: the website, built from the `Dockerfile`
+- **caddy**: gets and renews the HTTPS certificate automatically
+
+The database and uploads persist in a Docker volume. HTTPS is required: in production, cookies are `Secure`, so sign-in only works over HTTPS.
+
+**Before you start**
+
+- **DNS:** in GoDaddy → your domain → DNS, add an **A record** (`@`, or a subdomain like `affiliates`) pointing at the VPS IP address. Do this first, or the certificate request fails.
+- **Firewall:** open ports **22, 80 and 443**. Caddy needs port 80 to get the certificate.
+
+**On the VPS** (Ubuntu, logged in over SSH as a sudo user):
+
+```bash
+# 1. Install Docker (one time)
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER        # then log out and back in
+
+# 2. Get the code
+git clone -b new_chewaffiliate https://github.com/1n73ctor/new_chewaffiliate.git chew
+cd chew
+
+# 3. Configure
+cp .env.example .env
+openssl rand -hex 32                 # copy this into SESSION_SECRET
+nano .env
+```
+
+In `.env`, set:
+
+| Setting | Value |
+|---|---|
+| `DOMAIN` | your domain, e.g. `affiliates.chew.network` |
+| `SESSION_SECRET` | the random string from `openssl rand -hex 32` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | your first admin login |
+| `SMTP_*`, `MAIL_FROM` | your email-sending account, so verification codes arrive |
+
+`NODE_ENV`, `PORT` and `BASE_URL` are set by `docker-compose.yml`, so leave them alone.
+
+```bash
+# 4. Start
+docker compose up -d --build
+docker compose ps                    # app should show "healthy"
+docker compose logs -f app           # watch the logs (Ctrl+C to exit)
+```
+
+Open `https://<your domain>`. On first start, Caddy can take a minute to get the certificate.
+
+**Update to a new version**
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+**Back up the database and uploads**
+
+```bash
+docker volume ls                     # the volume is named <folder>_chew-data, e.g. chew_chew-data
+docker compose stop app
+docker run --rm -v chew_chew-data:/data -v "$PWD":/backup alpine tar czf /backup/chew-backup-$(date +%F).tgz -C /data .
+docker compose start app
+```
+
+Don't run `npm run seed:demo` on the live server; the demo accounts are for local testing only.
+
 ---
 
 ## Blueprint coverage

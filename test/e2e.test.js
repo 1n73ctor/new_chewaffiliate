@@ -420,3 +420,18 @@ test('security: CSRF, open redirects, suspended users, API auth', async () => {
   assert.equal((await new Client().get('/admin')).status, 302);
   assert.equal((await state.avaClient.get('/admin')).location, '/office', 'affiliates cannot reach admin');
 });
+
+test('staff can change their own password from My account', async () => {
+  const page = await admin.get('/admin/account');
+  assert.equal(page.status, 200);
+  assert.ok(page.text.includes('Change password'));
+  const wrong = await admin.post('/admin/account/password', { current_password: 'nope', new_password: 'New-Admin-Pass-1', confirm_password: 'New-Admin-Pass-1' });
+  assert.equal(wrong.status, 422);
+  const mismatch = await admin.post('/admin/account/password', { current_password: 'Admin-Pass-123', new_password: 'New-Admin-Pass-1', confirm_password: 'Different-1' });
+  assert.equal(mismatch.status, 422);
+  const ok = await admin.post('/admin/account/password', { current_password: 'Admin-Pass-123', new_password: 'New-Admin-Pass-1', confirm_password: 'New-Admin-Pass-1' });
+  assert.equal(ok.location, '/admin/account');
+  assert.equal((await admin.get('/admin')).status, 200, 'current session kept');
+  assert.equal((await new Client().signin('admin@test.local', 'Admin-Pass-123')).status, 401, 'old password rejected');
+  assert.equal((await new Client().signin('admin@test.local', 'New-Admin-Pass-1')).location, '/admin');
+});

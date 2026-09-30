@@ -97,6 +97,7 @@ router.get('/', (req, res) => {
   });
 });
 
+router.use(require('./account'));
 router.use('/m', require('./crud'));
 router.use(require('./affiliates'));
 router.use(require('./content'));

@@ -11,6 +11,7 @@
     <span class="role-chip"><%= locals.roleLabel || 'Staff' %></span>
     <div class="tools">
       <% if (user.affiliate_id) { %><a class="btn btn-light btn-sm" href="/office">My back office</a><% } %>
+      <a class="icon-btn" href="/admin/account" title="My account" aria-label="My account"><%- icon('user') %></a>
       <a class="icon-btn" href="/" title="View site" aria-label="View site"><%- icon('globe') %></a>
       <form class="inline-form" method="post" action="/signout"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="icon-btn" type="submit" title="Sign out" aria-label="Sign out"><%- icon('logout') %></button></form>
     </div>
