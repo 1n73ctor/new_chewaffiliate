@@ -3,10 +3,10 @@
   <p class="sub">Last step before your account is created. Please read the agreement — it’s short and plain-English.</p>
   <% if (error) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div><%= error %></div></div><% } %>
   <div class="agreement-box" tabindex="0" aria-label="Affiliate Agreement text"><%- agreementHtml %></div>
-  <p class="fine" style="margin-top:.5rem">Version <%= version %> · <a href="/affiliate-agreement" target="_blank">Open full page</a></p>
+  <p class="mt-050 fine">Version <%= version %> · <a href="/affiliate-agreement" target="_blank">Open full page</a></p>
   <form class="form" method="post" action="/join/agreement">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-    <label class="check-row" style="font-size:1rem"><input type="checkbox" name="agree" value="1" required><span>I have read and agree to the <strong>Chew Network Affiliate Agreement</strong>, including the <a href="/promotional-guidelines" target="_blank">Promotional Guidelines</a> and <a href="/earnings-disclosure" target="_blank">Earnings Disclosure</a>.</span></label>
+    <label class="fs-100 check-row"><input type="checkbox" name="agree" value="1" required><span>I have read and agree to the <strong>Chew Network Affiliate Agreement</strong>, including the <a href="/promotional-guidelines" target="_blank">Promotional Guidelines</a> and <a href="/earnings-disclosure" target="_blank">Earnings Disclosure</a>.</span></label>
     <button class="btn btn-cta btn-xl btn-block" type="submit">I AGREE — CREATE MY ACCOUNT <%- icon('arrow') %></button>
     <p class="free-note"><%- icon('lock') %> No payment. No purchase. Nothing to buy — ever.</p>
   </form>

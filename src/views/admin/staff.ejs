@@ -6,10 +6,10 @@
   <tbody>
     <% staff.forEach(function (s) { %>
     <tr>
-      <td><strong><%= s.first_name %> <%= s.last_name %></strong><%= s.id === user.id ? ' (you)' : '' %></td>
+      <td><strong><%= s.first_name %> <%= s.last_name %></strong><%= s.id === user.id ? ' (you)' : '' %><br><span class="badge <%= s.totp_enabled_at ? 'badge-live' : 'badge-soon' %>"><%= s.totp_enabled_at ? '2-step on' : '2-step off' %></span></td>
       <td><%= s.email %></td>
       <td colspan="2">
-        <form class="row" method="post" action="/admin/staff/<%= s.id %>" style="gap:.4rem">
+        <form class="gap-040 row" method="post" action="/admin/staff/<%= s.id %>">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <select class="status-select" name="role" aria-label="Role" <%= s.id === user.id ? 'disabled' : '' %>><% staffRoles.forEach(function (r) { %><option value="<%= r %>" <%= s.role === r ? 'selected' : '' %>><%= roles[r].label %></option><% }) %><% if (s.affiliate_id) { %><option value="affiliate">Affiliate only (remove staff access)</option><% } %></select>
           <select class="status-select" name="status" aria-label="Status" <%= s.id === user.id ? 'disabled' : '' %>><option value="active" <%= s.status === 'active' ? 'selected' : '' %>>Active</option><option value="suspended" <%= s.status !== 'active' ? 'selected' : '' %>>Suspended</option></select>
@@ -23,7 +23,7 @@
   </tbody>
 </table></div>
 
-<div class="grid-2 mt-2" style="align-items:start">
+<div class="items-start grid-2 mt-2">
   <form class="card form" method="post" action="/admin/staff">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="card-head"><h2>Add a staff member</h2></div>
@@ -37,7 +37,7 @@
   </form>
   <section class="card">
     <div class="card-head"><h2>What each role can do</h2></div>
-    <div class="table-wrap" style="max-height:520px;overflow:auto"><table class="table perm-table">
+    <div class="scroll-520 table-wrap"><table class="table perm-table">
       <thead><tr><th>Permission</th><% staffRoles.forEach(function (r) { %><th><%= roles[r].label %></th><% }) %></tr></thead>
       <tbody><% Object.entries(permissions).forEach(function ([p, label]) { %><tr><td><%= label %></td><% staffRoles.forEach(function (r) { const ok = roles[r].perms.includes('*') || roles[r].perms.includes(p); %><td class="<%= ok ? 'perm-yes' : 'perm-no' %>"><%= ok ? '✓' : '·' %></td><% }) %></tr><% }) %></tbody>
     </table></div>

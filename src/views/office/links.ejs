@@ -3,19 +3,19 @@
 
 <section class="card">
   <div class="card-head"><h2>Primary referral link</h2><span class="fine"><%= u.num(primaryClicks) %> clicks all time</span></div>
-  <div class="row" style="align-items:flex-start">
-    <div style="flex:1;min-width:240px" class="stack">
+  <div class="items-start row">
+    <div class="grow minw-240 stack">
       <div class="copy-field"><input id="primary" type="text" value="<%= primaryLink %>" readonly data-select aria-label="Primary referral link"><button class="btn btn-green" type="button" data-copy data-copy-target="#primary"><%- icon('copy') %> Copy</button></div>
       <details class="disclosure"><summary>Quick tagging without creating a link</summary>
         <p class="fine mb-0">Add <code>?s=instagram</code> (source), <code>&amp;c=campaign-slug</code> (campaign) or <code>&amp;d=join</code> (destination) to your primary link — e.g. <code><%= primaryLink %>?s=whatsapp</code></p>
       </details>
     </div>
-    <div style="text-align:center"><div class="qr-box qr-sm"><%- qrSvg %></div><a class="fine" href="/office/qr/primary.png?download=1">PNG</a> · <a class="fine" href="/office/qr/primary.svg?download=1">SVG</a></div>
+    <div class="center"><div class="qr-box qr-sm"><%- qrSvg %></div><a class="fine" href="/office/qr/primary.png?download=1">PNG</a> · <a class="fine" href="/office/qr/primary.svg?download=1">SVG</a></div>
   </div>
 </section>
 
 <% if (created) { %>
-<section class="card mt-1" id="new-link" style="border-color:var(--green-200);background:var(--green-50)">
+<section class="card-green card mt-1" id="new-link">
   <div class="card-head"><h2>Your new link</h2></div>
   <div class="copy-field"><input id="new" type="text" value="<%= created.url %>" readonly data-select aria-label="New tracked link"><button class="btn btn-green" type="button" data-copy data-copy-target="#new"><%- icon('copy') %> Copy</button></div>
 </section>
@@ -38,14 +38,14 @@
 </section>
 
 <section class="mt-2">
-  <h2 style="font-size:1.1rem">All my links</h2>
+  <h2 class="fs-110">All my links</h2>
   <div class="table-wrap">
     <table class="table">
       <thead><tr><th>Link</th><th>Goes to</th><th>Source</th><th>Campaign / content</th><th class="num">Clicks</th><th class="num">Results</th><th></th></tr></thead>
       <tbody>
         <% if (!links.length) { %><tr><td colspan="7" class="table-empty">No tracked links yet. Create one above, or use “Get My Link” in the Content Kitchen.</td></tr><% } %>
         <% links.forEach(function (l) { %>
-        <tr style="<%= l.active ? '' : 'opacity:.55' %>">
+        <tr class="<%= l.active ? '' : 'is-dim' %>">
           <td><strong><%= l.label || l.code %></strong><br><span class="mono fine"><%= l.url.replace(/^https?:\/\//, '') %></span></td>
           <td><%= l.destination_label || l.destination_key %></td>
           <td><%= l.source || '—' %></td>

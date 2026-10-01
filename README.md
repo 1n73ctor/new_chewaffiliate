@@ -180,6 +180,18 @@ Don't run `npm run seed:demo` on the live server; the demo accounts are for loca
 
 The full permission matrix is under **Admin → Staff & roles**.
 
+## Security
+
+- **Sign-in:** bcrypt password hashes, 32-byte random session tokens stored only as SHA-256 hashes, `__Host-` cookies (Secure, HttpOnly, SameSite=Lax) in production. Staff sessions expire after 12 hours.
+- **Two-step sign-in (TOTP)** for staff, in Admin → My account. Secrets are AES-256-GCM encrypted at rest, codes can't be replayed, and recovery codes are single-use and stored hashed. The staff list shows who has it on — turn it on for every admin.
+- **Brute force:** per-IP rate limits, plus a per-account lockout (10 failed attempts → 15 minutes) stored in the database so it survives restarts.
+- **Passwords:** 8+ characters for affiliates and 12+ for staff; common passwords and the account's own email are refused.
+- **Forms:** CSRF tokens on every form, simple query parsing, and only safe same-site redirects (`?next=`, `?ref=`).
+- **Headers:** a strict Content-Security-Policy with no inline scripts or styles (`style-src 'self'`, `frame-ancestors 'none'`), HSTS, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, and `Cache-Control: no-store` on dynamic pages. Keep it that way: don't add `style=""` attributes or inline `<script>` — use classes in `public/css/app.css`.
+- **Uploads** (admin only): checked by content, not just extension, and served with a sandboxing CSP; non-media files download instead of opening.
+- **Email:** messages that can go to an address nobody has verified (signup code, password reset, support confirmation) never include text a visitor typed, and names are restricted to letters, so the site can't be used to send phishing text.
+- **Roles:** Support-level staff can only see affiliate accounts, not staff/admin accounts.
+
 ## Project layout
 
 ```

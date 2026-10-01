@@ -1,12 +1,12 @@
 <% const max = Math.max(1, ...rows.map(r => r.clicks)); %>
 <section class="card">
   <div class="card-head"><h2><%= heading %></h2><span class="fine">clicks · results</span></div>
-  <% if (!rows.length) { %><p class="muted mb-0" style="font-size:.9rem">No data for this period.</p><% } else { %>
+  <% if (!rows.length) { %><p class="fs-90 muted mb-0">No data for this period.</p><% } else { %>
   <div class="hbar">
     <% rows.forEach(function (r) { %>
     <div class="hbar-row" title="<%= r.label %>: <%= r.clicks %> clicks, <%= r.results %> results">
       <span class="name"><%= r.label %></span><span class="val"><%= u.num(r.clicks) %> · <%= u.num(r.results) %></span>
-      <span class="track"><i style="width:<%= Math.round((r.clicks / max) * 100) %>%"></i></span>
+      <progress class="track" value="<%= r.clicks %>" max="<%= max %>" aria-hidden="true"></progress>
     </div>
     <% }) %>
   </div>

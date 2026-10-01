@@ -1,5 +1,5 @@
 <% const s = summary; const money = (c) => u.money(c); %>
-<div class="row-between" style="margin-bottom:1rem">
+<div class="mb-100 row-between">
   <div>
     <h1 class="page-title">Hi, <%= user.first_name %> 👋</h1>
     <p class="page-intro mb-0">Here’s your Chew back office.<% if (sponsor) { %> Referred by <%= sponsor.first_name %> <%= sponsor.last_name.charAt(0) %>. (<span class="mono"><%= sponsor.affiliate_id %></span>)<% } %></p>
@@ -12,21 +12,21 @@
     <div>
       <div class="label-sm">Your Affiliate ID</div>
       <div class="big-id"><%= user.affiliate_id %></div>
-      <div class="label-sm" style="margin-bottom:.4rem">Primary referral link</div>
+      <div class="mb-040 label-sm">Primary referral link</div>
       <div class="copy-field"><input id="primary-link" type="text" value="<%= primaryLink %>" readonly data-select aria-label="Your primary referral link"><button class="btn btn-light" type="button" data-copy data-copy-target="#primary-link"><%- icon('copy') %> Copy</button></div>
-      <div class="row" style="margin-top:.75rem">
+      <div class="mt-075 row">
         <button class="btn btn-sm btn-light" type="button" data-share="<%= primaryLink %>" data-share-title="Join me on Chew Network"><%- icon('share') %> Share</button>
-        <a class="btn btn-sm btn-ghost" style="color:#fff" href="/office/links"><%- icon('link') %> More links</a>
+        <a class="text-white btn btn-sm btn-ghost" href="/office/links"><%- icon('link') %> More links</a>
       </div>
     </div>
-    <div style="text-align:center">
+    <div class="center">
       <div class="qr-box"><%- qrSvg %></div>
-      <a class="btn btn-sm btn-ghost" style="color:#fff;margin-top:.4rem" href="/office/qr/primary.png?download=1"><%- icon('download') %> QR code</a>
+      <a class="text-white mt-040 btn btn-sm btn-ghost" href="/office/qr/primary.png?download=1"><%- icon('download') %> QR code</a>
     </div>
   </div>
 </div>
 
-<h2 class="mt-2" style="font-size:1.1rem">Last 30 days <span class="fine" style="font-weight:500">· real tracked activity only</span></h2>
+<h2 class="fs-110 mt-2">Last 30 days <span class="fw-500 fine">· real tracked activity only</span></h2>
 <div class="stats">
   <div class="stat"><span class="label">Clicks</span><span class="value"><%= u.num(s.clicks) %></span><span class="meta"><%= u.num(s.uniqueVisitors) %> unique visitors</span></div>
   <div class="stat"><span class="label">Referrals</span><span class="value"><%= u.num(s.signups) %></span><span class="meta"><%= u.num(s.referralsAll) %> all time</span></div>
@@ -37,7 +37,7 @@
   <p class="fine mt-1">No activity yet — that’s normal for a new account. Share Today’s 3 or your link and your numbers will appear here as they happen.</p>
 <% } %>
 
-<section class="t3-banner mt-2" style="margin-bottom:0">
+<section class="mb-0 t3-banner mt-2">
       <h2><%- icon('flame') %> TODAY’S 3 — Fresh Out of the Kitchen</h2>
       <p>Approved, ready-to-post picks. Copy the caption, get your link, post.</p>
       <% if (todays3.length) { %>
@@ -55,7 +55,7 @@
       <div class="announce">
         <strong><% if (a.pinned) { %><%- icon('bell') %><% } %><%= a.title %></strong>
         <% if (a.body) { %><p><%= a.body %></p><% } %>
-        <% if (a.link_url) { %><a href="<%= a.link_url %>" style="font-weight:600;font-size:.9rem"><%= a.link_label || 'Learn more' %> →</a><% } %>
+        <% if (a.link_url) { %><a class="fw-600 fs-90" href="<%= a.link_url %>"><%= a.link_label || 'Learn more' %> →</a><% } %>
         <span class="fine"><%= u.fmtDate(a.created_at) %></span>
       </div>
       <% }) %>
@@ -75,9 +75,9 @@
 
     <section class="card">
       <div class="card-head"><h2>Training</h2><span class="fine"><%= training.done %> of <%= training.total %> lessons</span></div>
-      <div class="progress" role="progressbar" aria-valuenow="<%= training.pct %>" aria-valuemin="0" aria-valuemax="100" aria-label="Training progress"><i style="width:<%= training.pct %>%"></i></div>
+      <progress class="progress" value="<%= training.pct %>" max="100" aria-label="Training progress"><%= training.pct %>%</progress>
       <% if (training.next) { %>
-        <p class="mt-1" style="margin-bottom:.6rem"><span class="fine">Up next · <%= training.next.module_title %></span><br><strong><%= training.next.title %></strong></p>
+        <p class="mb-060 mt-1"><span class="fine">Up next · <%= training.next.module_title %></span><br><strong><%= training.next.title %></strong></p>
         <a class="btn btn-light btn-block" href="/office/training/<%= training.next.id %>">Start lesson</a>
       <% } else if (training.total) { %>
         <p class="mt-1 mb-0">🎉 All lessons complete.</p>
@@ -86,7 +86,7 @@
 
     <section class="card">
       <div class="card-head"><h2>New Chew opportunities</h2></div>
-      <p class="muted" style="font-size:.92rem">See every pathway across the ecosystem and what’s available now.</p>
+      <p class="fs-sm muted">See every pathway across the ecosystem and what’s available now.</p>
       <a class="btn btn-light btn-block" href="/office/ways-to-earn">Explore Ways to Earn</a>
     </section>
   </div>

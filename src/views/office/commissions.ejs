@@ -26,8 +26,8 @@
 <% } %>
 
 <section class="mt-2">
-  <div class="row-between"><h2 style="font-size:1.1rem;margin:0">Ledger</h2>
-    <nav class="pills" style="padding:0" aria-label="Filter by status"><a class="pill <%= !status ? 'on' : '' %>" href="/office/commissions">All</a><% Object.entries(C.COMMISSION_STATUSES).forEach(function ([k, v]) { %><a class="pill <%= status === k ? 'on' : '' %>" href="?status=<%= k %>"><%= v %></a><% }) %></nav>
+  <div class="row-between"><h2 class="fs-110 m-0">Ledger</h2>
+    <nav class="p-0 pills" aria-label="Filter by status"><a class="pill <%= !status ? 'on' : '' %>" href="/office/commissions">All</a><% Object.entries(C.COMMISSION_STATUSES).forEach(function ([k, v]) { %><a class="pill <%= status === k ? 'on' : '' %>" href="?status=<%= k %>"><%= v %></a><% }) %></nav>
   </div>
   <div class="table-wrap mt-1"><table class="table">
     <thead><tr><th>Date</th><th>Description</th><th>From activity</th><th>Status</th><th class="num">Amount</th></tr></thead>

@@ -1,7 +1,7 @@
 <% const e = (k) => errors[k] ? `<p class="error">${u.esc(errors[k])}</p>` : ''; const plats = String(asset.platforms || '').split(','); %>
 <p class="fine"><a href="/admin/content">← Content Kitchen</a></p>
 <h1><%= title %></h1>
-<div class="grid-2" style="align-items:start">
+<div class="items-start grid-2">
   <div class="card">
     <form class="form" method="post" action="/admin/content<%= asset.id ? '/' + asset.id : '' %>" enctype="multipart/form-data">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -11,14 +11,14 @@
         <div class="field"><label for="status">Status</label><select id="status" name="status"><% Object.entries(statuses).forEach(function ([k, v]) { %><option value="<%= k %>" <%= asset.status === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
       </div>
       <div class="field"><label for="caption">Caption</label><textarea id="caption" name="caption"><%= asset.caption || '' %></textarea><p class="hint">Put <code>{link}</code> where the affiliate’s tracked link should go (otherwise it’s added at the end). Include a disclosure such as #ad.</p></div>
-      <div class="field"><label for="description">Notes for affiliates</label><textarea id="description" name="description" style="min-height:80px"><%= asset.description || '' %></textarea></div>
+      <div class="field"><label for="description">Notes for affiliates</label><textarea class="minh-80" id="description" name="description"><%= asset.description || '' %></textarea></div>
       <div class="field"><span class="label">Platform recommendation</span>
         <div class="check-grid"><% platforms.forEach(function (p) { %><label class="check-row"><input type="checkbox" name="platforms" value="<%= p %>" <%= plats.includes(p) ? 'checked' : '' %>><span><%= p %></span></label><% }) %></div></div>
       <div class="form-row two">
         <div class="field"><label for="destination_key">Links send people to</label><select id="destination_key" name="destination_key"><% destinations.forEach(function (d) { %><option value="<%= d.key %>" <%= asset.destination_key === d.key ? 'selected' : '' %>><%= d.label %></option><% }) %></select></div>
         <div class="field"><label for="campaign_id">Campaign</label><select id="campaign_id" name="campaign_id"><option value="">None</option><% campaigns.forEach(function (c) { %><option value="<%= c.id %>" <%= String(asset.campaign_id) === String(c.id) ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
       </div>
-      <div class="field"><label for="file">Media file (image, video or PDF)</label><input id="file" type="file" name="file" accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.webm,.pdf"><% if (asset.file_path) { %><p class="hint">Current: <a href="<%= asset.file_path %>" target="_blank"><%= asset.file_path.split('/').pop() %></a> — upload to replace.</p><% } %></div>
+      <div class="field <%= errors.file ? 'has-error' : '' %>"><label for="file">Media file (image, video or PDF)</label><input id="file" type="file" name="file" accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.webm,.pdf"><% if (asset.file_path) { %><p class="hint">Current: <a href="<%= asset.file_path %>" target="_blank"><%= asset.file_path.split('/').pop() %></a> — upload to replace.</p><% } %><%- e('file') %></div>
       <div class="field <%= errors.thumb ? 'has-error' : '' %>"><label for="thumb">Thumbnail image</label><input id="thumb" type="file" name="thumb" accept=".jpg,.jpeg,.png,.webp,.gif"><p class="hint">Optional for images (the image is used). Required for videos and documents.</p><%- e('thumb') %></div>
       <div class="field <%= errors.external_url ? 'has-error' : '' %>"><label for="external_url">Or external media URL</label><input id="external_url" type="url" name="external_url" value="<%= asset.external_url || '' %>" placeholder="https://…"><%- e('external_url') %></div>
       <div class="row"><button class="btn btn-green btn-lg" type="submit">Save asset</button><a class="btn btn-ghost" href="/admin/content">Cancel</a></div>
@@ -27,7 +27,7 @@
   </div>
   <div class="card">
     <div class="card-head"><h2>Preview</h2></div>
-    <% if (asset.thumb_path) { %><img src="<%= asset.thumb_path %>" alt="" style="width:100%;border-radius:12px"><% } else { %><div class="chart-empty">Upload an image or thumbnail to preview.</div><% } %>
+    <% if (asset.thumb_path) { %><img class="img-preview" src="<%= asset.thumb_path %>" alt=""><% } else { %><div class="chart-empty">Upload an image or thumbnail to preview.</div><% } %>
     <p class="fine mt-1 mb-0">Affiliates see: thumbnail, title, platform recommendation, their usage status and Preview · Copy Caption · Get My Link · Download.</p>
   </div>
 </div>

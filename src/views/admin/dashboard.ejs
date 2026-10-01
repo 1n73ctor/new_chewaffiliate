@@ -20,7 +20,7 @@
   <section class="card">
     <div class="card-head"><h2>Latest sign-ups</h2><% if (can('affiliates.view')) { %><a class="fine" href="/admin/affiliates">All affiliates →</a><% } %></div>
     <% if (!recentSignups.length) { %><p class="muted mb-0">No sign-ups yet.</p><% } %>
-    <div class="table-wrap" style="border:0"><table class="table"><tbody>
+    <div class="border-0 table-wrap"><table class="table"><tbody>
       <% recentSignups.forEach(function (a) { %><tr><td><a href="/admin/affiliates/<%= a.id %>"><%= a.first_name %> <%= a.last_name %></a><br><span class="fine"><%= a.email %></span></td><td><span class="mono"><%= a.affiliate_id || '—' %></span></td><td><span class="badge <%= a.status === 'active' ? 'badge-live' : a.status.startsWith('pending') ? 'badge-soon' : 'badge-red' %>"><%= C.USER_STATUSES[a.status] %></span></td></tr><% }) %>
     </tbody></table></div>
   </section>

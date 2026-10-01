@@ -1,8 +1,8 @@
 <section class="section">
-  <div class="wrap" style="max-width:640px;text-align:center">
-    <h1 style="color:var(--green-800)"><%= locals.heading || title %></h1>
+  <div class="mw-640 center wrap">
+    <h1 class="text-green"><%= locals.heading || title %></h1>
     <p class="lead"><%= locals.message || '' %></p>
-    <div class="row" style="justify-content:center;margin-top:1.5rem">
+    <div class="justify-center mt-150 row">
       <% (locals.actions || [{ href: '/', label: 'Go to homepage' }]).forEach(function (a) { %><a class="btn btn-green" href="<%= a.href %>"><%= a.label %></a><% }) %>
       <a class="btn btn-light" href="/help">Get help</a>
     </div>

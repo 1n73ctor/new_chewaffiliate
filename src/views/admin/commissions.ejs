@@ -4,7 +4,7 @@
 </div>
 <div class="stats mt-1">
   <% Object.entries(C.COMMISSION_STATUSES).forEach(function ([k, v]) { const t = totals[k] || { n: 0, cents: 0 }; %>
-  <a class="stat" href="?status=<%= k %>" style="text-decoration:none;color:inherit"><span class="label"><%= v %></span><span class="value"><%= u.money(t.cents) %></span><span class="meta"><%= t.n %> entries</span></a>
+  <a class="plain-link stat" href="?status=<%= k %>"><span class="label"><%= v %></span><span class="value"><%= u.money(t.cents) %></span><span class="meta"><%= t.n %> entries</span></a>
   <% }) %>
 </div>
 <form class="toolbar" method="get">
@@ -36,12 +36,12 @@
 <div class="toolbar">
   <div class="field"><label for="to">Move selected to</label><select id="to" name="to" form="bulk"><option value="approved">Approved</option><option value="paid">Paid</option><option value="reversed">Reversed</option></select></div>
   <button class="btn btn-green" type="submit" form="bulk" data-confirm="Change the status of the selected entries?">Apply</button>
-  <p class="fine" style="align-self:center;margin:0">Allowed: Pending → Approved/Reversed · Approved → Paid/Reversed · Paid → Reversed. Every change is audited.</p>
+  <p class="self-center m-0 fine">Allowed: Pending → Approved/Reversed · Approved → Paid/Reversed · Paid → Reversed. Every change is audited.</p>
 </div>
 <% } %>
 <%- include('../partials/pager', { pg: pg, base: '?' + (back ? back + '&' : '') }) %>
 <% if (manage) { %>
-<section class="card mt-2" style="max-width:720px">
+<section class="mw-720 card mt-2">
   <div class="card-head"><h2>Manual adjustment</h2></div>
   <form class="form" method="post" action="/admin/commissions/adjust" data-confirm="Add this adjustment to the ledger?">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">

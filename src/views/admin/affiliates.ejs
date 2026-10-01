@@ -10,7 +10,7 @@
 </nav>
 <form class="toolbar" method="get">
   <% if (status) { %><input type="hidden" name="status" value="<%= status %>"><% } %>
-  <div class="field" style="flex:1;max-width:420px"><label for="q">Search</label><input id="q" type="search" name="q" value="<%= q %>" placeholder="Name, email, mobile or CHW…"></div>
+  <div class="grow mw-420 field"><label for="q">Search</label><input id="q" type="search" name="q" value="<%= q %>" placeholder="Name, email, mobile or CHW…"></div>
   <button class="btn btn-green" type="submit"><%- icon('search') %> Search</button>
 </form>
 <div class="table-wrap">

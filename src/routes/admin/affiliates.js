@@ -54,9 +54,11 @@ router.get('/affiliates', requirePerm('affiliates.view'), (req, res) => {
   res.page('admin/affiliates', { title: 'Affiliates', nav: 'affiliates', rows, q, status, pg, statusCounts });
 });
 
+// Staff accounts (admin, support…) are only visible to people who manage staff,
+// so support-level users can't view admins or send them password resets.
 function loadAffiliate(req, res, next) {
   const a = db.get('SELECT * FROM users WHERE id = ?', Number(req.params.id) || 0);
-  if (!a) return next('route');
+  if (!a || (a.role !== 'affiliate' && !can(req.user, 'staff.manage'))) return next('route');
   req.affiliate = a;
   next();
 }

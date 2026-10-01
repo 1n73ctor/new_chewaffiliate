@@ -10,7 +10,7 @@ const settings = require('../lib/settings');
 const rateLimit = require('../lib/rateLimit');
 const qr = require('../lib/qr');
 const { sendEmail, sendSms, smsAvailable } = require('../lib/notify');
-const { createSession, destroySession, hashPassword, passwordProblem, nextSignupStep } = require('../lib/auth');
+const { createSession, destroySession, hashPassword, passwordProblem, validName, nextSignupStep } = require('../lib/auth');
 const { readAttribution, generateAffiliateId, recordEvent, primaryLink } = require('../lib/tracking');
 const { COUNTRIES, BY_CODE, guessCountry, normalizePhone, validPhone } = require('../lib/countries');
 const { HEAR_ABOUT } = require('../lib/constants');
@@ -35,7 +35,8 @@ async function sendCode(user, channel) {
     userId: user.id,
     sensitive: true,
     subject: `${code} is your Chew Network verification code`,
-    text: `Hi ${user.first_name},\n\nYour verification code is:\n\n${code}\n\nEnter it on the Chew Network signup page. It expires in ${CODE_TTL_MIN} minutes.\n\nIf you didn’t start signing up, you can ignore this email.`,
+    // No user-supplied text here: this email goes out before the address is verified.
+    text: `Your Chew Network verification code is:\n\n${code}\n\nEnter it on the signup page. It expires in ${CODE_TTL_MIN} minutes.\n\nIf you didn’t start signing up, you can ignore this email.`,
   });
 }
 
@@ -104,12 +105,14 @@ router.post('/', rateLimit({ windowMs: 3_600_000, max: 15, message: 'Too many si
   const attr = readAttribution(req);
   const errors = {};
   if (!form.first_name) errors.first_name = 'Enter your first name.';
+  else if (!validName(form.first_name)) errors.first_name = 'Use letters only (spaces, hyphens and apostrophes are fine).';
   if (!form.last_name) errors.last_name = 'Enter your last name.';
+  else if (!validName(form.last_name)) errors.last_name = 'Use letters only (spaces, hyphens and apostrophes are fine).';
   if (!EMAIL_RE.test(form.email)) errors.email = 'Enter a valid email address.';
   if (!form.country) errors.country = 'Choose your country.';
   const mobile = normalizePhone(form.mobile, form.country);
   if (!mobile || !validPhone(mobile)) errors.mobile = 'Enter a valid mobile number.';
-  const pwProblem = passwordProblem(b.password);
+  const pwProblem = passwordProblem(b.password, { email: form.email });
   if (pwProblem) errors.password = pwProblem;
   if (!form.terms) errors.terms = 'Please accept the Terms of Use and Privacy Policy to create your account.';
   if (form.sms_consent && !mobile) errors.sms_consent = 'Add a mobile number to receive texts.';

@@ -37,11 +37,13 @@ function record({ userId, channel, recipient, subject, body, driver, status, err
   );
 }
 
+const escHtml = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
 function wrapHtml(text) {
-  const site = settings.get('site_name') || 'Chew Network';
+  const site = escHtml(settings.get('site_name') || 'Chew Network');
   const paragraphs = String(text)
     .split(/\n{2,}/)
-    .map((p) => `<p style="margin:0 0 16px">${p.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]).replace(/\n/g, '<br>')}</p>`)
+    .map((p) => `<p style="margin:0 0 16px">${escHtml(p).replace(/\n/g, '<br>')}</p>`)
     .join('');
   return `<!doctype html><html><body style="margin:0;background:#f6f7f6;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1d2521">
   <div style="max-width:560px;margin:0 auto;padding:32px 20px">

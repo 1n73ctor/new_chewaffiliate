@@ -1,5 +1,5 @@
 <p class="fine"><a href="/office/training">← Training</a> · <%= lesson.module_title %></p>
-<article class="card" style="max-width:860px">
+<article class="mw-860 card">
   <h1 class="page-title"><%= lesson.title %></h1>
   <p class="fine"><%= lesson.minutes ? lesson.minutes + ' min' : '' %><%= done ? ' · ✓ Completed' : '' %></p>
   <% if (video && video.type === 'iframe') { %><div class="video-frame"><iframe src="<%= video.src %>" title="<%= lesson.title %>" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>

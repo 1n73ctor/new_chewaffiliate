@@ -1,7 +1,7 @@
 <% const err = (k) => errors[k] ? `<p class="error">${u.esc(errors[k])}</p>` : ''; %>
 <h1 class="page-title">Account</h1>
 <p class="page-intro">Affiliate ID <span class="mono"><strong><%= me.affiliate_id %></strong></span> · Member since <%= u.fmtDate(me.agreement_accepted_at || me.created_at) %></p>
-<div class="grid-2" style="align-items:start">
+<div class="items-start grid-2">
   <div class="stack">
     <section class="card">
       <div class="card-head"><h2>Profile</h2></div>
@@ -32,7 +32,7 @@
   <div class="stack">
     <section class="card" id="preferences">
       <div class="card-head"><h2>Communication preferences</h2></div>
-      <p class="muted" style="font-size:.9rem">Optional and separate from your account terms. Account and security messages are always sent.</p>
+      <p class="fs-90 muted">Optional and separate from your account terms. Account and security messages are always sent.</p>
       <form class="form" method="post" action="/office/account/preferences">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label class="check-row"><input type="checkbox" name="marketing_consent" value="1" <%= me.marketing_consent ? 'checked' : '' %>><span><strong>Marketing emails</strong><br><span class="fine"><%= me.marketing_consent ? 'Opted in ' + u.fmtDate(me.marketing_consent_at) : (me.marketing_consent_at ? 'Opted out ' + u.fmtDate(me.marketing_consent_at) : 'Not opted in') %></span></span></label>

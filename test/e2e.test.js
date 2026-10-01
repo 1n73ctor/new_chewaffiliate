@@ -440,3 +440,124 @@ test('staff can change their own password from My account', async () => {
   assert.equal((await new Client().signin('admin@test.local', 'Admin-Pass-123')).status, 401, 'old password rejected');
   assert.equal((await new Client().signin('admin@test.local', 'New-Admin-Pass-1')).location, '/admin');
 });
+
+// ---- Security regression tests ------------------------------------------------
+test('security: no open redirect through ?ref on protocol-relative paths', async () => {
+  for (const p of ['//evil.example/?ref=CHWAAAAAA', '//evil.example/%2e%2e?ref=X']) {
+    const r = await new Client().get(p);
+    assert.equal(r.status, 302, p);
+    assert.ok(r.location.startsWith('/') && !r.location.startsWith('//') && !r.location.startsWith('/\\'), `${p} -> ${r.location}`);
+  }
+});
+
+test('security: strict headers, no inline styles, no caching of dynamic pages', async () => {
+  const r = await new Client().get('/signin');
+  const csp = r.headers.get('content-security-policy');
+  assert.ok(!csp.includes('unsafe-inline'), csp);
+  assert.match(csp, /frame-ancestors 'none'/);
+  assert.match(csp, /script-src-attr 'none'/);
+  assert.equal(r.headers.get('x-frame-options'), 'DENY');
+  assert.match(r.headers.get('permissions-policy'), /camera=\(\)/);
+  assert.equal(r.headers.get('cache-control'), 'no-store');
+  for (const p of ['/', '/join', '/ways-to-earn', '/help', '/see-it-cook-it']) {
+    const { text } = await new Client().get(p);
+    assert.ok(!/\sstyle="/.test(text), `${p} has an inline style attribute`);
+  }
+});
+
+test('security: names with links are refused and pre-verification emails echo nothing typed', async () => {
+  const c = new Client();
+  await c.get('/join');
+  const bad = await c.post('/join', { first_name: 'Win $500 at http://evil.example', last_name: 'X', email: 'victim@test.local', mobile: '5555550199', country: 'US', password: 'Secret-Pass-1', terms: '1' });
+  assert.equal(bad.status, 422);
+  await c.post('/join', { first_name: 'Zoë', last_name: "O'Neil", email: 'zoe@test.local', mobile: '5555550198', country: 'US', password: 'Secret-Pass-1', terms: '1' });
+  const mail = db.get("SELECT body FROM outbox WHERE recipient = 'zoe@test.local' ORDER BY id DESC LIMIT 1").body;
+  assert.ok(!mail.includes('Zoë'), 'verification email must not include the typed name');
+  const h = new Client();
+  await h.get('/help');
+  await h.post('/help/contact', { name: 'Visit http://evil.example', email: 'victim2@test.local', topic: 'Signing in', subject: 'Claim your prize http://evil.example', message: 'phishing attempt text here' });
+  const conf = db.get("SELECT body, subject FROM outbox WHERE recipient = 'victim2@test.local' ORDER BY id DESC LIMIT 1");
+  assert.ok(!conf.body.includes('evil.example') && !conf.subject.includes('evil.example'));
+});
+
+test('security: weak passwords and repeated form fields are rejected cleanly', async () => {
+  const c = new Client();
+  await c.get('/join');
+  const weak = await c.post('/join', { first_name: 'Weak', last_name: 'Pass', email: 'weak@test.local', mobile: '5555550197', country: 'US', password: 'password123', terms: '1' });
+  assert.equal(weak.status, 422);
+  assert.ok(weak.text.includes('too common'));
+  const arr = await c.post('/signin', new URLSearchParams([['email', 'ava@test.local'], ['password', 'a'], ['password', 'b']]));
+  assert.equal(arr.status, 401, 'array password must not crash the server');
+});
+
+test('security: accounts lock after repeated failed sign-ins (survives restarts)', async () => {
+  const c = new Client();
+  await c.get('/signin');
+  for (let i = 0; i < 10; i++) await c.post('/signin', { email: 'ava@test.local', password: `wrong-${i}` });
+  assert.ok(db.get("SELECT locked_until FROM users WHERE email = 'ava@test.local'").locked_until, 'locked in the database');
+  const locked = await c.post('/signin', { email: 'ava@test.local', password: 'Secret-Pass-1' });
+  assert.equal(locked.status, 401);
+  assert.ok(locked.text.includes('Too many failed attempts'));
+  db.run("UPDATE users SET locked_until = NULL, failed_logins = 0 WHERE email = 'ava@test.local'");
+  assert.equal((await c.post('/signin', { email: 'ava@test.local', password: 'Secret-Pass-1' })).location, '/office');
+});
+
+test('security: support staff cannot open or reset staff accounts', async () => {
+  const v = new Client();
+  assert.equal((await v.signin('vanessa@test.local', 'Vanessa-Pass-1')).location, '/admin');
+  const adminId = db.get("SELECT id FROM users WHERE email = 'admin@test.local'").id;
+  assert.equal((await v.get(`/admin/affiliates/${adminId}`)).status, 404);
+  const before = db.get('SELECT COUNT(*) AS n FROM password_resets WHERE user_id = ?', adminId).n;
+  await v.post(`/admin/affiliates/${adminId}/reset`, {});
+  assert.equal(db.get('SELECT COUNT(*) AS n FROM password_resets WHERE user_id = ?', adminId).n, before);
+});
+
+test('security: uploads must really be the file type they claim, and are served sandboxed', async () => {
+  const fd = new FormData();
+  fd.set('_csrf', admin.csrf());
+  fd.set('title', 'Disguised file');
+  fd.set('status', 'draft');
+  fd.set('file', new Blob(['<html><script>alert(1)</script></html>'], { type: 'image/png' }), 'innocent.png');
+  const r = await fetch(BASE + '/admin/content', { method: 'POST', body: fd, redirect: 'manual', headers: { cookie: Object.entries(admin.jar).map(([k, v]) => `${k}=${v}`).join('; ') } });
+  assert.equal(r.status, 422);
+  assert.equal(db.get("SELECT COUNT(*) AS n FROM content_assets WHERE title = 'Disguised file'").n, 0);
+  const asset = db.get("SELECT file_path FROM content_assets WHERE file_path LIKE '/uploads/%' LIMIT 1");
+  const served = await fetch(BASE + asset.file_path);
+  assert.match(served.headers.get('content-security-policy'), /sandbox/);
+  assert.equal(served.headers.get('x-content-type-options'), 'nosniff');
+});
+
+test('security: two-step sign-in for staff (setup, code, replay protection, recovery codes)', async () => {
+  const totp = require('../src/lib/totp');
+  const adminRow = () => db.get("SELECT * FROM users WHERE email = 'admin@test.local'");
+  await admin.post('/admin/account/2fa/start', {});
+  const secret = totp.pendingSecret(adminRow());
+  assert.ok(secret);
+  const step = Math.floor(Date.now() / 1000 / totp.STEP);
+  const bad = await admin.post('/admin/account/2fa/confirm', { code: totp.codeAt(secret, step) === '000000' ? '111111' : '000000' });
+  assert.equal(bad.status, 422);
+  const ok = await admin.post('/admin/account/2fa/confirm', { code: totp.codeAt(secret, step) });
+  assert.equal(ok.status, 200);
+  const recovery = ok.text.match(/[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}/g);
+  assert.equal(new Set(recovery).size, 8);
+  assert.ok(adminRow().totp_enabled_at);
+  assert.ok(!adminRow().totp_secret.includes(secret), 'secret encrypted at rest');
+
+  // Password alone no longer signs in
+  const c = new Client();
+  const first = await c.signin('admin@test.local', 'New-Admin-Pass-1');
+  assert.equal(first.location, '/signin/code');
+  assert.equal((await c.get('/admin')).status, 302, 'no session yet');
+  assert.equal((await c.post('/signin/code', { code: totp.codeAt(secret, step) })).status, 401, 'replayed code refused');
+  const good = await c.post('/signin/code', { code: totp.codeAt(secret, step + 1) });
+  assert.equal(good.location, '/admin');
+  assert.equal((await c.get('/admin')).status, 200);
+
+  // Recovery code works once
+  const d = new Client();
+  await d.signin('admin@test.local', 'New-Admin-Pass-1');
+  assert.equal((await d.post('/signin/code', { code: recovery[0] })).location, '/admin');
+  const e = new Client();
+  await e.signin('admin@test.local', 'New-Admin-Pass-1');
+  assert.equal((await e.post('/signin/code', { code: recovery[0] })).status, 401, 'recovery code is single-use');
+});

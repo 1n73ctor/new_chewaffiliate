@@ -19,7 +19,7 @@
   <%- include('../partials/breakdown', { heading: 'By destination / product', rows: byDestination }) %>
 </div>
 
-<h2 class="mt-2" style="font-size:1.15rem">Detail</h2>
+<h2 class="fs-115 mt-2">Detail</h2>
 <nav class="pills" aria-label="View"><a class="pill <%= f.view === 'clicks' ? 'on' : '' %>" href="<%= withView('clicks') %>">Clicks</a><a class="pill <%= f.view === 'results' ? 'on' : '' %>" href="<%= withView('results') %>">Results (events)</a></nav>
 <form class="toolbar" method="get">
   <input type="hidden" name="view" value="<%= f.view %>">
@@ -33,8 +33,8 @@
   <% if (f.view === 'results') { %>
   <div class="field"><label for="type">Result</label><select id="type" name="type"><option value="">Any</option><% Object.entries(eventTypes).forEach(function ([k, v]) { %><option value="<%= k %>" <%= f.type === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
   <% } else { %>
-  <label class="check-row" style="align-self:center"><input type="checkbox" name="converted" value="1" <%= f.converted ? 'checked' : '' %>><span>Only clicks with a result</span></label>
-  <label class="check-row" style="align-self:center"><input type="checkbox" name="bots" value="1" <%= f.bots ? 'checked' : '' %>><span>Include bots &amp; self-clicks</span></label>
+  <label class="self-center check-row"><input type="checkbox" name="converted" value="1" <%= f.converted ? 'checked' : '' %>><span>Only clicks with a result</span></label>
+  <label class="self-center check-row"><input type="checkbox" name="bots" value="1" <%= f.bots ? 'checked' : '' %>><span>Include bots &amp; self-clicks</span></label>
   <% } %>
   <button class="btn btn-green" type="submit">Apply</button>
   <a class="btn btn-ghost" href="?view=<%= f.view %>">Reset</a>
@@ -47,7 +47,7 @@
     <tbody>
       <% if (!rows.length) { %><tr><td colspan="7" class="table-empty">No clicks match.</td></tr><% } %>
       <% rows.forEach(function (r) { %>
-      <tr style="<%= r.is_bot || r.is_self ? 'opacity:.55' : '' %>">
+      <tr class="<%= r.is_bot || r.is_self ? 'is-dim' : '' %>">
         <td class="nowrap"><%= u.fmtDateTime(r.created_at) %></td>
         <td><span class="mono"><%= r.affiliate_id %></span><br><span class="fine"><%= r.affiliate_name %></span></td>
         <td><%= r.content || '—' %><% if (r.campaign) { %><br><span class="fine"><%= r.campaign %></span><% } %></td>

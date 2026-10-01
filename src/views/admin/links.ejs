@@ -6,7 +6,7 @@
   <tbody>
     <% if (!rows.length) { %><tr><td colspan="8" class="table-empty">No tracked links.</td></tr><% } %>
     <% rows.forEach(function (l) { %>
-    <tr style="<%= l.active ? '' : 'opacity:.55' %>">
+    <tr class="<%= l.active ? '' : 'is-dim' %>">
       <td><strong><%= l.label || l.code %></strong><br><span class="mono fine"><%= l.code %></span></td>
       <td><span class="mono"><%= l.affiliate_id %></span><br><span class="fine"><%= l.first_name %> <%= l.last_name %></span></td>
       <td><%= l.destination_label || l.destination_key %></td>

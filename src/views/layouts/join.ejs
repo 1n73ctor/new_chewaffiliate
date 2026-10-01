@@ -28,7 +28,7 @@
       <% }) %>
     </ol>
     <% } %>
-    <% if (flash && flash.length) { %><div style="max-width:560px;margin:0 auto"><% flash.forEach(function (f) { %><div class="alert alert-<%= f.type %>" role="status"><%- icon(f.type === 'error' ? 'x' : f.type === 'success' ? 'check' : 'bell') %><div><%= f.message %></div></div><% }) %></div><% } %>
+    <% if (flash && flash.length) { %><div class="mw-560 mx-auto"><% flash.forEach(function (f) { %><div class="alert alert-<%= f.type %>" role="status"><%- icon(f.type === 'error' ? 'x' : f.type === 'success' ? 'check' : 'bell') %><div><%= f.message %></div></div><% }) %></div><% } %>
     <%- body %>
   </div>
 </main>

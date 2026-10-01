@@ -2,6 +2,7 @@
 const router = require('express').Router();
 const db = require('../db');
 const { recordClick, getDestination, trackAppDownload, cleanSource } = require('../lib/tracking');
+const { safeNext } = require('../lib/util');
 
 const activeAffiliate = (affiliateId) =>
   db.get("SELECT * FROM users WHERE affiliate_id = ? AND status = 'active'", String(affiliateId || '').toUpperCase().slice(0, 20));
@@ -61,7 +62,8 @@ router.use((req, res, next) => {
   params.delete('ref');
   params.delete('s');
   const qs = params.toString();
-  res.redirect(req.path + (qs ? `?${qs}` : ''));
+  // req.path can start with "//" or "/\\" (e.g. //evil.com/?ref=…) — never redirect off-site.
+  res.redirect(safeNext(req.path + (qs ? `?${qs}` : ''), '/'));
 });
 
 module.exports = router;

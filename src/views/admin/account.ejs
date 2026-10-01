@@ -1,17 +1,64 @@
 <% const err = (k) => errors[k] ? `<p class="error">${u.esc(errors[k])}</p>` : ''; %>
 <h1>My account</h1>
 <p class="page-intro"><%= me.email %> · <%= roleLabel %><% if (me.last_login_at) { %> · last sign-in <%= u.timeAgo(me.last_login_at) %><% } %></p>
-<div class="grid-2" style="align-items:start;max-width:980px">
+
+<% if (twoStep.recoveryCodes) { %>
+<section class="card card-green mw-980" id="two-step">
+  <div class="card-head"><h2><%- icon('shield') %> Two-step sign-in is on</h2></div>
+  <p><strong>Save these recovery codes now — they won’t be shown again.</strong> Each one works once if you lose your phone.</p>
+  <div class="key-reveal" id="recovery-codes"><%= twoStep.recoveryCodes.join('   ') %></div>
+  <p class="mt-1 mb-0"><button class="btn btn-green btn-sm" type="button" data-copy data-copy-target="#recovery-codes"><%- icon('copy') %> Copy codes</button></p>
+</section>
+<% } %>
+
+<div class="grid-2 items-start mw-980 mt-1">
   <section class="card">
     <div class="card-head"><h2>Change password</h2></div>
     <form class="form" method="post" action="/admin/account/password">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="field <%= errors.current_password ? 'has-error' : '' %>"><label for="current_password">Current password</label><input id="current_password" type="password" name="current_password" autocomplete="current-password" required><%- err('current_password') %></div>
-      <div class="field <%= errors.new_password ? 'has-error' : '' %>"><label for="new_password">New password</label><div class="pw-wrap"><input id="new_password" type="password" name="new_password" autocomplete="new-password" minlength="8" required><button class="pw-toggle" type="button" aria-pressed="false">Show</button></div><p class="hint">At least 8 characters. Signing in with the new password signs out your other devices.</p><%- err('new_password') %></div>
-      <div class="field <%= errors.confirm_password ? 'has-error' : '' %>"><label for="confirm_password">Confirm new password</label><input id="confirm_password" type="password" name="confirm_password" autocomplete="new-password" minlength="8" required><%- err('confirm_password') %></div>
+      <div class="field <%= errors.new_password ? 'has-error' : '' %>"><label for="new_password">New password</label><div class="pw-wrap"><input id="new_password" type="password" name="new_password" autocomplete="new-password" minlength="12" required><button class="pw-toggle" type="button" aria-pressed="false">Show</button></div><p class="hint">At least 12 characters for staff accounts. Your other devices will be signed out.</p><%- err('new_password') %></div>
+      <div class="field <%= errors.confirm_password ? 'has-error' : '' %>"><label for="confirm_password">Confirm new password</label><input id="confirm_password" type="password" name="confirm_password" autocomplete="new-password" minlength="12" required><%- err('confirm_password') %></div>
       <div><button class="btn btn-green" type="submit">Update password</button></div>
     </form>
   </section>
+
+  <section class="card" id="two-step">
+    <div class="card-head"><h2>Two-step sign-in</h2><span class="badge <%= twoStep.enabled ? 'badge-live' : 'badge-soon' %>"><%= twoStep.enabled ? 'On' : 'Off' %></span></div>
+    <% if (twoStep.enabled) { %>
+      <p class="muted fs-sm">Signing in asks for a code from your authenticator app. <%= twoStep.recoveryLeft %> recovery code<%= twoStep.recoveryLeft === 1 ? '' : 's' %> left.</p>
+      <details class="disclosure">
+        <summary>Turn off two-step sign-in</summary>
+        <form class="form" method="post" action="/admin/account/2fa/disable">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field"><label for="d-pass">Password</label><input id="d-pass" type="password" name="current_password" autocomplete="current-password" required></div>
+          <div class="field"><label for="d-code">Authenticator or recovery code</label><input id="d-code" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" required></div>
+          <%- err('disable') %>
+          <div><button class="btn btn-danger btn-sm" type="submit">Turn off</button></div>
+        </form>
+      </details>
+    <% } else if (twoStep.pendingQr) { %>
+      <ol class="fs-sm">
+        <li>Open an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password…).</li>
+        <li>Scan this QR code, or enter the key by hand.</li>
+        <li>Type the 6-digit code it shows.</li>
+      </ol>
+      <div class="row items-start">
+        <div class="qr-box"><%- twoStep.pendingQr %></div>
+        <div class="grow minw-150"><span class="label">Key</span><div class="key-reveal fs-sm" id="totp-key"><%= twoStep.pendingKey %></div></div>
+      </div>
+      <form class="form mt-1" method="post" action="/admin/account/2fa/confirm">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="field <%= errors.totp_code ? 'has-error' : '' %>"><label for="totp_code">6-digit code</label><input id="totp_code" class="code-input" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required><%- err('totp_code') %></div>
+        <div class="row"><button class="btn btn-green" type="submit">Turn on</button></div>
+      </form>
+      <form method="post" action="/admin/account/2fa/cancel" class="mt-1"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="link-btn fine" type="submit">Cancel setup</button></form>
+    <% } else { %>
+      <p class="muted fs-sm">Protect this staff account: after your password, sign-in also asks for a 6-digit code from an app on your phone. Strongly recommended for every admin.</p>
+      <form method="post" action="/admin/account/2fa/start"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-green" type="submit"><%- icon('shield') %> Set up two-step sign-in</button></form>
+    <% } %>
+  </section>
+
   <section class="card">
     <div class="card-head"><h2>Your name</h2></div>
     <form class="form" method="post" action="/admin/account/profile">

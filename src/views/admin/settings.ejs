@@ -1,7 +1,7 @@
 <h1>Settings</h1>
 <p class="page-intro">Everything here is live the moment you save — no code deployment needed.</p>
 <nav class="pills" aria-label="Sections"><% groups.forEach(function (g) { %><a class="pill" href="#<%= g.id %>"><%= g.title.replace(/ \(.*\)$/, '') %></a><% }) %></nav>
-<div class="stack" style="max-width:820px">
+<div class="mw-820 stack">
   <% groups.forEach(function (g) { %>
   <form class="card form settings-group" id="<%= g.id %>" method="post" action="/admin/settings">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">

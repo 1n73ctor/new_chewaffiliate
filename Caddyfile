@@ -4,10 +4,12 @@
 
 {$DOMAIN} {
 	encode zstd gzip
+	header -Server
 	reverse_proxy app:3000
 }
 
 # www → bare domain, keeping the path (so /a/<ID> referral links still work)
 www.{$DOMAIN} {
+	header -Server
 	redir https://{$DOMAIN}{uri} permanent
 }

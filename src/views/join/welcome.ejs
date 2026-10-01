@@ -10,10 +10,10 @@
         <h3>Save your referral link</h3>
         <p>Share it anywhere — every click is tracked to you.</p>
         <div class="copy-field"><input id="ref-link" type="text" value="<%= link %>" readonly data-select aria-label="Your referral link"><button class="btn btn-green" type="button" data-copy data-copy-target="#ref-link"><%- icon('copy') %> Copy</button></div>
-        <div class="row" style="margin-top:.75rem;align-items:flex-start">
+        <div class="mt-075 items-start row">
           <div class="qr-box qr-sm"><%- qrSvg %></div>
-          <div class="stack" style="flex:1;min-width:160px">
-            <p class="mb-0 muted" style="font-size:.9rem">Your QR code opens the same link — great for flyers and in-person sharing.</p>
+          <div class="grow minw-160 stack">
+            <p class="fs-90 mb-0 muted">Your QR code opens the same link — great for flyers and in-person sharing.</p>
             <a class="btn btn-light btn-sm" href="/office/qr/primary.png?download=1"><%- icon('download') %> Download QR</a>
           </div>
         </div>

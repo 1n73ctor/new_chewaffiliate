@@ -1,7 +1,7 @@
 <p class="fine"><a href="/admin/pages">← Legal pages</a></p>
 <h1><%= title %></h1>
 <% if (page.slug === 'affiliate-agreement') { %><p class="notice">Every affiliate’s acceptance records the <strong>agreement version</strong> set in <a href="/admin/settings#signup">Settings → Signup</a> (currently <strong><%= agreementVersion %></strong>). Update it whenever the terms change.</p><% } %>
-<div class="grid-2" style="align-items:start">
+<div class="items-start grid-2">
   <form class="card form" method="post" action="/admin/pages/<%= page.slug %>">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="form-row two">
@@ -11,5 +11,5 @@
     <div class="field"><label for="body">Content (Markdown)</label><textarea id="body" class="code" name="body"><%= page.body %></textarea><p class="hint"># Heading · **bold** · *italic* · - list · 1. list · [link](/path) · &gt; callout</p></div>
     <div class="row"><button class="btn btn-green btn-lg" type="submit">Save page</button><a class="btn btn-ghost" href="/<%= page.slug %>" target="_blank">View live</a></div>
   </form>
-  <section class="card"><div class="card-head"><h2>Current preview</h2></div><div class="prose" style="font-size:.92rem"><%- u.markdown(page.body) %></div></section>
+  <section class="card"><div class="card-head"><h2>Current preview</h2></div><div class="fs-sm prose"><%- u.markdown(page.body) %></div></section>
 </div>

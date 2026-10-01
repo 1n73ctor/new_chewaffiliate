@@ -4,7 +4,7 @@ const router = require('express').Router();
 const db = require('../../db');
 const settings = require('../../lib/settings');
 const audit = require('../../lib/audit');
-const { requirePerm, hashPassword, destroyAllSessions } = require('../../lib/auth');
+const { requirePerm, hashPassword, validName, destroyAllSessions } = require('../../lib/auth');
 const { ROLES, STAFF_ROLES, PERMISSIONS } = require('../../lib/permissions');
 const { LEGAL_PAGES } = require('../../lib/constants');
 const { sendPasswordReset } = require('../auth');
@@ -82,8 +82,8 @@ router.post('/staff', requirePerm('staff.manage'), async (req, res) => {
     role: STAFF_ROLES.includes(req.body.role) ? req.body.role : '',
   };
   const errors = {};
-  if (!form.first_name) errors.first_name = 'Required.';
-  if (!form.last_name) errors.last_name = 'Required.';
+  if (!validName(form.first_name)) errors.first_name = form.first_name ? 'Use letters only.' : 'Required.';
+  if (!validName(form.last_name)) errors.last_name = form.last_name ? 'Use letters only.' : 'Required.';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Enter a valid email.';
   if (!form.role) errors.role = 'Choose a role.';
   const existing = form.email && db.get('SELECT * FROM users WHERE email = ?', form.email);

@@ -56,7 +56,7 @@ router.post('/tickets/:id(\\d+)', requirePerm('tickets.manage'), loadTicket, asy
       to: t.email,
       userId: t.user_id,
       subject: `Re: ${t.subject} (#${t.id})`,
-      text: `Hi ${t.name || 'there'},\n\n${reply}\n\n— ${req.user.first_name}, Chew Network Support`,
+      text: `Hello,\n\n${reply}\n\n— ${req.user.first_name}, Chew Network Support`,
     });
     db.run('INSERT INTO ticket_notes (ticket_id, author_id, body) VALUES (?, ?, ?)', t.id, req.user.id, `Replied by email:\n${reply}`);
   }

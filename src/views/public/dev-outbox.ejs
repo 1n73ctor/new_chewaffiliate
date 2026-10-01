@@ -1,4 +1,4 @@
-<section class="section" style="padding-top:32px">
+<section class="pt-32 section">
   <div class="wrap">
     <h1>Development outbox</h1>
     <p class="muted">Emails and texts sent by the console driver (no SMTP / Twilio configured). This page does not exist in production.</p>
@@ -7,7 +7,7 @@
       <tbody>
         <% if (!messages.length) { %><tr><td colspan="4" class="table-empty">Nothing sent yet.</td></tr><% } %>
         <% messages.forEach(function (m) { %>
-        <tr><td class="nowrap"><%= u.timeAgo(m.created_at) %></td><td><%= m.channel %></td><td><%= m.recipient %></td><td><strong><%= m.subject || '' %></strong><pre style="white-space:pre-wrap;margin:.3rem 0 0;font-size:.85rem"><%= m.body %></pre></td></tr>
+        <tr><td class="nowrap"><%= u.timeAgo(m.created_at) %></td><td><%= m.channel %></td><td><%= m.recipient %></td><td><strong><%= m.subject || '' %></strong><pre class="pre-msg"><%= m.body %></pre></td></tr>
         <% }) %>
       </tbody>
     </table></div>

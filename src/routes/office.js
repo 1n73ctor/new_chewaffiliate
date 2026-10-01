@@ -7,7 +7,7 @@ const qr = require('../lib/qr');
 const stats = require('../lib/stats');
 const activation = require('../lib/activation');
 const content = require('../lib/content');
-const { requireAffiliate, checkPassword, hashPassword, passwordProblem, destroyAllSessions, createSession } = require('../lib/auth');
+const { requireAffiliate, checkPassword, hashPassword, passwordProblem, validName, destroyAllSessions, createSession } = require('../lib/auth');
 const { primaryLink, linkUrl, getOrCreateLink, SOURCES, cleanSource, EVENT_TYPES, appStoreUrl } = require('../lib/tracking');
 const { COMMISSION_STATUSES } = require('../lib/constants');
 const { COUNTRIES, BY_CODE, normalizePhone, validPhone } = require('../lib/countries');
@@ -400,8 +400,8 @@ router.post('/account/profile', (req, res) => {
   const country = BY_CODE[req.body.country] ? req.body.country : req.user.country;
   const mobile = normalizePhone(req.body.mobile, country);
   const errors = {};
-  if (!first) errors.first_name = 'Enter your first name.';
-  if (!last) errors.last_name = 'Enter your last name.';
+  if (!validName(first)) errors.first_name = first ? 'Use letters only (spaces, hyphens and apostrophes are fine).' : 'Enter your first name.';
+  if (!validName(last)) errors.last_name = last ? 'Use letters only (spaces, hyphens and apostrophes are fine).' : 'Enter your last name.';
   if (!validPhone(mobile)) errors.mobile = 'Enter a valid mobile number.';
   if (Object.keys(errors).length) return renderAccount(req, res, { errors, status: 422 });
   const phoneChanged = mobile !== req.user.mobile;
@@ -420,10 +420,10 @@ router.post('/account/profile', (req, res) => {
 });
 
 router.post('/account/password', (req, res) => {
-  if (!checkPassword(String(req.body.current_password || ''), req.user.password_hash)) {
+  if (!checkPassword(req.body.current_password, req.user.password_hash)) {
     return renderAccount(req, res, { errors: { current_password: 'Your current password is incorrect.' }, status: 422 });
   }
-  const problem = passwordProblem(req.body.new_password);
+  const problem = passwordProblem(req.body.new_password, { email: req.user.email });
   if (problem) return renderAccount(req, res, { errors: { new_password: problem }, status: 422 });
   db.run("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", hashPassword(req.body.new_password), req.user.id);
   // Sign out other devices, keep this one.

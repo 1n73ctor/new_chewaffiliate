@@ -48,8 +48,9 @@ const cleanSource = (s) =>
 const BOT_RE =
   /bot|crawl|spider|slurp|facebookexternalhit|facebot|embedly|preview|whatsapp|telegram|discord|slack|linkedin|twitter|pinterest|skype|vkshare|reddit|headless|lighthouse|curl|wget|python-requests|go-http-client/i;
 
-const ATTR_COOKIE = 'chew_attr';
-const VISITOR_COOKIE = 'chew_vid';
+const COOKIE_PREFIX = config.isProd ? '__Host-' : '';
+const ATTR_COOKIE = `${COOKIE_PREFIX}chew_attr`;
+const VISITOR_COOKIE = `${COOKIE_PREFIX}chew_vid`;
 
 // ---- IDs --------------------------------------------------------------------
 function generateAffiliateId() {

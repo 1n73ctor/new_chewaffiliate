@@ -1,7 +1,7 @@
 <h1>🔥 Today’s 3</h1>
 <p class="page-intro">“Fresh Out of the Kitchen” — the three picks shown at the top of every affiliate’s Dashboard and Content Kitchen.<% if (lastSet) { %> Last set <%= u.timeAgo(lastSet.set_at) %><%= lastSet.first_name ? ' by ' + lastSet.first_name : '' %>.<% } %></p>
 <% if (!assets.length) { %><div class="empty"><%- icon('kitchen') %><h3>No published assets</h3><p>Publish Content Kitchen assets first.</p><a class="btn btn-green" href="/admin/content/new">New asset</a></div><% } else { %>
-<form class="card form" method="post" action="/admin/content/todays-3" style="max-width:720px">
+<form class="mw-720 card form" method="post" action="/admin/content/todays-3">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <% [1, 2, 3].forEach(function (rank) { const cur = current[rank] && current[rank].asset_id; %>
   <div class="field"><label for="rank<%= rank %>">Pick #<%= rank %></label>

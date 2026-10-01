@@ -13,9 +13,9 @@
   <div class="stack">
     <div>
       <div class="row"><span class="badge badge-<%= asset.usage.tone %>"><%= asset.usage.label %></span><% if (asset.category_name) { %><span class="chip"><%= asset.category_name %></span><% } %></div>
-      <h1 class="page-title" style="margin-top:.6rem"><%= asset.title %></h1>
+      <h1 class="mt-060 page-title"><%= asset.title %></h1>
       <% if (asset.description) { %><p class="muted"><%= asset.description %></p><% } %>
-      <% if (asset.platformList.length) { %><p class="mb-0"><strong>Recommended for:</strong></p><div class="chip-row" style="margin-top:.35rem"><% asset.platformList.forEach(function (p) { %><span class="chip"><%= p %></span><% }) %></div><% } %>
+      <% if (asset.platformList.length) { %><p class="mb-0"><strong>Recommended for:</strong></p><div class="mt-035 chip-row"><% asset.platformList.forEach(function (p) { %><span class="chip"><%= p %></span><% }) %></div><% } %>
     </div>
 
     <section class="card card-tight" id="caption">

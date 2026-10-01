@@ -2,26 +2,69 @@
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 const config = require('../config');
-const { sha256, randomToken, addDays, safeEqual } = require('./util');
-const { can, isStaff } = require('./permissions');
+const { sha256, randomToken, addDays, addMinutes, safeEqual, hmac, now } = require('./util');
+const { can, isStaff, STAFF_ROLES } = require('./permissions');
 
-const SESSION_COOKIE = 'chew_sid';
-const CSRF_COOKIE = 'chew_csrf';
-const FLASH_COOKIE = 'chew_flash';
+// In production every cookie uses the __Host- prefix: browsers then only accept
+// it over HTTPS, for the exact host, so no subdomain can set or overwrite it.
+const COOKIE_PREFIX = config.isProd ? '__Host-' : '';
+const SESSION_COOKIE = `${COOKIE_PREFIX}chew_sid`;
+const CSRF_COOKIE = `${COOKIE_PREFIX}chew_csrf`;
+const FLASH_COOKIE = `${COOKIE_PREFIX}chew_flash`;
+const MFA_COOKIE = `${COOKIE_PREFIX}chew_mfa`;
 const cookieBase = { httpOnly: true, sameSite: 'lax', secure: config.isProd, path: '/' };
 
-const hashPassword = (pw) => bcrypt.hashSync(pw, config.isTest ? 4 : 11);
-const checkPassword = (pw, hash) => !!hash && bcrypt.compareSync(pw, hash);
+const hashPassword = (pw) => bcrypt.hashSync(String(pw), config.isTest ? 4 : 11);
+const checkPassword = (pw, hash) => typeof pw === 'string' && !!hash && bcrypt.compareSync(pw, hash);
 
-function passwordProblem(pw) {
-  if (!pw || pw.length < 8) return 'Use at least 8 characters for your password.';
+// Most-used passwords (and site-specific ones) are always refused.
+const COMMON_PASSWORDS = new Set(
+  `password password1 password12 password123 password1234 passw0rd p@ssword p@ssw0rd 12345678 123456789 1234567890 0123456789
+   87654321 11111111 00000000 12341234 11223344 qwertyui qwerty123 qwertyuiop 1q2w3e4r 1qaz2wsx zaq12wsx asdfghjk
+   iloveyou letmein1 welcome1 welcome123 sunshine princess football baseball superman starwars trustno1 whatever
+   admin123 administrator changeme changeme1 default1 abc12345 abcd1234 qazwsxedc monkey12 dragon12 master12
+   chewnetwork chew1234 chew12345 chewchew chewnetwork1 chewnetwork123 seeitcookit affiliate affiliate1`.split(/\s+/),
+);
+
+// opts: { email, staff } — staff accounts need 12+ characters.
+function passwordProblem(pw, { email = '', staff = false } = {}) {
+  if (typeof pw !== 'string' || !pw) return 'Enter a password.';
+  const min = staff ? 12 : 8;
+  if (pw.length < min) return `Use at least ${min} characters for your password.`;
   if (pw.length > 200) return 'That password is too long.';
+  const lower = pw.toLowerCase();
+  if (COMMON_PASSWORDS.has(lower) || /^(.)\1+$/.test(pw)) return 'That password is too common. Please choose something harder to guess.';
+  const e = String(email).toLowerCase();
+  if (e && (lower === e || lower === e.split('@')[0])) return 'Don’t use your email address as your password.';
   return null;
 }
 
+// Letters (any language), spaces, apostrophes, hyphens and periods only — no
+// links or symbols, so names can't be used to inject text into emails.
+const NAME_RE = /^[\p{L}\p{M}][\p{L}\p{M}' .\-]{0,59}$/u;
+const validName = (s) => NAME_RE.test(String(s || '').trim());
+
+// ---- Account lockout (persists across restarts) --------------------------
+const MAX_FAILED_LOGINS = 10;
+const LOCK_MINUTES = 15;
+const isLocked = (user) => !!(user && user.locked_until && user.locked_until > now());
+function recordFailedLogin(user) {
+  if (!user) return;
+  const failed = (user.failed_logins || 0) + 1;
+  if (failed >= MAX_FAILED_LOGINS) {
+    db.run('UPDATE users SET failed_logins = 0, locked_until = ? WHERE id = ?', addMinutes(LOCK_MINUTES), user.id);
+  } else {
+    db.run('UPDATE users SET failed_logins = ? WHERE id = ?', failed, user.id);
+  }
+}
+const clearFailedLogins = (userId) => db.run('UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = ?', userId);
+
 function createSession(req, res, userId, { remember = false } = {}) {
+  const user = db.get('SELECT role FROM users WHERE id = ?', userId);
+  const staff = !!user && STAFF_ROLES.includes(user.role);
+  // Staff sessions last at most 12 hours; affiliates can stay signed in for 30 days.
+  const days = staff ? 0.5 : remember ? 30 : 1;
   const token = randomToken(32);
-  const days = remember ? 30 : 1;
   db.run(
     'INSERT INTO sessions (id, user_id, ip, user_agent, expires_at) VALUES (?, ?, ?, ?, ?)',
     sha256(token),
@@ -30,9 +73,28 @@ function createSession(req, res, userId, { remember = false } = {}) {
     (req.get('user-agent') || '').slice(0, 300),
     addDays(days),
   );
-  // "remember" keeps a persistent cookie; otherwise a browser-session cookie.
-  res.cookie(SESSION_COOKIE, token, remember ? { ...cookieBase, maxAge: days * 86_400_000 } : cookieBase);
+  const persistent = staff || remember;
+  res.cookie(SESSION_COOKIE, token, persistent ? { ...cookieBase, maxAge: days * 86_400_000 } : cookieBase);
 }
+
+// ---- Pending two-step sign-in (password OK, code still needed) -------------
+function setMfaTicket(res, data) {
+  const payload = Buffer.from(JSON.stringify({ ...data, exp: Date.now() + 5 * 60_000 })).toString('base64url');
+  res.cookie(MFA_COOKIE, `${payload}.${hmac(`mfa:${payload}`)}`, { ...cookieBase, maxAge: 5 * 60_000 });
+}
+function readMfaTicket(req) {
+  const raw = req.cookies[MFA_COOKIE];
+  if (typeof raw !== 'string') return null;
+  const [payload, sig] = raw.split('.');
+  if (!payload || !sig || !safeEqual(sig, hmac(`mfa:${payload}`))) return null;
+  try {
+    const t = JSON.parse(Buffer.from(payload, 'base64url').toString());
+    return t.exp > Date.now() ? t : null;
+  } catch {
+    return null;
+  }
+}
+const clearMfaTicket = (res) => res.clearCookie(MFA_COOKIE, cookieBase);
 
 function destroySession(req, res) {
   const token = req.cookies[SESSION_COOKIE];
@@ -148,9 +210,17 @@ function requirePerm(perm) {
 }
 
 module.exports = {
+  COOKIE_PREFIX,
   hashPassword,
   checkPassword,
   passwordProblem,
+  validName,
+  isLocked,
+  recordFailedLogin,
+  clearFailedLogins,
+  setMfaTicket,
+  readMfaTicket,
+  clearMfaTicket,
   createSession,
   destroySession,
   destroyAllSessions,

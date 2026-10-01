@@ -40,6 +40,42 @@ const upload = multer({
   { name: 'thumb', maxCount: 1 },
 ]);
 
+// The file's first bytes must match its extension (so an HTML or script file
+// can't be uploaded disguised as an image).
+function contentMatchesExtension(file) {
+  const ext = path.extname(file.filename).toLowerCase();
+  let head;
+  try {
+    const fd = fs.openSync(file.path, 'r');
+    head = Buffer.alloc(16);
+    fs.readSync(fd, head, 0, 16, 0);
+    fs.closeSync(fd);
+  } catch {
+    return false;
+  }
+  const at = (offset, str) => head.subarray(offset, offset + str.length).toString('latin1') === str;
+  switch (ext) {
+    case '.jpg':
+    case '.jpeg':
+      return head[0] === 0xff && head[1] === 0xd8 && head[2] === 0xff;
+    case '.png':
+      return at(0, '\x89PNG\r\n\x1a\n');
+    case '.gif':
+      return at(0, 'GIF87a') || at(0, 'GIF89a');
+    case '.webp':
+      return at(0, 'RIFF') && at(8, 'WEBP');
+    case '.mp4':
+    case '.mov':
+      return at(4, 'ftyp') || at(4, 'moov') || at(4, 'mdat') || at(4, 'wide');
+    case '.webm':
+      return head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3;
+    case '.pdf':
+      return at(0, '%PDF-');
+    default:
+      return false;
+  }
+}
+
 const perm = requirePerm('content.manage');
 const STATUSES = { draft: 'Draft', published: 'Published', archived: 'Archived' };
 
@@ -116,6 +152,13 @@ function save(req, res, existing) {
     media_type: existing ? existing.media_type : 'image',
   };
   const errors = {};
+  for (const f of [file, thumb].filter(Boolean)) {
+    if (!contentMatchesExtension(f)) {
+      fs.rm(f.path, { force: true }, () => {});
+      errors[f.fieldname === 'thumb' ? 'thumb' : 'file'] = 'That file’s contents don’t match its type. Upload a real image, video or PDF.';
+    }
+  }
+  if (errors.file || errors.thumb) return renderForm(req, res, { ...existing, ...v }, errors, 422);
   if (!v.title) errors.title = 'Required.';
   if (v.external_url && !/^https:\/\//i.test(v.external_url)) errors.external_url = 'Use a full https:// URL.';
   if (file) {

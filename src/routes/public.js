@@ -141,8 +141,9 @@ router.post('/help/contact', rateLimit({ windowMs: 3_600_000, max: 8 }), async (
   await sendEmail({
     to: form.email,
     userId: req.user ? req.user.id : null,
-    subject: `We received your request (#${id})`,
-    text: `Hi ${form.name},\n\nThanks for contacting Chew Network support. Your request #${id} — “${form.subject}” — is with our team and we’ll reply by email.\n\nChew Network Support`,
+    subject: `We received your support request (#${id})`,
+    // Generic on purpose: anyone can enter any address here, so echo nothing they typed.
+    text: `Hello,\n\nThanks for contacting Chew Network support. Your request #${id} is with our team and we’ll reply to this address.\n\nIf you didn’t contact us, you can ignore this email.\n\nChew Network Support`,
   });
   res.flash('success', `Thanks — your request #${id} is with our support team. We’ll reply by email.`);
   res.redirect('/help#contact');

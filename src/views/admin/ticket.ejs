@@ -1,9 +1,9 @@
 <p class="fine"><a href="/admin/tickets">← Support tickets</a></p>
 <h1>#<%= t.id %> · <%= t.subject %></h1>
 <p class="page-intro"><%= t.topic %> · received <%= u.fmtDateTime(t.created_at) %> · <span class="badge <%= t.status === 'open' ? 'badge-soon' : 'badge-grey' %>"><%= C.TICKET_STATUSES[t.status] %></span></p>
-<div class="grid-2" style="align-items:start">
+<div class="items-start grid-2">
   <div class="stack">
-    <section class="card"><div class="card-head"><h2>Message</h2></div><p style="white-space:pre-wrap" class="mb-0"><%= t.message %></p></section>
+    <section class="card"><div class="card-head"><h2>Message</h2></div><p class="pre-wrap mb-0"><%= t.message %></p></section>
     <section class="card"><div class="card-head"><h2>History</h2></div>
       <% if (!notes.length) { %><p class="muted mb-0">No replies or notes yet.</p><% } %>
       <ul class="timeline"><% notes.forEach(function (n) { %><li><div class="meta"><%= n.author || 'Staff' %> · <%= u.fmtDateTime(n.created_at) %></div><p><%= n.body %></p></li><% }) %></ul>

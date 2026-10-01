@@ -22,7 +22,7 @@
         <span class="path-cat"><%= p.category_name %></span>
         <h3><%= p.title %></h3>
         <p><%= p.summary %></p>
-        <% if (p.cta_url) { %><p style="margin-top:.5rem"><a class="btn btn-green btn-sm" href="<%= p.cta_url %>"><%= p.cta_label || 'Get started' %></a></p><% } %>
+        <% if (p.cta_url) { %><p class="mt-050"><a class="btn btn-green btn-sm" href="<%= p.cta_url %>"><%= p.cta_label || 'Get started' %></a></p><% } %>
       </div>
       <span class="badge badge-live">Available Now</span>
     </div>
@@ -32,7 +32,7 @@
 </div>
 <% } %>
 
-<div id="results" style="scroll-margin-top:80px">
+<div class="scroll-anchor" id="results">
   <div class="pills" role="navigation" aria-label="Filter by category">
     <a class="pill <%= !catSlug ? 'on' : '' %>" href="<%= qs({ status: locals.status }) %>">All categories</a>
     <% categories.forEach(function (c) { %><a class="pill <%= catSlug === c.slug ? 'on' : '' %>" href="<%= qs({ category: c.slug, status: locals.status }) %>"><%= c.name %> <span class="count"><%= c.total %></span></a><% }) %>
@@ -56,7 +56,7 @@
         <div>
           <h3><%= p.title %></h3>
           <p><%= p.summary %></p>
-          <% if (live && p.cta_url) { %><p style="margin-top:.5rem"><a class="btn btn-green btn-sm" href="<%= p.cta_url %>"><%= p.cta_label || 'Get started' %></a></p><% } %>
+          <% if (live && p.cta_url) { %><p class="mt-050"><a class="btn btn-green btn-sm" href="<%= p.cta_url %>"><%= p.cta_label || 'Get started' %></a></p><% } %>
         </div>
         <%- include('pathway-badge', { status: p.status }) %>
       </div>

@@ -5,7 +5,7 @@
   <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Detail</th></tr></thead>
   <tbody>
     <% if (!rows.length) { %><tr><td colspan="5" class="table-empty">No entries.</td></tr><% } %>
-    <% rows.forEach(function (r) { %><tr><td class="nowrap"><%= u.fmtDateTime(r.created_at) %></td><td><%= r.first_name ? r.first_name + ' ' + r.last_name : 'System' %></td><td class="mono"><%= r.action %></td><td><%= r.target_type || '' %> <%= r.target_id || '' %></td><td class="fine" style="max-width:420px;overflow-wrap:anywhere"><%= (r.detail || '').slice(0, 300) %></td></tr><% }) %>
+    <% rows.forEach(function (r) { %><tr><td class="nowrap"><%= u.fmtDateTime(r.created_at) %></td><td><%= r.first_name ? r.first_name + ' ' + r.last_name : 'System' %></td><td class="mono"><%= r.action %></td><td><%= r.target_type || '' %> <%= r.target_id || '' %></td><td class="mw-420 break-any fine"><%= (r.detail || '').slice(0, 300) %></td></tr><% }) %>
   </tbody>
 </table></div>
 <%- include('../partials/pager', { pg: pg, base: q ? '?q=' + encodeURIComponent(q) + '&' : '?' }) %>

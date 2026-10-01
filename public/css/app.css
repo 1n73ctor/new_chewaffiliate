@@ -658,6 +658,92 @@ html.js .admin-side.open nav { display: block; }
 .settings-group { scroll-margin-top: 80px; }
 .status-select { min-height: 34px; padding: 0.2rem 1.8rem 0.2rem 0.5rem; font: inherit; font-size: 0.82rem; border: 1.5px solid var(--line-2); border-radius: 8px; background: #fff; }
 
+
+/* ---------- Utilities (replace inline styles so the CSP can forbid them) ----------
+   !important matches the precedence the old inline style="" attributes had. */
+.fs-sm { font-size: 0.92rem !important; }
+.fs-90 { font-size: 0.9rem !important; }
+.fs-100 { font-size: 1rem !important; }
+.fs-110 { font-size: 1.1rem !important; }
+.fs-115 { font-size: 1.15rem !important; }
+.fs-120 { font-size: 1.2rem !important; }
+.fs-125 { font-size: 1.25rem !important; }
+.fs-130 { font-size: 1.3rem !important; }
+.fw-500 { font-weight: 500 !important; }
+.fw-600 { font-weight: 600 !important; }
+.fw-800 { font-weight: 800 !important; }
+.display-xl { font-size: clamp(2.2rem, 6vw, 3.4rem) !important; }
+.ink-2 { color: var(--ink-2) !important; }
+.text-green { color: var(--green-800) !important; }
+.text-white { color: #fff !important; }
+.step-title { text-transform: uppercase !important; letter-spacing: 0.06em !important; color: var(--green-800) !important; }
+.group-heading { font-size: 1rem; text-transform: uppercase !important; letter-spacing: 0.08em !important; color: var(--muted) !important; margin-top: 1.5rem !important; }
+.group-heading.fs-110 { font-size: 1.1rem !important; }
+.group-heading-faq { font-size: 1.05rem !important; margin: 1.25rem 0 0.6rem !important; }
+.plain-link { text-decoration: none !important; color: inherit !important; }
+.pre-wrap { white-space: pre-wrap !important; }
+.pre-msg { white-space: pre-wrap !important; margin: 0.3rem 0 0 !important; font-size: 0.85rem !important; }
+.break-any { overflow-wrap: anywhere !important; }
+.img-preview { width: 100% !important; border-radius: 12px !important; }
+.is-dim { opacity: 0.55; }
+.mt-035 { margin-top: 0.35rem !important; }
+.mt-040 { margin-top: 0.4rem !important; }
+.mt-050 { margin-top: 0.5rem !important; }
+.mt-060 { margin-top: 0.6rem !important; }
+.mt-075 { margin-top: 0.75rem !important; }
+.mt-150 { margin-top: 1.5rem !important; }
+.mb-040 { margin-bottom: 0.4rem !important; }
+.mb-060 { margin-bottom: 0.6rem !important; }
+.mb-100 { margin-bottom: 1rem !important; }
+.m-0 { margin: 0 !important; }
+.mx-auto { margin-left: auto !important; margin-right: auto !important; }
+.my-2-auto { margin: 2rem auto !important; }
+.p-0 { padding: 0 !important; }
+.px-16 { padding-left: 16px !important; padding-right: 16px !important; }
+.py-030 { padding-top: 0.3rem !important; padding-bottom: 0.3rem !important; }
+.pt-16 { padding-top: 16px !important; }
+.pt-28 { padding-top: 28px !important; }
+.pt-32 { padding-top: 32px !important; }
+.pt-40 { padding-top: 40px !important; }
+.pb-56 { padding-bottom: 56px !important; }
+.mw-420 { max-width: 420px !important; }
+.mw-520 { max-width: 520px !important; }
+.mw-560 { max-width: 560px !important; }
+.mw-620 { max-width: 620px !important; }
+.mw-640 { max-width: 640px !important; }
+.mw-720 { max-width: 720px !important; }
+.mw-820 { max-width: 820px !important; }
+.mw-860 { max-width: 860px !important; }
+.mw-980 { max-width: 980px !important; }
+.mw-1400 { max-width: 1400px !important; }
+.minw-150 { min-width: 150px !important; }
+.minw-160 { min-width: 160px !important; }
+.minw-240 { min-width: 240px !important; }
+.minh-80 { min-height: 80px !important; }
+.minh-220 { min-height: 220px !important; }
+.scroll-520 { max-height: 520px !important; overflow: auto !important; }
+.scroll-anchor { scroll-margin-top: 80px !important; }
+.grow { flex: 1 !important; }
+.items-start { align-items: start !important; }
+.self-center { align-self: center !important; }
+.justify-center { justify-content: center !important; }
+.gap-040 { gap: 0.4rem !important; }
+.list-plain { list-style: none !important; padding: 0 !important; }
+.border-0 { border: 0 !important; }
+.border-green { border-color: var(--green-200) !important; }
+.card-green { border-color: var(--green-200) !important; background: var(--green-50) !important; }
+.card-orange { border-color: var(--orange-100) !important; background: var(--orange-50) !important; }
+.center { text-align: center !important; }
+
+/* Native <progress> bars (no inline width needed) */
+progress.progress, progress.track { -webkit-appearance: none; appearance: none; display: block; width: 100%; border: 0; border-radius: 99px; overflow: hidden; color: var(--green-600); }
+progress.progress { height: 10px; background: var(--line); }
+progress.track { height: 8px; background: var(--bg-soft); grid-column: 1 / -1; }
+progress.progress::-webkit-progress-bar { background: var(--line); }
+progress.track::-webkit-progress-bar { background: var(--bg-soft); }
+progress.progress::-webkit-progress-value, progress.track::-webkit-progress-value { background: var(--green-600); border-radius: 99px; }
+progress.progress::-moz-progress-bar, progress.track::-moz-progress-bar { background: var(--green-600); border-radius: 99px; }
+
 /* ---------- Responsive ---------- */
 @media (min-width: 560px) {
   .hero-cta .btn-xl { width: auto; }

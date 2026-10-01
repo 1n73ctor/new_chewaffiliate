@@ -5,8 +5,8 @@
     <p>The Chew Network Affiliate Program is free. There’s no purchase, no payment page and nothing to sell door to door — just a clean set of tools to share a food technology platform you like.</p>
   </div>
 </section>
-<section class="section" style="padding-top:40px">
-  <div class="wrap" style="max-width:860px">
+<section class="pt-40 section">
+  <div class="mw-860 wrap">
     <% const steps = [
       ['Join', 'user', 'Tap Join Free and enter your name, email, mobile, country and a password. It takes about a minute on your phone. Marketing emails and text messages are optional and separate from your account terms.', '/join', 'Join free'],
       ['Get your ID', 'key', 'Confirm the 6-digit code we send you, accept the Affiliate Agreement, and your unique Affiliate ID is created automatically — along with your referral link and QR code.', null, null],
@@ -15,13 +15,13 @@
       ['Share', 'share', 'Start with Today’s 3 — fresh, approved posts. Copy the caption, get your tracked link and post. Share See It. Cook It. with your app link.', null, null],
       ['Track', 'chart', 'See real clicks, referrals and qualifying activity by content, source, link and destination. Commissions appear only when real tracked activity meets the published rules.', '/ways-to-earn', 'See what’s available now'],
     ]; %>
-    <ol class="flow-steps" style="list-style:none;padding:0">
+    <ol class="list-plain flow-steps">
       <% steps.forEach(function (s, i) { %>
       <li class="flow-step">
         <span class="n"><%= i + 1 %></span>
         <div>
-          <h3 style="text-transform:uppercase;letter-spacing:.06em;color:var(--green-800)"><%= s[0] %></h3>
-          <p style="font-size:1rem;color:var(--ink-2)"><%= s[2] %></p>
+          <h3 class="step-title"><%= s[0] %></h3>
+          <p class="fs-100 ink-2"><%= s[2] %></p>
           <% if (s[3]) { %><a class="btn btn-light btn-sm" href="<%= s[3] %>"><%= s[4] %> →</a><% } %>
         </div>
       </li>

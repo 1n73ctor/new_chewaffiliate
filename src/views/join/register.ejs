@@ -37,7 +37,7 @@
       <p class="group-label">Required</p>
       <label class="check-row"><input type="checkbox" name="terms" value="1" <%= form.terms ? 'checked' : '' %> required><span>I agree to the <a href="/terms" target="_blank">Terms of Use</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</span></label>
       <%- err('terms') %>
-      <p class="group-label" style="margin-top:.4rem">Optional — you can change these anytime</p>
+      <p class="mt-040 group-label">Optional — you can change these anytime</p>
       <label class="check-row"><input type="checkbox" name="marketing_consent" value="1" <%= form.marketing_consent ? 'checked' : '' %>><span>Email me Chew news, new opportunities and tips.</span></label>
       <label class="check-row"><input type="checkbox" name="sms_consent" value="1" <%= form.sms_consent ? 'checked' : '' %>><span>Text me Chew updates. Msg &amp; data rates may apply. Reply STOP to opt out.</span></label>
       <%- err('sms_consent') %>
