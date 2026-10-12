@@ -21,6 +21,11 @@ ENV NODE_ENV=production \
     DATA_DIR=/app/data
 WORKDIR /app
 
+# ffmpeg takes thumbnails from uploaded Content Kitchen videos.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 

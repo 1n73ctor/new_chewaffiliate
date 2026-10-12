@@ -2,6 +2,7 @@
 // Content Kitchen management: assets (upload or link), Today's 3.
 const path = require('path');
 const fs = require('fs');
+const { execFile } = require('child_process');
 const multer = require('multer');
 const router = require('express').Router();
 const db = require('../../db');
@@ -132,7 +133,27 @@ function removeUpload(p) {
   if (full.startsWith(path.resolve(config.uploadDir) + path.sep)) fs.rm(full, { force: true }, () => {});
 }
 
-function save(req, res, existing) {
+// Grab a still from an uploaded video for its thumbnail (needs ffmpeg; the
+// Docker image has it). Resolves to the new /uploads path, or null.
+function videoThumb(videoPath) {
+  const name = `${Date.now().toString(36)}-${randomToken(6)}.jpg`;
+  const out = path.join(config.uploadDir, name);
+  const grab = (at) =>
+    new Promise((resolve) => {
+      const args = ['-v', 'error', '-y', '-ss', at, '-i', videoPath, '-frames:v', '1', '-vf', "scale='min(1280,iw)':-2", '-q:v', '3', out];
+      execFile(process.env.FFMPEG_PATH || 'ffmpeg', args, { timeout: 60_000 }, (err) => {
+        let ok = false;
+        try {
+          ok = !err && fs.statSync(out).size > 0;
+        } catch {}
+        resolve(ok);
+      });
+    });
+  // 1s in skips black fade-ins; very short clips fall back to the first frame.
+  return grab('1').then((ok) => ok || grab('0')).then((ok) => (ok ? `/uploads/${name}` : (fs.rm(out, { force: true }, () => {}), null)));
+}
+
+async function save(req, res, existing) {
   const b = req.body;
   const file = req.files && req.files.file && req.files.file[0];
   const thumb = req.files && req.files.thumb && req.files.thumb[0];
@@ -175,10 +196,17 @@ function save(req, res, existing) {
   if (thumb) {
     if (existing && existing.thumb_path !== existing.file_path) removeUpload(existing.thumb_path);
     v.thumb_path = `/uploads/${thumb.filename}`;
+  } else if (v.media_type === 'video' && v.file_path && v.file_path.startsWith('/uploads/') && (file || !v.thumb_path)) {
+    // No thumbnail given: take one from the (new) video.
+    const grabbed = await videoThumb(path.join(config.uploadDir, v.file_path.slice('/uploads/'.length)));
+    if (grabbed) {
+      if (existing && existing.thumb_path !== existing.file_path) removeUpload(existing.thumb_path);
+      v.thumb_path = grabbed;
+    }
   }
   // YouTube links: use YouTube's own thumbnail unless one was uploaded.
   if (!v.thumb_path && !v.file_path) v.thumb_path = youtubeThumb(v.external_url);
-  if (v.status === 'published' && !v.thumb_path) errors.thumb = 'Add a thumbnail image (or upload an image file) before publishing.';
+  if (v.status === 'published' && !v.thumb_path) errors.thumb = 'Add a thumbnail image before publishing (we couldn’t take one from this media automatically).';
   if (Object.keys(errors).length) return renderForm(req, res, { ...existing, ...v }, errors, 422);
 
   if (existing) {
@@ -203,12 +231,12 @@ function save(req, res, existing) {
   res.redirect('/admin/content');
 }
 
-router.post('/content', perm, upload, verifyCsrf, (req, res) => save(req, res, null));
+router.post('/content', perm, upload, verifyCsrf, (req, res, next) => save(req, res, null).catch(next));
 
 router.post('/content/:id(\\d+)', perm, upload, verifyCsrf, (req, res, next) => {
   const existing = db.get('SELECT * FROM content_assets WHERE id = ?', req.params.id);
   if (!existing) return next();
-  save(req, res, existing);
+  save(req, res, existing).catch(next);
 });
 
 router.post('/content/:id(\\d+)/delete', perm, (req, res) => {

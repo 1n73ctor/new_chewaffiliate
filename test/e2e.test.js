@@ -503,6 +503,33 @@ test('security: accounts lock after repeated failed sign-ins (survives restarts)
   assert.equal((await c.post('/signin', { email: 'ava@test.local', password: 'Secret-Pass-1' })).location, '/office');
 });
 
+test('Content Kitchen: thumbnails come from the video or YouTube when none is uploaded', async (t) => {
+  const post = (fields) => {
+    const fd = new FormData();
+    fd.set('_csrf', admin.csrf());
+    fd.set('status', 'published');
+    for (const [k, v] of Object.entries(fields)) Array.isArray(v) ? fd.set(k, v[0], v[1]) : fd.set(k, v);
+    return fetch(BASE + '/admin/content', { method: 'POST', body: fd, redirect: 'manual', headers: { cookie: Object.entries(admin.jar).map(([k, v]) => `${k}=${v}`).join('; ') } });
+  };
+
+  assert.equal((await post({ title: 'YouTube reel', external_url: 'https://youtu.be/dQw4w9WgXcQ' })).status, 302);
+  const yt = db.get("SELECT * FROM content_assets WHERE title = 'YouTube reel'");
+  assert.equal(yt.thumb_path, 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg');
+  const page = await state.avaClient.get(`/office/content-kitchen/${yt.id}`);
+  assert.ok(page.text.includes('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ'), 'embedded player');
+
+  const sample = process.env.TEST_VIDEO;
+  if (!sample) return t.skip('set TEST_VIDEO=<mp4> (and FFMPEG_PATH if ffmpeg is not on PATH) to test video stills');
+  const res = await post({ title: 'Uploaded clip', file: [new Blob([fs.readFileSync(sample)], { type: 'video/mp4' }), 'clip.mp4'] });
+  assert.equal(res.status, 302);
+  const clip = db.get("SELECT * FROM content_assets WHERE title = 'Uploaded clip'");
+  assert.match(clip.thumb_path, /^\/uploads\/.+\.jpg$/);
+  const thumb = await fetch(BASE + clip.thumb_path);
+  assert.equal(thumb.status, 200);
+  const head = Buffer.from(await thumb.arrayBuffer()).subarray(0, 3);
+  assert.deepEqual([...head], [0xff, 0xd8, 0xff], 'a real JPEG');
+});
+
 test('security: support staff cannot open or reset staff accounts', async () => {
   const v = new Client();
   assert.equal((await v.signin('vanessa@test.local', 'Vanessa-Pass-1')).location, '/admin');
