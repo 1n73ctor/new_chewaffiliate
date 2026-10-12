@@ -91,6 +91,33 @@ const GROUPS = [
     ],
   },
   {
+    id: 'ppc',
+    title: 'Pay-per-click protection',
+    fields: [
+      {
+        key: 'ppc_unique_hours',
+        label: 'Repeat-click window (hours)',
+        type: 'number',
+        default: '24',
+        help: 'One paid click per IP address — and per device — per affiliate in this many hours. Repeat clicks still show in analytics, unpaid.',
+      },
+      {
+        key: 'ppc_daily_cap',
+        label: 'Daily paid-click cap per affiliate',
+        type: 'number',
+        default: '500',
+        help: 'Limits how much any one affiliate can earn from clicks in a day (UTC). Extra clicks are tracked but not paid.',
+      },
+      {
+        key: 'ppc_ip_hourly_limit',
+        label: 'Click-farm limit (clicks per IP per hour)',
+        type: 'number',
+        default: '60',
+        help: 'An IP that clicks more than this many affiliate links in an hour earns nothing for anyone.',
+      },
+    ],
+  },
+  {
     id: 'signup',
     title: 'Signup',
     fields: [

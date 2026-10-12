@@ -3,7 +3,7 @@
 // Bot/link-preview clicks and an affiliate's own clicks are excluded.
 const db = require('../db');
 const { daysAgo } = require('./util');
-const { QUALIFYING_TYPES, sourceLabel } = require('./tracking');
+const { QUALIFYING_TYPES, sourceLabel, REJECT_REASONS } = require('./tracking');
 
 const QUAL_IN = QUALIFYING_TYPES.map((t) => `'${t}'`).join(',');
 
@@ -34,8 +34,23 @@ function summary(scope, days) {
   const referralsAll = scope.userId
     ? db.get("SELECT COUNT(*) AS n FROM users WHERE referred_by = ? AND status = 'active'", scope.userId).n
     : db.get("SELECT COUNT(*) AS n FROM users WHERE referred_by IS NOT NULL AND status = 'active'").n;
+  // Pay-per-click: verified (paid) clicks and why the others weren't paid.
+  const ppc = db.all(
+    `SELECT status, reject_reason AS reason, COUNT(*) AS n FROM clicks
+     WHERE created_at >= ? AND status IN ('qualified', 'rejected')${s.sql} GROUP BY status, reject_reason`,
+    since,
+    ...s.params,
+  );
+  const paidClicks = ppc.filter((r) => r.status === 'qualified').reduce((n, r) => n + r.n, 0);
+  const unpaid = {};
+  for (const r of ppc.filter((x) => x.status === 'rejected')) {
+    const label = REJECT_REASONS[r.reason] || 'Other';
+    unpaid[label] = (unpaid[label] || 0) + r.n;
+  }
   return {
     days,
+    paidClicks,
+    unpaidClicks: Object.entries(unpaid).sort((a, b) => b[1] - a[1]),
     clicks: clicks.n,
     uniqueVisitors: clicks.uniq,
     signups: ev.affiliate_signup || 0,
@@ -123,7 +138,7 @@ function recentEvents(scope, limit = 20) {
      LEFT JOIN content_assets ca ON ca.id = e.content_id
      LEFT JOIN campaigns cp ON cp.id = e.campaign_id
      LEFT JOIN destinations d ON d.key = e.destination_key
-     WHERE e.affiliate_user_id IS NOT NULL${s.sql}
+     WHERE e.affiliate_user_id IS NOT NULL AND e.type != 'qualified_click'${s.sql}
      ORDER BY e.id DESC LIMIT ${Number(limit) | 0}`,
     ...s.params,
   );

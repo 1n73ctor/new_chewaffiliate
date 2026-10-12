@@ -8,7 +8,7 @@ const stats = require('../lib/stats');
 const activation = require('../lib/activation');
 const content = require('../lib/content');
 const { requireAffiliate, checkPassword, hashPassword, passwordProblem, validName, destroyAllSessions, createSession } = require('../lib/auth');
-const { primaryLink, linkUrl, getOrCreateLink, SOURCES, cleanSource, EVENT_TYPES, appStoreUrl } = require('../lib/tracking');
+const { primaryLink, linkUrl, getOrCreateLink, SOURCES, cleanSource, EVENT_TYPES, appStoreUrl, ppcActive } = require('../lib/tracking');
 const { COMMISSION_STATUSES } = require('../lib/constants');
 const { COUNTRIES, BY_CODE, normalizePhone, validPhone } = require('../lib/countries');
 const { clampStr, now, markdown } = require('../lib/util');
@@ -18,6 +18,7 @@ router.use(requireAffiliate);
 router.use((req, res, next) => {
   res.locals.layout = 'office';
   res.locals.primaryLink = primaryLink(req.user);
+  res.locals.ppcOn = ppcActive();
   next();
 });
 
@@ -176,6 +177,7 @@ router.get('/links', async (req, res) => {
   const links = db.all(
     `SELECT l.*, d.label AS destination_label, c.name AS campaign_name, a.title AS content_title,
        (SELECT COUNT(*) FROM clicks k WHERE k.link_id = l.id AND k.is_bot = 0 AND k.is_self = 0) AS clicks,
+       (SELECT COUNT(*) FROM clicks k WHERE k.link_id = l.id AND k.status = 'qualified') AS paid,
        (SELECT COUNT(*) FROM events e WHERE e.link_id = l.id AND e.type IN ('affiliate_signup','app_account_linked','activation_completed','qualifying_action','purchase')) AS results
      FROM tracked_links l
      LEFT JOIN destinations d ON d.key = l.destination_key

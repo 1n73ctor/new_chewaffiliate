@@ -28,7 +28,7 @@
 
 <h2 class="fs-110 mt-2">Last 30 days <span class="fw-500 fine">· real tracked activity only</span></h2>
 <div class="stats">
-  <div class="stat"><span class="label">Clicks</span><span class="value"><%= u.num(s.clicks) %></span><span class="meta"><%= u.num(s.uniqueVisitors) %> unique visitors</span></div>
+  <div class="stat"><span class="label">Clicks</span><span class="value"><%= u.num(s.clicks) %></span><span class="meta"><% if (ppcOn) { %><%= u.num(s.paidClicks) %> paid · <% } %><%= u.num(s.uniqueVisitors) %> unique visitors</span></div>
   <div class="stat"><span class="label">Referrals</span><span class="value"><%= u.num(s.signups) %></span><span class="meta"><%= u.num(s.referralsAll) %> all time</span></div>
   <div class="stat"><span class="label">Qualifying activity</span><span class="value"><%= u.num(s.qualifying) %></span><span class="meta">sign-ups, activations &amp; actions</span></div>
   <div class="stat"><span class="label">Commissions</span><span class="value"><%= money(s.commissions.approved + s.commissions.paid) %></span><span class="meta"><%= money(s.commissions.pending) %> pending review</span></div>

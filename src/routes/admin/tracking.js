@@ -5,7 +5,7 @@ const db = require('../../db');
 const stats = require('../../lib/stats');
 const audit = require('../../lib/audit');
 const { requirePerm } = require('../../lib/auth');
-const { EVENT_TYPES, SOURCES, sourceLabel, linkUrl } = require('../../lib/tracking');
+const { EVENT_TYPES, SOURCES, sourceLabel, linkUrl, REJECT_REASONS } = require('../../lib/tracking');
 const { paginate, clampStr } = require('../../lib/util');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -23,6 +23,7 @@ function filters(req) {
     type: EVENT_TYPES[req.query.type] ? req.query.type : '',
     converted: req.query.converted === '1' ? '1' : '',
     bots: req.query.bots === '1' ? '1' : '',
+    paid: ['qualified', 'rejected', 'pending'].includes(req.query.paid) ? req.query.paid : '',
   };
   const t = f.view === 'clicks' ? 'k' : 'e';
   const where = [];
@@ -41,6 +42,7 @@ function filters(req) {
   if (f.view === 'clicks') {
     if (!f.bots) where.push('k.is_bot = 0 AND k.is_self = 0');
     if (f.converted) where.push('EXISTS (SELECT 1 FROM events x WHERE x.click_id = k.click_id)');
+    if (f.paid) add('k.status = ?', f.paid);
   } else {
     if (f.type) add('e.type = ?', f.type);
   }
@@ -51,6 +53,7 @@ const CLICKS_SQL = (where) => `
   SELECT k.created_at, k.click_id, u.affiliate_id, u.first_name || ' ' || u.last_name AS affiliate_name,
          ca.title AS content, k.source, l.code AS link_code, COALESCE(l.label, CASE WHEN k.link_id IS NULL THEN 'Primary link' END) AS link_label,
          cp.name AS campaign, COALESCE(d.label, k.destination_key) AS destination, k.is_bot, k.is_self,
+         k.status AS paid_status, k.reject_reason,
          (SELECT GROUP_CONCAT(x.type, ', ') FROM events x WHERE x.click_id = k.click_id) AS results
   FROM clicks k JOIN users u ON u.id = k.affiliate_user_id
   LEFT JOIN content_assets ca ON ca.id = k.content_id
@@ -90,7 +93,7 @@ router.get('/tracking', requirePerm('tracking.view'), (req, res) => {
     audit(req, 'tracking.export', f.view, null, { rows: rows.length });
     const cols =
       f.view === 'clicks'
-        ? ['created_at', 'affiliate_id', 'affiliate_name', 'content', 'source', 'link_code', 'link_label', 'campaign', 'destination', 'results', 'click_id', 'is_bot', 'is_self']
+        ? ['created_at', 'affiliate_id', 'affiliate_name', 'content', 'source', 'link_code', 'link_label', 'campaign', 'destination', 'results', 'paid_status', 'reject_reason', 'click_id', 'is_bot', 'is_self']
         : ['created_at', 'type', 'affiliate_id', 'affiliate_name', 'content', 'source', 'link_code', 'campaign', 'destination', 'value_cents', 'currency', 'origin', 'subject_affiliate_id', 'click_id', 'event_id'];
     res.attachment(`chew-tracking-${f.view}.csv`).type('text/csv');
     return res.send(csv(rows, cols));
@@ -122,6 +125,7 @@ router.get('/tracking', requirePerm('tracking.view'), (req, res) => {
     sources: SOURCES,
     eventTypes: EVENT_TYPES,
     sourceLabel,
+    rejectReasons: REJECT_REASONS,
   });
 });
 

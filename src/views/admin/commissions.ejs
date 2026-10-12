@@ -24,7 +24,7 @@
         <td class="nowrap"><%= u.fmtDate(c.created_at) %></td>
         <td><span class="mono"><%= c.affiliate_id %></span><br><span class="fine"><%= c.first_name %> <%= c.last_name %></span></td>
         <td><%= c.description %><% if (c.note) { %><br><span class="fine"><%= c.note %></span><% } %></td>
-        <td><%= c.event_type ? (eventTypes[c.event_type] || c.event_type) + ' #' + c.event_id : 'Manual' %></td>
+        <td><%= c.period ? u.num(c.quantity) + ' paid click' + (c.quantity === 1 ? '' : 's') + ' · ' + u.fmtDate(c.period + ' 00:00:00') : c.event_type ? (eventTypes[c.event_type] || c.event_type) + ' #' + c.event_id : 'Manual' %></td>
         <td><span class="badge <%= c.status === 'paid' || c.status === 'approved' ? 'badge-live' : c.status === 'reversed' ? 'badge-red' : 'badge-soon' %>"><%= C.COMMISSION_STATUSES[c.status] %></span></td>
         <td class="num"><%= u.money(c.amount_cents, c.currency) %></td>
       </tr>

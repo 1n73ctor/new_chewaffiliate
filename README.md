@@ -168,6 +168,17 @@ Don't run `npm run seed:demo` on the live server; the demo accounts are for loca
    - `qualifying_action` / `purchase` from partners via the API
 4. When an event matches an **active commission rule**, a *Pending* ledger entry is created. Finance moves it Pending → Approved → Paid, or → Reversed. Every change goes to the audit log.
 
+### Pay-per-click
+
+Turn it on by creating a commission rule with the event **“Paid click (verified)”** and an amount per click (Admin → Commission rules). While a rule is active:
+
+1. Shared links (`/a/<ID>`, `/r/<code>`) show a short “Opening…” page. Its script confirms the click came from a real browser, then forwards the visitor (about half a second). Bots and link-preview crawlers are redirected straight away and never earn.
+2. A click is **paid** only if the browser confirmed it (not too fast, not automated, same cookies and browser), it isn't the affiliate's own click or from a network they sign in from, it's the first from that IP address (IPv6: /64) or device for that affiliate within the repeat window, the IP isn't clicking suspiciously often, and the affiliate is under the daily cap. Limits: Settings → Pay-per-click protection.
+3. Paid clicks add up into one **Pending** ledger line per affiliate per day (e.g. “37 paid clicks · Oct 3”), for finance to approve and pay.
+4. Every click stays in analytics; unpaid ones show the reason (Analytics for affiliates, Tracking report → Paid? for admins). Unconfirmed clicks expire after 15 minutes.
+
+No click-fraud filter is perfect — attackers with many real devices or residential IPs can still get through, which is why click lines start as Pending and the daily cap exists.
+
 ## Roles
 
 | Role | For | Can |

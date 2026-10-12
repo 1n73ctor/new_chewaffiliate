@@ -433,4 +433,25 @@ module.exports = [
   );
   CREATE INDEX idx_recovery_user ON recovery_codes(user_id);
   `,
+
+  /* 4: pay-per-click — click validation status + daily aggregated commissions */ `
+  ALTER TABLE clicks ADD COLUMN status TEXT NOT NULL DEFAULT 'ineligible';
+  ALTER TABLE clicks ADD COLUMN reject_reason TEXT;
+  ALTER TABLE clicks ADD COLUMN confirmed_at TEXT;
+  CREATE INDEX idx_clicks_ppc ON clicks(affiliate_user_id, status, created_at);
+  CREATE INDEX idx_clicks_ip ON clicks(ip_hash, created_at);
+
+  ALTER TABLE commissions ADD COLUMN period TEXT;
+  ALTER TABLE commissions ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1;
+  CREATE UNIQUE INDEX idx_commissions_daily ON commissions(user_id, rule_id, period)
+    WHERE period IS NOT NULL AND status = 'pending';
+
+  -- Networks each account has signed in from (hashed), to spot self-clicking.
+  CREATE TABLE login_ips (
+    user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    ip_hash   TEXT NOT NULL,
+    last_seen TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, ip_hash)
+  );
+  `,
 ];

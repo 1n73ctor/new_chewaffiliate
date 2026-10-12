@@ -11,6 +11,21 @@
   <div class="stat"><span class="label">App activations</span><span class="value"><%= u.num(s.activations) %></span><span class="meta"><%= u.num(s.appDownloads) %> download clicks</span></div>
   <div class="stat"><span class="label">Qualifying activity</span><span class="value"><%= u.num(s.qualifying) %></span><span class="meta">all qualifying events</span></div>
 </div>
+<% if (ppcOn || s.paidClicks || s.unpaidClicks.length) { const unpaidTotal = s.unpaidClicks.reduce((n, r) => n + r[1], 0); %>
+<section class="card mt-1">
+  <div class="card-head"><h2>Paid clicks</h2><span class="fine">verified, unique visitors only</span></div>
+  <div class="stats">
+    <div class="stat"><span class="label">Paid clicks</span><span class="value"><%= u.num(s.paidClicks) %></span><span class="meta">last <%= days %> days</span></div>
+    <div class="stat"><span class="label">Not paid</span><span class="value"><%= u.num(unpaidTotal) %></span><span class="meta">see reasons</span></div>
+  </div>
+  <% if (s.unpaidClicks.length) { %>
+  <div class="funnel mt-1">
+    <% s.unpaidClicks.forEach(function (r) { %><div class="funnel-row"><span><%= r[0] %></span><strong><%= u.num(r[1]) %></strong></div><% }) %>
+  </div>
+  <% } %>
+  <p class="fine mt-1 mb-0">A click is paid once per visitor (IP address or device) in each <%= site.ppc_unique_hours %>-hour window, only from a real browser, never for your own clicks, and up to <%= u.num(Number(site.ppc_daily_cap)) %> paid clicks a day.</p>
+</section>
+<% } %>
 
 <section class="card mt-1">
   <div class="card-head"><h2>Clicks per day</h2><span class="fine">last <%= days %> days</span></div>

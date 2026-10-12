@@ -833,3 +833,12 @@ progress.progress::-moz-progress-bar, progress.track::-moz-progress-bar { backgr
 @media print {
   .site-header, .site-footer, .office-top, .office-nav, .admin-top, .admin-side { display: none !important; }
 }
+
+/* ---------- "Opening…" page for shared links ---------- */
+.bare-body { background: var(--bg-soft); min-height: 100vh; display: grid; place-items: center; margin: 0; }
+.redirect-page { padding: 24px 16px; width: 100%; }
+.redirect-card { max-width: 360px; margin: 0 auto; text-align: center; background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 2rem 1.5rem; box-shadow: var(--shadow-sm); }
+.redirect-title { font-weight: 800; color: var(--green-800); font-size: 1.1rem; margin: 0.9rem 0 1rem; }
+.spinner { width: 34px; height: 34px; margin: 0 auto 1rem; border-radius: 50%; border: 3px solid var(--green-100); border-top-color: var(--green-600); animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

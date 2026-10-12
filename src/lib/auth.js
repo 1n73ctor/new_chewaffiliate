@@ -2,7 +2,7 @@
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 const config = require('../config');
-const { sha256, randomToken, addDays, addMinutes, safeEqual, hmac, now } = require('./util');
+const { sha256, randomToken, addDays, addMinutes, safeEqual, hmac, now, ipHash } = require('./util');
 const { can, isStaff, STAFF_ROLES } = require('./permissions');
 
 // In production every cookie uses the __Host- prefix: browsers then only accept
@@ -72,6 +72,12 @@ function createSession(req, res, userId, { remember = false } = {}) {
     req.ip,
     (req.get('user-agent') || '').slice(0, 300),
     addDays(days),
+  );
+  db.run(
+    `INSERT INTO login_ips (user_id, ip_hash) VALUES (?, ?)
+     ON CONFLICT(user_id, ip_hash) DO UPDATE SET last_seen = datetime('now')`,
+    userId,
+    ipHash(req.ip),
   );
   const persistent = staff || remember;
   res.cookie(SESSION_COOKIE, token, persistent ? { ...cookieBase, maxAge: days * 86_400_000 } : cookieBase);

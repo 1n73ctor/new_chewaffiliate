@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head>
+<%- include('../partials/head', { noindex: true }) %>
+<% if (locals.dest) { %><noscript><meta http-equiv="refresh" content="0;url=<%= dest %>"></noscript><% } %>
+</head>
+<body class="bare-body">
+<%- body %>
+<script src="/js/redirect.js?v=<%= assetVersion %>" defer></script>
+</body>
+</html>

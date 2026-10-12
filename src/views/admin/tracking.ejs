@@ -33,6 +33,7 @@
   <% if (f.view === 'results') { %>
   <div class="field"><label for="type">Result</label><select id="type" name="type"><option value="">Any</option><% Object.entries(eventTypes).forEach(function ([k, v]) { %><option value="<%= k %>" <%= f.type === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
   <% } else { %>
+  <div class="field"><label for="paid">Paid?</label><select id="paid" name="paid"><option value="">Any</option><option value="qualified" <%= f.paid === 'qualified' ? 'selected' : '' %>>Paid</option><option value="rejected" <%= f.paid === 'rejected' ? 'selected' : '' %>>Not paid</option><option value="pending" <%= f.paid === 'pending' ? 'selected' : '' %>>Still checking</option></select></div>
   <label class="self-center check-row"><input type="checkbox" name="converted" value="1" <%= f.converted ? 'checked' : '' %>><span>Only clicks with a result</span></label>
   <label class="self-center check-row"><input type="checkbox" name="bots" value="1" <%= f.bots ? 'checked' : '' %>><span>Include bots &amp; self-clicks</span></label>
   <% } %>
@@ -43,9 +44,9 @@
 <div class="table-wrap">
   <table class="table">
     <% if (f.view === 'clicks') { %>
-    <thead><tr><th>When</th><th>Who</th><th>What content</th><th>What source</th><th>What link</th><th>What product</th><th>What result</th></tr></thead>
+    <thead><tr><th>When</th><th>Who</th><th>What content</th><th>What source</th><th>What link</th><th>What product</th><th>What result</th><th>Paid?</th></tr></thead>
     <tbody>
-      <% if (!rows.length) { %><tr><td colspan="7" class="table-empty">No clicks match.</td></tr><% } %>
+      <% if (!rows.length) { %><tr><td colspan="8" class="table-empty">No clicks match.</td></tr><% } %>
       <% rows.forEach(function (r) { %>
       <tr class="<%= r.is_bot || r.is_self ? 'is-dim' : '' %>">
         <td class="nowrap"><%= u.fmtDateTime(r.created_at) %></td>
@@ -55,6 +56,7 @@
         <td><%= r.link_label || '—' %><% if (r.link_code) { %><br><span class="mono fine"><%= r.link_code %></span><% } %></td>
         <td><%= r.destination || '—' %></td>
         <td><%= r.results ? r.results.split(', ').map(t => eventTypes[t] || t).join(', ') : '—' %></td>
+        <td><% if (r.paid_status === 'qualified') { %><span class="badge badge-live">Paid</span><% } else if (r.paid_status === 'rejected') { %><span class="badge badge-red">No</span><br><span class="fine"><%= rejectReasons[r.reject_reason] || r.reject_reason %></span><% } else if (r.paid_status === 'pending') { %><span class="badge badge-soon">Checking</span><% } else { %><span class="fine">—</span><% } %></td>
       </tr>
       <% }) %>
     </tbody>

@@ -225,7 +225,7 @@ module.exports = {
     perm: 'commissions.manage',
     order: 'active DESC, event_type, id',
     columns: ['name', 'event_type', 'amount_cents', 'percent_bps', 'active'],
-    intro: 'When a tracked event matches an active rule, a Pending commission is added to the referring affiliate’s ledger. Rules start inactive — set amounts once management approves them.',
+    intro: 'When a tracked event matches an active rule, a Pending commission is added to the referring affiliate’s ledger. Rules start inactive — set amounts once management approves them. Pay-per-click: choose “Paid click (verified)” with a fixed amount per click; clicks add up into one line per affiliate per day, and the protection limits are in Settings → Pay-per-click protection.',
     fields: [
       { name: 'name', label: 'Name', required: true },
       { name: 'event_type', label: 'Qualifying event', type: 'select', required: true, options: () => Object.entries(EVENT_TYPES).filter(([k]) => k !== 'app_download_clicked') },

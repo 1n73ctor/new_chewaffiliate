@@ -48,6 +48,19 @@ function slugify(s) {
 }
 
 const sha256 = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
+
+// IP identity for duplicate-click checks. IPv4: the full address. IPv6: the /64
+// network, because one household or phone rotates through addresses inside it.
+function ipKey(ip) {
+  const a = String(ip || '').trim().replace(/^::ffff:/i, '');
+  if (!a.includes(':')) return a;
+  const [head, tail = ''] = a.split('::');
+  const h = head ? head.split(':') : [];
+  const t = tail ? tail.split(':') : [];
+  const groups = a.includes('::') ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t] : h;
+  return groups.slice(0, 4).map((g) => g.toLowerCase().replace(/^0+(?=.)/, '')).join(':') + '::/64';
+}
+const ipHash = (ip) => sha256(`${config.secret}:${ipKey(ip)}`).slice(0, 32);
 const hmac = (s) => crypto.createHmac('sha256', config.secret).update(String(s)).digest('base64url');
 const randomToken = (bytes = 32) => crypto.randomBytes(bytes).toString('base64url');
 
@@ -186,6 +199,8 @@ module.exports = {
   esc,
   slugify,
   sha256,
+  ipKey,
+  ipHash,
   hmac,
   randomToken,
   safeEqual,

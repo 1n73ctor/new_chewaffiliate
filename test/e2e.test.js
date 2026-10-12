@@ -16,6 +16,7 @@ process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'chew-test-'));
 process.env.ADMIN_EMAIL = 'admin@test.local';
 process.env.ADMIN_PASSWORD = 'Admin-Pass-123';
 process.env.RATE_LIMIT_FACTOR = '100';
+process.env.TRUST_PROXY = '1'; // lets tests simulate visitor IPs with X-Forwarded-For
 
 const createApp = require('../src/app');
 const db = require('../src/db');
@@ -41,7 +42,7 @@ class Client {
     }
   }
   async req(method, p, { form, json, headers = {}, body } = {}) {
-    const h = { 'user-agent': this.ua, cookie: Object.entries(this.jar).map(([k, v]) => `${k}=${v}`).join('; '), ...headers };
+    const h = { 'user-agent': this.ua, 'accept-language': 'en-US,en;q=0.9', cookie: Object.entries(this.jar).map(([k, v]) => `${k}=${v}`).join('; '), ...headers };
     let payload = body;
     if (form) {
       const params = new URLSearchParams(form);
@@ -560,4 +561,88 @@ test('security: two-step sign-in for staff (setup, code, replay protection, reco
   const e = new Client();
   await e.signin('admin@test.local', 'New-Admin-Pass-1');
   assert.equal((await e.post('/signin/code', { code: recovery[0] })).status, 401, 'recovery code is single-use');
+});
+
+// ---- Pay-per-click ---------------------------------------------------------------
+test('pay-per-click: only verified, unique, human clicks earn', async () => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const status = (clickId) => db.get('SELECT status, reject_reason FROM clicks WHERE click_id = ?', clickId);
+  const todayLine = () =>
+    db.get("SELECT c.* FROM commissions c JOIN commission_rules r ON r.id = c.rule_id WHERE r.event_type = 'qualified_click' AND c.user_id = ? AND c.period = date('now')", state.ava.id);
+
+  // Off by default: plain redirect, nothing to pay.
+  const before = await new Client().get(`/a/${state.ava.affiliate_id}`, { headers: { 'x-forwarded-for': '198.51.100.250' } });
+  assert.equal(before.status, 302);
+
+  // Management turns it on: $0.05 per verified click.
+  await admin.post('/admin/m/commission_rules', { name: 'Paid click', event_type: 'qualified_click', amount_cents: '0.05', percent_bps: '', currency: 'USD', active: '1' });
+
+  async function click(client, path, ip, { wait = 260, webdriver = false } = {}) {
+    const headers = ip ? { 'x-forwarded-for': ip } : {};
+    const page = await client.get(path, { headers });
+    assert.equal(page.status, 200, `${path} should show the Opening page`);
+    const token = page.text.match(/data-token="([^"]+)"/)[1];
+    await sleep(wait);
+    const r = await client.req('POST', '/r/confirm', { json: { t: token, wd: webdriver }, headers: { ...headers, 'x-csrf-token': client.csrf() } });
+    assert.equal(r.status, 204);
+    return token.split('.')[0];
+  }
+  const primary = `/a/${state.ava.affiliate_id}`;
+  const linkCode = db.get('SELECT code FROM tracked_links WHERE user_id = ? AND active = 1 LIMIT 1', state.ava.id).code;
+
+  // 1. A real visitor → paid
+  const v1 = new Client();
+  const c1 = await click(v1, primary, '198.51.100.1');
+  assert.equal(status(c1).status, 'qualified');
+  assert.equal(todayLine().quantity, 1);
+  assert.equal(todayLine().amount_cents, 5);
+
+  // 2. Same visitor again → not paid (repeat)
+  assert.equal(status(await click(v1, primary, '198.51.100.1')).reject_reason, 'repeat_visitor');
+  // 3. Different browser, same IP → not paid
+  assert.equal(status(await click(new Client(), `/r/${linkCode}`, '198.51.100.1')).reject_reason, 'repeat_visitor');
+  // 4. Another real visitor on another IP, via a tracked link → paid
+  assert.equal(status(await click(new Client(), `/r/${linkCode}`, '198.51.100.2')).status, 'qualified');
+  assert.equal(todayLine().quantity, 2);
+  assert.equal(todayLine().amount_cents, 10);
+
+  // 5. Bots / link previews never see the page and never earn
+  const bot = new Client('facebookexternalhit/1.1');
+  const b = await bot.get(primary, { headers: { 'x-forwarded-for': '198.51.100.3' } });
+  assert.equal(b.status, 302);
+  assert.equal(db.get('SELECT reject_reason FROM clicks ORDER BY id DESC LIMIT 1').reject_reason, 'bot');
+  // 6. Automated browser (navigator.webdriver) → not paid
+  assert.equal(status(await click(new Client(), primary, '198.51.100.4', { webdriver: true })).reject_reason, 'automation');
+  // 7. Script that confirms instantly → not paid
+  assert.equal(status(await click(new Client(), primary, '198.51.100.5', { wait: 0 })).reject_reason, 'too_fast');
+  // 8. From a network the affiliate signs in from → not paid
+  assert.equal(status(await click(new Client(), primary, null)).reject_reason, 'own_ip');
+  // 9. A forged token is ignored
+  const forged = await new Client().req('POST', '/r/confirm', { json: { t: 'abc.1700000000000.forged' } });
+  assert.ok([204, 403].includes(forged.status));
+
+  // 10. Daily cap
+  await admin.post('/admin/settings', { _group: 'ppc', ppc_unique_hours: '24', ppc_daily_cap: '2', ppc_ip_hourly_limit: '60' });
+  assert.equal(status(await click(new Client(), primary, '198.51.100.6')).reject_reason, 'daily_cap');
+  assert.equal(todayLine().quantity, 2, 'still only 2 paid');
+
+  // Affiliate sees it
+  const analytics = await state.avaClient.get('/office/analytics');
+  assert.ok(analytics.text.includes('Paid clicks'));
+  assert.ok(analytics.text.includes('Repeat visitor (same IP or device)'));
+  assert.ok((await state.avaClient.get('/office/commissions')).text.includes('2 paid clicks'));
+  // Admin report shows why
+  assert.ok((await admin.get('/admin/tracking?paid=rejected')).text.includes('Automated browser'));
+
+  // A click nobody confirmed (no JavaScript / tab closed) expires unpaid
+  const pend = await new Client().get(primary, { headers: { 'x-forwarded-for': '198.51.100.8' } });
+  const pendId = pend.text.match(/data-token="([^.]+)\./)[1];
+  db.run("UPDATE clicks SET created_at = datetime('now', '-20 minutes') WHERE click_id = ?", pendId);
+  require('../src/lib/tracking').expireStaleClicks();
+  assert.equal(status(pendId).reject_reason, 'expired');
+
+  // Turning the rule off goes back to plain redirects
+  const rule = db.get("SELECT id FROM commission_rules WHERE event_type = 'qualified_click'");
+  db.run('UPDATE commission_rules SET active = 0 WHERE id = ?', rule.id);
+  assert.equal((await new Client().get(primary, { headers: { 'x-forwarded-for': '198.51.100.7' } })).status, 302);
 });

@@ -20,6 +20,9 @@ const ASSET_VERSION = Date.now().toString(36);
 function createApp() {
   db.migrate();
   require('./db/seed').ensureBaseData();
+  const { expireStaleClicks } = require('./lib/tracking');
+  expireStaleClicks();
+  setInterval(expireStaleClicks, 5 * 60_000).unref();
 
   const app = express();
   app.set('view engine', 'ejs');
