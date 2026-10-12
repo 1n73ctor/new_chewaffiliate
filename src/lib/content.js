@@ -83,4 +83,21 @@ const fillCaption = (caption, url) => {
   return text.includes('{link}') ? text.split('{link}').join(url) : `${text}${text ? '\n\n' : ''}${url}`;
 };
 
-module.exports = { ASSET_SELECT, todays3, recordUsage, usageMap, usageStatus, PLATFORM_SOURCE, platforms, assetFile, fillCaption };
+// YouTube / Vimeo / direct video URL → how to play it on our pages.
+const YOUTUBE_ID = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/;
+function embedVideo(url) {
+  if (!url) return null;
+  let m = url.match(YOUTUBE_ID);
+  if (m) return { type: 'iframe', src: `https://www.youtube-nocookie.com/embed/${m[1]}` };
+  m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (m) return { type: 'iframe', src: `https://player.vimeo.com/video/${m[1]}` };
+  if (/^(https?:\/\/|\/uploads\/)[^\s]+\.(mp4|webm|mov)(\?.*)?$/i.test(url)) return { type: 'video', src: url };
+  return /^https?:\/\//i.test(url) ? { type: 'link', src: url } : null;
+}
+
+function youtubeThumb(url) {
+  const m = String(url || '').match(YOUTUBE_ID);
+  return m ? `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg` : null;
+}
+
+module.exports = { embedVideo, youtubeThumb, ASSET_SELECT, todays3, recordUsage, usageMap, usageStatus, PLATFORM_SOURCE, platforms, assetFile, fillCaption };

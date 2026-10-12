@@ -114,6 +114,7 @@ router.get('/content-kitchen/:id(\\d+)', (req, res, next) => {
     title: asset.title,
     nav: 'content',
     asset: { ...asset, platformList: content.platforms(asset), usage: content.usageStatus(usage) },
+    player: asset.file_path ? null : content.embedVideo(asset.external_url),
     sources: SOURCES,
     link: link ? { ...link, url: linkUrl(link.code) } : null,
     captionFilled: link ? content.fillCaption(asset.caption, linkUrl(link.code)) : null,
@@ -324,7 +325,7 @@ router.get('/training/:id(\\d+)', (req, res, next) => {
     nav: 'training',
     lesson,
     bodyHtml: markdown(lesson.body),
-    video: embedVideo(lesson.video_url),
+    video: content.embedVideo(lesson.video_url),
     done: !!db.get('SELECT 1 FROM training_progress WHERE user_id = ? AND lesson_id = ?', req.user.id, lesson.id),
     prevId: i > 0 ? order[i - 1] : null,
     nextId: i >= 0 && i < order.length - 1 ? order[i + 1] : null,
@@ -338,16 +339,6 @@ router.post('/training/:id(\\d+)/complete', (req, res) => {
   const next = order[order.indexOf(Number(req.params.id)) + 1];
   res.redirect(next ? `/office/training/${next}` : '/office/training');
 });
-
-function embedVideo(url) {
-  if (!url) return null;
-  let m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
-  if (m) return { type: 'iframe', src: `https://www.youtube-nocookie.com/embed/${m[1]}` };
-  m = url.match(/vimeo\.com\/(\d+)/);
-  if (m) return { type: 'iframe', src: `https://player.vimeo.com/video/${m[1]}` };
-  if (/^(https?:\/\/|\/uploads\/)[^\s]+\.(mp4|webm|mov)(\?.*)?$/i.test(url)) return { type: 'video', src: url };
-  return /^https?:\/\//i.test(url) ? { type: 'link', src: url } : null;
-}
 
 // ---- Resources -------------------------------------------------------------------
 router.get('/resources', (req, res) => {

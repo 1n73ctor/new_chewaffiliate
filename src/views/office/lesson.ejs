@@ -2,7 +2,7 @@
 <article class="mw-860 card">
   <h1 class="page-title"><%= lesson.title %></h1>
   <p class="fine"><%= lesson.minutes ? lesson.minutes + ' min' : '' %><%= done ? ' · ✓ Completed' : '' %></p>
-  <% if (video && video.type === 'iframe') { %><div class="video-frame"><iframe src="<%= video.src %>" title="<%= lesson.title %>" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
+  <% if (video && video.type === 'iframe') { %><div class="video-frame"><iframe src="<%= video.src %>" title="<%= lesson.title %>" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
   <% } else if (video && video.type === 'video') { %><div class="video-frame"><video src="<%= video.src %>" controls playsinline preload="metadata"></video></div>
   <% } else if (video) { %><p><a class="btn btn-light" href="<%= video.src %>" target="_blank" rel="noopener"><%- icon('play') %> Watch the video</a></p><% } %>
   <div class="prose"><%- bodyHtml %></div>

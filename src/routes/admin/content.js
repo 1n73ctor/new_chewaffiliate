@@ -10,7 +10,7 @@ const audit = require('../../lib/audit');
 const { requirePerm, verifyCsrf } = require('../../lib/auth');
 const { PLATFORMS } = require('../../lib/constants');
 const { randomToken, clampStr } = require('../../lib/util');
-const { ASSET_SELECT } = require('../../lib/content');
+const { ASSET_SELECT, youtubeThumb } = require('../../lib/content');
 
 const TYPES = {
   '.jpg': 'image',
@@ -176,6 +176,8 @@ function save(req, res, existing) {
     if (existing && existing.thumb_path !== existing.file_path) removeUpload(existing.thumb_path);
     v.thumb_path = `/uploads/${thumb.filename}`;
   }
+  // YouTube links: use YouTube's own thumbnail unless one was uploaded.
+  if (!v.thumb_path && !v.file_path) v.thumb_path = youtubeThumb(v.external_url);
   if (v.status === 'published' && !v.thumb_path) errors.thumb = 'Add a thumbnail image (or upload an image file) before publishing.';
   if (Object.keys(errors).length) return renderForm(req, res, { ...existing, ...v }, errors, 422);
 

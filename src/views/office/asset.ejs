@@ -1,6 +1,11 @@
 <p class="fine"><a href="/office/content-kitchen">← Content Kitchen</a></p>
 <div class="asset-preview">
   <div>
+    <% if (player && player.type === 'iframe') { %>
+      <div class="video-frame"><iframe src="<%= player.src %>" title="<%= asset.title %>" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+    <% } else if (player && player.type === 'video') { %>
+      <div class="video-frame"><video src="<%= player.src %>" poster="<%= asset.thumb_path || '' %>" controls playsinline preload="metadata"></video></div>
+    <% } else { %>
     <div class="asset-media">
       <% if (asset.media_type === 'video' && asset.file_path) { %>
         <video src="<%= asset.file_path %>" poster="<%= asset.thumb_path || '' %>" controls playsinline preload="metadata"></video>
@@ -8,7 +13,8 @@
         <img src="<%= asset.file_path && asset.media_type === 'image' ? asset.file_path : asset.thumb_path %>" alt="<%= asset.title %>">
       <% } %>
     </div>
-    <% if (asset.external_url) { %><p class="fine mt-1">Media hosted at <a href="<%= asset.external_url %>" target="_blank" rel="noopener">external link</a>.</p><% } %>
+    <% } %>
+    <% if (asset.external_url && !asset.file_path && !(player && player.type === 'iframe')) { %><p class="fine mt-1">Media hosted at <a href="<%= asset.external_url %>" target="_blank" rel="noopener">external link</a>.</p><% } %>
   </div>
   <div class="stack">
     <div>
@@ -45,6 +51,6 @@
       <% } %>
     </section>
 
-    <a class="btn btn-light btn-lg btn-block" href="/office/content-kitchen/<%= asset.id %>/download"><%- icon('download') %> Download <%= asset.media_type === 'video' ? 'video' : asset.media_type === 'document' ? 'file' : 'image' %></a>
+    <a class="btn btn-light btn-lg btn-block" href="/office/content-kitchen/<%= asset.id %>/download"><%- icon('download') %> <%= !asset.file_path && asset.external_url && player && player.type === 'iframe' ? 'Watch on ' + (/vimeo/i.test(asset.external_url) ? 'Vimeo' : 'YouTube') : 'Download ' + (asset.media_type === 'video' ? 'video' : asset.media_type === 'document' ? 'file' : 'image') %></a>
   </div>
 </div>
