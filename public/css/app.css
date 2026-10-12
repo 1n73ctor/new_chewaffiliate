@@ -572,7 +572,7 @@ details.disclosure[open] { padding-bottom: 1rem; }
 .asset-thumb { position: relative; display: block; aspect-ratio: 4 / 3; overflow: hidden; background: var(--bg-soft); }
 .asset-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .asset-thumb .badge { position: absolute; top: 10px; left: 10px; }
-.asset-thumb .media-type { position: absolute; bottom: 10px; right: 10px; background: rgba(0, 0, 0, 0.6); color: #fff; border: 0; }
+.asset-thumb .media-type { position: absolute; top: auto; left: auto; bottom: 10px; right: 10px; background: rgba(0, 0, 0, 0.6); color: #fff; border: 0; }
 .asset-thumb .rank { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%; background: var(--orange-500); color: #1d1206; font-weight: 900; display: grid; place-items: center; font-size: 0.9rem; }
 .asset-body { padding: 0.8rem 0.9rem 0.4rem; display: grid; gap: 0.45rem; flex: 1; align-content: start; }
 .asset-body h3 { font-size: 1rem; margin: 0; }
