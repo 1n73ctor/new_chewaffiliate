@@ -1,0 +1,28 @@
+<section class="section claim-page">
+  <div class="wrap claim-wrap">
+    <div class="card claim-card">
+      <p class="eyebrow eyebrow-orange">Free sponsored credits</p>
+      <% if (grant) { %>
+        <h1 class="claim-title">Your free credits are reserved</h1>
+        <p class="lead"><strong><%= u.num(grant.credits) %> credits</strong> for See It. Cook It. — enough for <%= videos %> cooking video<%= videos === 1 ? '' : 's' %>.</p>
+        <ol class="claim-steps">
+          <li><strong>Download See It. Cook It.</strong><%- include('../partials/store-badges', { quiet: true }) %></li>
+          <li><strong>Sign in with <%= email %></strong> — or enter this claim code in the app:<div class="link-code" aria-label="Claim code"><%= grant.claim_code %></div></li>
+        </ol>
+        <p class="fine mb-0">We emailed your claim code too. Sign in within <%= site.sic_claim_expiry_days %> days or the claim expires.</p>
+      <% } else { %>
+        <h1 class="claim-title">Turn a Food Photo Into Your Next Cooking Video.</h1>
+        <p class="lead">Get <strong><%= u.num(offer.credits) %> free credits</strong> — enough for <%= videos %> cooking video<%= videos === 1 ? '' : 's' %> with See It. Cook It.</p>
+        <p class="muted">Upload a dish, choose yourself or an AI chef, select a kitchen, and let See It. Cook It. create a cooking video. Each video uses <%= u.num(videoCost) %> credits and takes a little time to create.</p>
+        <% if (error) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div><%= error %></div></div><% } %>
+        <form class="form mt-1" method="post" action="/claim/<%= offer.code %>">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field"><label for="claim-email">Your email</label><input id="claim-email" type="email" name="email" value="<%= email %>" autocomplete="email" required><p class="hint">Use the email you’ll sign in to the app with.</p></div>
+          <label class="check-row"><input type="checkbox" name="consent" value="1" required><span>I agree to the <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>, and to receive my claim code by email.</span></label>
+          <button class="btn btn-cta btn-lg btn-block" type="submit">GET FREE CREDITS <%- icon('arrow') %></button>
+        </form>
+        <p class="fine mt-1 mb-0">One free claim per person. Videos made with free credits include Chew branding; a watermark-free download is <%= site.sic_price_download %>, or subscribe for <%= site.sic_price_monthly %>. Credits have no cash value.</p>
+      <% } %>
+    </div>
+  </div>
+</section>

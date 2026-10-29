@@ -7,11 +7,13 @@ const qr = require('../lib/qr');
 const stats = require('../lib/stats');
 const activation = require('../lib/activation');
 const content = require('../lib/content');
+const credits = require('../lib/credits');
+const wholesale = require('../lib/wholesale');
 const { requireAffiliate, checkPassword, hashPassword, passwordProblem, validName, destroyAllSessions, createSession } = require('../lib/auth');
-const { primaryLink, linkUrl, getOrCreateLink, SOURCES, cleanSource, EVENT_TYPES, appStoreUrl, ppcActive } = require('../lib/tracking');
-const { COMMISSION_STATUSES } = require('../lib/constants');
+const { primaryLink, linkUrl, getOrCreateLink, SOURCES, cleanSource, EVENT_TYPES, ppcActive } = require('../lib/tracking');
+const { COMMISSION_STATUSES, TRAINING_TRACKS, PROMO_KINDS } = require('../lib/constants');
 const { COUNTRIES, BY_CODE, normalizePhone, validPhone } = require('../lib/countries');
-const { clampStr, now, markdown } = require('../lib/util');
+const { clampStr, markdown } = require('../lib/util');
 const { waysData } = require('./public');
 
 router.use(requireAffiliate);
@@ -27,15 +29,15 @@ const RANGES = [7, 30, 90];
 const rangeOf = (req) => (RANGES.includes(Number(req.query.days)) ? Number(req.query.days) : 30);
 
 function trainingProgress(userId) {
-  const total = db.get('SELECT COUNT(*) AS n FROM training_lessons l JOIN training_modules m ON m.id = l.module_id WHERE l.published = 1 AND m.published = 1').n;
+  const total = db.get('SELECT COUNT(*) AS n FROM training_lessons l JOIN training_modules m ON m.id = l.module_id WHERE l.published = 1 AND m.published = 1 AND l.coming_soon = 0').n;
   const done = db.get(
     `SELECT COUNT(*) AS n FROM training_progress p JOIN training_lessons l ON l.id = p.lesson_id
-     JOIN training_modules m ON m.id = l.module_id WHERE p.user_id = ? AND l.published = 1 AND m.published = 1`,
+     JOIN training_modules m ON m.id = l.module_id WHERE p.user_id = ? AND l.published = 1 AND m.published = 1 AND l.coming_soon = 0`,
     userId,
   ).n;
   const next = db.get(
     `SELECT l.*, m.title AS module_title FROM training_lessons l JOIN training_modules m ON m.id = l.module_id
-     WHERE l.published = 1 AND m.published = 1 AND l.id NOT IN (SELECT lesson_id FROM training_progress WHERE user_id = ?)
+     WHERE l.published = 1 AND m.published = 1 AND l.coming_soon = 0 AND l.id NOT IN (SELECT lesson_id FROM training_progress WHERE user_id = ?)
      ORDER BY m.sort, l.sort LIMIT 1`,
     userId,
   );
@@ -65,6 +67,8 @@ router.get('/', async (req, res) => {
     announcements: announcements(),
     qrSvg: await qr.svg(primaryLink(req.user)),
     sponsor,
+    sic: wholesale.summary(req.user.id),
+    sicProgramOn: wholesale.enabled(),
   });
 });
 
@@ -89,16 +93,43 @@ router.get('/content-kitchen', (req, res) => {
   const usage = content.usageMap(req.user.id);
   const withUsage = (a) => ({ ...a, usage: content.usageStatus(usage[a.id]), platformList: content.platforms(a) });
   const assets = db.all(`${content.ASSET_SELECT} WHERE ${where.join(' AND ')} ORDER BY a.created_at DESC, a.id DESC`, ...params).map(withUsage);
+  const sicCategory = categories.find((c) => c.slug === 'see-it-cook-it');
+  const showSic = !q && (!category || category === sicCategory);
   res.page('office/content-kitchen', {
     title: 'Content Kitchen',
     nav: 'content',
     categories,
     category,
     q,
-    assets,
+    // See It. Cook It. assets live in their own gallery above the main grid.
+    assets: showSic && sicCategory ? assets.filter((a) => a.category_id !== sicCategory.id) : assets,
     todays3: content.todays3().map(withUsage),
+    sicGallery: showSic && sicCategory
+      ? db.all(`${content.ASSET_SELECT} WHERE a.status = 'published' AND a.category_id = ? ORDER BY a.created_at DESC, a.id DESC`, sicCategory.id).map(withUsage)
+      : [],
+    sicCategory,
+    ads: showSic ? promoCopy(req.user, 'ad') : [],
   });
 });
+
+// Approved copy with the affiliate's own link: their newest open claim link if they
+// run a giveaway, otherwise a tracked link to the See It. Cook It. page.
+function sicShareLink(user) {
+  const claim = db.get(
+    `SELECT l.code FROM claim_offers o JOIN tracked_links l ON l.id = o.link_id
+     WHERE o.user_id = ? AND o.active = 1 AND l.active = 1 ORDER BY o.id DESC LIMIT 1`,
+    user.id,
+  );
+  if (claim) return { url: linkUrl(claim.code), claim: true };
+  return { url: linkUrl(getOrCreateLink(user.id, { destinationKey: 'see-it-cook-it', label: 'See It. Cook It. promo copy' }).code), claim: false };
+}
+
+function promoCopy(user, kind) {
+  const rows = db.all('SELECT * FROM promo_copy WHERE published = 1 AND kind = ? ORDER BY sort, id', kind);
+  if (!rows.length) return [];
+  const link = kind === 'creator_faq' ? null : sicShareLink(user);
+  return rows.map((r) => ({ ...r, text: settings.fill(link ? r.body.replace(/\{link\}/g, link.url) : r.body), viaClaim: link && link.claim }));
+}
 
 function publishedAsset(id) {
   return db.get(`${content.ASSET_SELECT} WHERE a.id = ? AND a.status = 'published'`, Number(id) || 0);
@@ -157,6 +188,10 @@ router.post('/content-kitchen/:id(\\d+)/caption', (req, res, next) => {
 router.get('/content-kitchen/:id(\\d+)/download', (req, res, next) => {
   const asset = publishedAsset(req.params.id);
   if (!asset) return next();
+  if (!asset.download_allowed) {
+    res.flash('error', 'This asset can be shared with your link, but not downloaded.');
+    return res.redirect(`/office/content-kitchen/${asset.id}`);
+  }
   content.recordUsage(req.user.id, asset.id, 'download');
   const file = content.assetFile(asset);
   if (file) return res.download(file);
@@ -168,7 +203,8 @@ router.get('/content-kitchen/:id(\\d+)/download', (req, res, next) => {
 // ---- My Links ------------------------------------------------------------------
 function linkFormData() {
   return {
-    destinations: db.all('SELECT * FROM destinations WHERE active = 1 ORDER BY sort, id'),
+    // Claim links are created in See It. Cook It. (they hand out credits).
+    destinations: db.all("SELECT * FROM destinations WHERE active = 1 AND key != 'claim' ORDER BY sort, id"),
     campaigns: db.all("SELECT * FROM campaigns WHERE active = 1 AND (ends_on IS NULL OR ends_on = '' OR ends_on >= date('now')) ORDER BY name"),
     sources: SOURCES,
   };
@@ -179,7 +215,10 @@ router.get('/links', async (req, res) => {
     `SELECT l.*, d.label AS destination_label, c.name AS campaign_name, a.title AS content_title,
        (SELECT COUNT(*) FROM clicks k WHERE k.link_id = l.id AND k.is_bot = 0 AND k.is_self = 0) AS clicks,
        (SELECT COUNT(*) FROM clicks k WHERE k.link_id = l.id AND k.status = 'qualified') AS paid,
-       (SELECT COUNT(*) FROM events e WHERE e.link_id = l.id AND e.type IN ('affiliate_signup','app_account_linked','activation_completed','qualifying_action','purchase')) AS results
+       (SELECT COUNT(*) FROM events e WHERE e.link_id = l.id AND e.type IN ('affiliate_signup','app_account_linked','activation_completed','qualifying_action','purchase')) AS results,
+       (SELECT COUNT(*) FROM events e WHERE e.link_id = l.id AND e.type = 'affiliate_signup') AS signups,
+       (SELECT COUNT(*) FROM credit_grants g WHERE g.link_id = l.id AND g.status IN ('active','exhausted')) AS claims,
+       (SELECT COUNT(*) FROM creator_attribution ca WHERE ca.link_id = l.id) AS creators
      FROM tracked_links l
      LEFT JOIN destinations d ON d.key = l.destination_key
      LEFT JOIN campaigns c ON c.id = l.campaign_id
@@ -196,6 +235,8 @@ router.get('/links', async (req, res) => {
     primaryClicks,
     qrSvg: await qr.svg(primaryLink(req.user)),
     created: created ? { ...created, url: linkUrl(created.code) } : null,
+    sicDestinations: db.all("SELECT * FROM destinations WHERE active = 1 AND key IN ('see-it-cook-it', 'wholesale', 'app') ORDER BY sort"),
+    isWholesaler: !!credits.account(req.user.id),
     ...linkFormData(),
   });
 });
@@ -215,6 +256,8 @@ router.post('/links', (req, res) => {
     source: SOURCES.some(([k]) => k === source) ? source : null,
     label: clampStr(req.body.label, 80) || null,
   });
+  const utm = clampStr(req.body.utm_campaign, 60).replace(/[^\w .-]/g, '');
+  if (utm && utm !== link.utm_campaign) db.run('UPDATE tracked_links SET utm_campaign = ? WHERE id = ?', utm, link.id);
   res.flash('success', 'Your tracked link is ready.');
   res.redirect(`/office/links?created=${link.code}#new-link`);
 });
@@ -243,7 +286,13 @@ router.get('/qr/:code.:ext(svg|png)', async (req, res, next) => {
 
 // ---- Ways to Earn --------------------------------------------------------------
 router.get('/ways-to-earn', (req, res) => {
-  res.page('office/ways', { title: 'Ways to Earn', nav: 'ways', ...waysData(req.query) });
+  const rules = db.all("SELECT event_type FROM commission_rules WHERE active = 1 AND event_type IN ('sic_subscription', 'sic_download')").map((r) => r.event_type);
+  res.page('office/ways', {
+    title: 'Ways to Earn',
+    nav: 'ways',
+    ...waysData(req.query),
+    sic: { on: wholesale.enabled(), isWholesaler: !!credits.account(req.user.id), subscriptionRule: rules.includes('sic_subscription'), downloadRule: rules.includes('sic_download') },
+  });
 });
 
 // ---- Analytics -------------------------------------------------------------------
@@ -264,12 +313,50 @@ router.get('/analytics', (req, res) => {
     byDestination: stats.breakdown(scope, days, 'destination'),
     recent: stats.recentEvents(scope, 15),
     eventTypes: EVENT_TYPES,
+    sicFilters: sicFilters(req.query),
+    sicReport: credits.account(req.user.id) ? wholesale.creatorsReport(req.user.id, sicFilters(req.query)) : null,
   });
+});
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+function sicFilters(q) {
+  return {
+    from: ISO_DATE.test(q.from || '') ? q.from : '',
+    to: ISO_DATE.test(q.to || '') ? q.to : '',
+    link: /^\d{1,9}$/.test(q.link || '') ? q.link : '',
+    subscribed: ['yes', 'no'].includes(q.subscribed) ? q.subscribed : '',
+    activity: ['active', 'inactive'].includes(q.activity) ? q.activity : '',
+  };
+}
+
+// Export: only the affiliate's own creators, masked IDs, no personal data.
+router.get('/analytics/sic-users.csv', (req, res) => {
+  if (!credits.account(req.user.id)) return res.redirect('/office/analytics');
+  const { rows } = wholesale.creatorsReport(req.user.id, sicFilters(req.query));
+  const cell = (v) => {
+    const t = String(v ?? '');
+    return /^[=+\-@]/.test(t) ? `"'${t.replace(/"/g, '""')}"` : `"${t.replace(/"/g, '""')}"`;
+  };
+  const header = ['creator_id', 'joined', 'referral_campaign', 'credit_grants', 'credits_granted', 'credits_used', 'credits_remaining', 'subscription', 'last_activity', 'affiliate_id'];
+  const lines = rows.map((r) => [r.ref, r.assigned_at, r.campaign_name || r.link_label || r.source, r.grants, r.granted, r.used, r.remaining, r.subscription_status, r.last_active_at || '', r.affiliate_id].map(cell).join(','));
+  res.attachment(`see-it-cook-it-users-${req.user.affiliate_id}.csv`).type('text/csv').send([header.join(','), ...lines].join('\n'));
 });
 
 // ---- Commissions -----------------------------------------------------------------
 router.get('/commissions', (req, res) => {
   const status = COMMISSION_STATUSES[req.query.status] ? req.query.status : null;
+  if (req.query.tab === 'sic') {
+    return res.page('office/commissions-sic', {
+      title: 'Commissions · See It. Cook It.',
+      nav: 'commissions',
+      status,
+      rows: wholesale.commissionRows(req.user.id, status),
+      totals: wholesale.commissionTotals(req.user.id),
+      rules: db.all("SELECT * FROM commission_rules WHERE active = 1 AND event_type IN ('sic_subscription', 'sic_download') ORDER BY event_type, name"),
+      eventTypes: EVENT_TYPES,
+      isWholesaler: !!credits.account(req.user.id),
+    });
+  }
   const rows = db.all(
     `SELECT c.*, e.type AS event_type, e.created_at AS event_at FROM commissions c LEFT JOIN events e ON e.id = c.event_id
      WHERE c.user_id = ? ${status ? 'AND c.status = ?' : ''} ORDER BY c.id DESC LIMIT 200`,
@@ -290,7 +377,7 @@ router.get('/commissions', (req, res) => {
 
 // ---- Training --------------------------------------------------------------------
 router.get('/training', (req, res) => {
-  const modules = db.all('SELECT * FROM training_modules WHERE published = 1 ORDER BY sort, id');
+  const modules = db.all("SELECT * FROM training_modules WHERE published = 1 ORDER BY CASE track WHEN 'general' THEN 0 WHEN 'creators' THEN 1 ELSE 2 END, sort, id");
   const lessons = db.all('SELECT * FROM training_lessons WHERE published = 1 ORDER BY sort, id');
   const done = new Set(db.all('SELECT lesson_id FROM training_progress WHERE user_id = ?', req.user.id).map((r) => r.lesson_id));
   res.page('office/training', {
@@ -298,16 +385,31 @@ router.get('/training', (req, res) => {
     nav: 'training',
     modules: modules.map((m) => {
       const items = lessons.filter((l) => l.module_id === m.id).map((l) => ({ ...l, done: done.has(l.id) }));
-      return { ...m, lessons: items, done: items.filter((l) => l.done).length };
+      return { ...m, lessons: items, done: items.filter((l) => l.done).length, ready: items.filter((l) => !l.coming_soon).length };
     }),
     progress: trainingProgress(req.user.id),
+    tracks: TRAINING_TRACKS,
   });
+});
+
+// Downloadable checklist for a training track (plain text, prints anywhere).
+router.get('/training/checklist/:track(creators|wholesale)', (req, res) => {
+  const lessons = db.all(
+    `SELECT l.title, l.summary, l.coming_soon FROM training_lessons l JOIN training_modules m ON m.id = l.module_id
+     WHERE m.track = ? AND l.published = 1 AND m.published = 1 ORDER BY m.sort, l.sort, l.id`,
+    req.params.track,
+  );
+  const lines = [`See It. Cook It. — ${TRAINING_TRACKS[req.params.track]} checklist`, ''];
+  for (const l of lessons) lines.push(`[ ] ${l.title}${l.coming_soon ? ' (coming soon)' : ''}${l.summary ? `\n    ${settings.fill(l.summary)}` : ''}`);
+  lines.push('', 'Credits are free and promotional. Never present them as a cash prize. Always disclose #ad or #sponsored.');
+  res.attachment(`see-it-cook-it-${req.params.track}-checklist.txt`).type('text/plain').send(lines.join('\n'));
 });
 
 function orderedLessons() {
   return db.all(
     `SELECT l.id FROM training_lessons l JOIN training_modules m ON m.id = l.module_id
-     WHERE l.published = 1 AND m.published = 1 ORDER BY m.sort, m.id, l.sort, l.id`,
+     WHERE l.published = 1 AND m.published = 1 AND l.coming_soon = 0
+     ORDER BY CASE m.track WHEN 'general' THEN 0 WHEN 'creators' THEN 1 ELSE 2 END, m.sort, m.id, l.sort, l.id`,
   ).map((r) => r.id);
 }
 
@@ -317,14 +419,14 @@ router.get('/training/:id(\\d+)', (req, res, next) => {
      WHERE l.id = ? AND l.published = 1 AND m.published = 1`,
     req.params.id,
   );
-  if (!lesson) return next();
+  if (!lesson || lesson.coming_soon) return next();
   const order = orderedLessons();
   const i = order.indexOf(lesson.id);
   res.page('office/lesson', {
     title: lesson.title,
     nav: 'training',
     lesson,
-    bodyHtml: markdown(lesson.body),
+    bodyHtml: markdown(settings.fill(lesson.body)),
     video: content.embedVideo(lesson.video_url),
     done: !!db.get('SELECT 1 FROM training_progress WHERE user_id = ? AND lesson_id = ?', req.user.id, lesson.id),
     prevId: i > 0 ? order[i - 1] : null,
@@ -333,7 +435,7 @@ router.get('/training/:id(\\d+)', (req, res, next) => {
 });
 
 router.post('/training/:id(\\d+)/complete', (req, res) => {
-  const lesson = db.get('SELECT id FROM training_lessons WHERE id = ? AND published = 1', req.params.id);
+  const lesson = db.get('SELECT id FROM training_lessons WHERE id = ? AND published = 1 AND coming_soon = 0', req.params.id);
   if (lesson) db.run('INSERT OR IGNORE INTO training_progress (user_id, lesson_id) VALUES (?, ?)', req.user.id, lesson.id);
   const order = orderedLessons();
   const next = order[order.indexOf(Number(req.params.id)) + 1];
@@ -343,33 +445,26 @@ router.post('/training/:id(\\d+)/complete', (req, res) => {
 // ---- Resources -------------------------------------------------------------------
 router.get('/resources', (req, res) => {
   const resources = db.all('SELECT * FROM resources WHERE published = 1 ORDER BY category, sort, id');
-  res.page('office/resources', { title: 'Resources', nav: 'resources', resources });
-});
-
-// ---- See It. Cook It. activation -------------------------------------------------
-router.get('/see-it-cook-it', async (req, res) => {
-  const appLink = getOrCreateLink(req.user.id, { destinationKey: 'app', label: 'See It. Cook It. app link' });
-  const appLinkUrl = linkUrl(appLink.code);
-  const code = req.user.app_link_code && req.user.app_link_code_expires > now() ? req.user.app_link_code : null;
-  res.page('office/see-it-cook-it', {
-    title: 'See It. Cook It.',
-    nav: 'app',
-    activation: activation.status(req.user),
-    linkCode: code,
-    linkCodeExpires: code ? req.user.app_link_code_expires : null,
-    deepLink: code ? `${settings.get('app_deep_link_scheme') || 'seeitcookit://'}link?code=${code}` : null,
-    appLinkUrl,
-    appLinkCode: appLink.code,
-    appQrSvg: await qr.svg(appLinkUrl),
-    storesReady: { ios: !!appStoreUrl('ios'), android: !!appStoreUrl('android') },
-    reward: settings.get('reward_enabled') === '1' ? settings.all() : null,
+  res.page('office/resources', {
+    title: 'Resources',
+    nav: 'resources',
+    resources,
+    promo: { ad: promoCopy(req.user, 'ad'), giveaway: promoCopy(req.user, 'giveaway'), creator_faq: promoCopy(req.user, 'creator_faq') },
+    promoKinds: PROMO_KINDS,
   });
 });
 
-router.post('/see-it-cook-it/link-code', (req, res) => {
-  activation.issueLinkCode(req.user.id);
-  res.redirect('/office/see-it-cook-it#link-code');
+// One-click download of a piece of approved copy, with the affiliate's link filled in.
+router.get('/resources/copy/:id(\\d+).txt', (req, res, next) => {
+  const row = db.get('SELECT * FROM promo_copy WHERE id = ? AND published = 1', req.params.id);
+  if (!row) return next();
+  const filled = promoCopy(req.user, row.kind).find((r) => r.id === row.id);
+  const text = [filled.title, '', filled.text, '', filled.guidance ? `Usage: ${filled.guidance}` : '', 'Always disclose #ad or #sponsored. Credits are free and have no cash value.'].filter((l, i, all) => l || all[i - 1]).join('\n');
+  res.attachment(`chew-${row.kind}-${row.id}.txt`).type('text/plain').send(text);
 });
+
+// ---- See It. Cook It. (activation + wholesale command center) ---------------------
+router.use(require('./office-sic'));
 
 // ---- Account -----------------------------------------------------------------------
 function renderAccount(req, res, extra = {}) {
@@ -380,6 +475,15 @@ function renderAccount(req, res, extra = {}) {
     me: user,
     countries: COUNTRIES,
     sponsor: user.referred_by ? db.get('SELECT first_name, last_name, affiliate_id FROM users WHERE id = ?', user.referred_by) : null,
+    wsAccount: credits.account(user.id),
+    domains: db.all('SELECT * FROM promo_domains WHERE user_id = ? ORDER BY id', user.id),
+    termsVersion: wholesale.termsVersion(),
+    history: db.all(
+      `SELECT action, created_at FROM audit_log WHERE (target_type = 'user' AND target_id = ?) OR (actor_id = ? AND action LIKE 'wholesale.%')
+       ORDER BY id DESC LIMIT 15`,
+      String(user.id),
+      user.id,
+    ),
     errors: {},
     ...extra,
   });

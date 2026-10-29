@@ -21,8 +21,13 @@ function createApp() {
   db.migrate();
   require('./db/seed').ensureBaseData();
   const { expireStaleClicks } = require('./lib/tracking');
-  expireStaleClicks();
-  setInterval(expireStaleClicks, 5 * 60_000).unref();
+  const { expireClaims } = require('./lib/credits');
+  const housekeeping = () => {
+    expireStaleClicks();
+    expireClaims();
+  };
+  housekeeping();
+  setInterval(housekeeping, 5 * 60_000).unref();
 
   const app = express();
   app.set('view engine', 'ejs');
@@ -49,7 +54,8 @@ function createApp() {
           frameSrc: ['https://www.youtube-nocookie.com', 'https://www.youtube.com', 'https://player.vimeo.com'],
           objectSrc: ["'none'"],
           frameAncestors: ["'none'"],
-          formAction: ["'self'"],
+          // Wholesale package checkout redirects to Stripe after the form posts.
+          formAction: ["'self'", 'https://checkout.stripe.com'],
           ...(config.isProd ? { upgradeInsecureRequests: [] } : {}),
         },
       },
@@ -81,6 +87,18 @@ function createApp() {
   app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();
+  });
+  // Stripe needs the raw body to verify its signature, so this comes before the parsers.
+  app.post('/webhooks/stripe', express.raw({ type: '*/*', limit: '1mb' }), (req, res) => {
+    const evt = require('./lib/stripe').verifyWebhook(req.body.toString('utf8'), req.get('stripe-signature'));
+    if (!evt) return res.status(400).json({ error: 'invalid_signature' });
+    try {
+      require('./lib/wholesale').handleStripeEvent(evt);
+    } catch (err) {
+      console.error('Stripe webhook failed:', err);
+      return res.status(500).json({ error: 'server_error' });
+    }
+    res.json({ received: true });
   });
   app.use(express.urlencoded({ extended: false, limit: '300kb' }));
   app.use(express.json({ limit: '100kb' }));
@@ -116,6 +134,7 @@ function createApp() {
   app.use(auth.csrf);
 
   app.use(require('./routes/track'));
+  app.use(require('./routes/wholesale-public'));
   app.use(require('./routes/public'));
   app.use(require('./routes/auth'));
   app.use('/join', require('./routes/join'));

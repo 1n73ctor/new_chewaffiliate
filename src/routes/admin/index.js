@@ -44,6 +44,17 @@ const NAV = [
     ],
   },
   {
+    section: 'See It. Cook It.',
+    items: [
+      { key: 'wholesale', href: '/admin/wholesale', label: 'Wholesale & credits', icon: 'gift', perm: 'wholesale.view' },
+      { key: 'wholesale-creators', href: '/admin/wholesale/creators', label: 'Creators & attribution', icon: 'users', perm: 'wholesale.view' },
+      { key: 'wholesale-ledger', href: '/admin/wholesale/ledger', label: 'Credit ledger', icon: 'list', perm: 'wholesale.view' },
+      { key: 'm-credit_packages', href: '/admin/m/credit_packages', label: 'Credit packages', icon: 'store', perm: 'wholesale.manage' },
+      { key: 'm-promo_copy', href: '/admin/m/promo_copy', label: 'Promo copy & ads', icon: 'megaphone', perm: 'content.manage' },
+      { key: 'm-business_leads', href: '/admin/m/business_leads', label: 'Business inquiries', icon: 'mail', perm: 'leads.manage' },
+    ],
+  },
+  {
     section: 'Commissions',
     items: [
       { key: 'commissions', href: '/admin/commissions', label: 'Ledger', icon: 'dollar', perm: 'commissions.view' },
@@ -103,6 +114,7 @@ router.use(require('./affiliates'));
 router.use(require('./content'));
 router.use(require('./tracking'));
 router.use(require('./commissions'));
+router.use(require('./wholesale'));
 router.use(require('./tickets'));
 router.use(require('./system'));
 

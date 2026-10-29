@@ -65,6 +65,12 @@ module.exports = {
     token: env.TWILIO_AUTH_TOKEN,
     from: env.TWILIO_FROM,
   },
+  // Wholesale credit packages are paid through Stripe Checkout.
+  stripe: {
+    secretKey: env.STRIPE_SECRET_KEY || '',
+    webhookSecret: env.STRIPE_WEBHOOK_SECRET || '',
+    apiBase: (env.STRIPE_API_BASE || 'https://api.stripe.com').replace(/\/+$/, ''),
+  },
   admin: {
     email: env.ADMIN_EMAIL || 'admin@chew.local',
     password: env.ADMIN_PASSWORD || '',

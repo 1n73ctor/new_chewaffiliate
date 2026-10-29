@@ -454,4 +454,283 @@ module.exports = [
     PRIMARY KEY (user_id, ip_hash)
   );
   `,
+
+  /* 5: See It. Cook It. wholesale credits — packages, inventory batches, grants,
+        consumption, creator attribution and an append-only credit ledger */ `
+  CREATE TABLE wholesale_accounts (
+    user_id             INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    wholesale_id        TEXT NOT NULL UNIQUE,
+    status              TEXT NOT NULL DEFAULT 'active',
+    attribution_ack_at  TEXT,
+    attribution_ack_version TEXT,
+    site_request_url    TEXT,
+    site_request_note   TEXT,
+    site_request_status TEXT,
+    site_requested_at   TEXT,
+    notify_low_balance  INTEGER NOT NULL DEFAULT 1,
+    notify_claims       INTEGER NOT NULL DEFAULT 1,
+    notify_earnings     INTEGER NOT NULL DEFAULT 1,
+    low_balance_notified_at TEXT,
+    created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE promo_domains (
+    id          INTEGER PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    domain      TEXT NOT NULL,
+    token       TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    checked_at  TEXT,
+    verified_at TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, domain)
+  );
+
+  CREATE TABLE credit_packages (
+    id          INTEGER PRIMARY KEY,
+    name        TEXT NOT NULL,
+    description TEXT,
+    price_cents INTEGER NOT NULL CHECK (price_cents > 0),
+    currency    TEXT NOT NULL DEFAULT 'USD',
+    credits     INTEGER NOT NULL CHECK (credits > 0),
+    active      INTEGER NOT NULL DEFAULT 1,
+    sort        INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE package_orders (
+    id                INTEGER PRIMARY KEY,
+    ref               TEXT NOT NULL UNIQUE,
+    user_id           INTEGER NOT NULL REFERENCES users(id),
+    package_id        INTEGER REFERENCES credit_packages(id) ON DELETE SET NULL,
+    package_name      TEXT NOT NULL,
+    price_cents       INTEGER NOT NULL,
+    currency          TEXT NOT NULL,
+    credits           INTEGER NOT NULL,
+    status            TEXT NOT NULL DEFAULT 'pending',
+    stripe_session_id TEXT UNIQUE,
+    stripe_payment_intent TEXT,
+    created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    paid_at           TEXT,
+    refunded_at       TEXT
+  );
+  CREATE INDEX idx_orders_user ON package_orders(user_id, id);
+
+  -- Inventory a wholesale affiliate owns. Credits leave "available" when they are
+  -- reserved for a claim or granted to a creator, and come back if a claim expires.
+  CREATE TABLE credit_batches (
+    id                INTEGER PRIMARY KEY,
+    ref               TEXT NOT NULL UNIQUE,
+    user_id           INTEGER NOT NULL REFERENCES users(id),
+    order_id          INTEGER UNIQUE REFERENCES package_orders(id),
+    source            TEXT NOT NULL,
+    credits_total     INTEGER NOT NULL CHECK (credits_total > 0),
+    credits_available INTEGER NOT NULL CHECK (credits_available >= 0),
+    credits_written_off INTEGER NOT NULL DEFAULT 0 CHECK (credits_written_off >= 0),
+    status            TEXT NOT NULL DEFAULT 'active',
+    note              TEXT,
+    created_by        INTEGER REFERENCES users(id),
+    created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (credits_available + credits_written_off <= credits_total)
+  );
+  CREATE INDEX idx_batches_user ON credit_batches(user_id, status, id);
+
+  -- App users (See It. Cook It. creators). Only a masked ref is ever shown to affiliates.
+  CREATE TABLE creators (
+    id                  INTEGER PRIMARY KEY,
+    ref                 TEXT NOT NULL UNIQUE,
+    app_user_id         TEXT NOT NULL UNIQUE,
+    email_hash          TEXT,
+    subscription_status TEXT NOT NULL DEFAULT 'none',
+    subscription_plan   TEXT,
+    subscription_updated_at TEXT,
+    last_active_at      TEXT,
+    created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_creators_email ON creators(email_hash);
+
+  -- One wholesale affiliate per creator, for the life of the app (PRIMARY KEY).
+  CREATE TABLE creator_attribution (
+    creator_id        INTEGER PRIMARY KEY REFERENCES creators(id),
+    affiliate_user_id INTEGER NOT NULL REFERENCES users(id),
+    source            TEXT NOT NULL,
+    grant_id          INTEGER,
+    link_id           INTEGER,
+    click_id          TEXT,
+    campaign_id       INTEGER,
+    assigned_at       TEXT NOT NULL DEFAULT (datetime('now')),
+    assigned_by       INTEGER REFERENCES users(id)
+  );
+  CREATE INDEX idx_attr_affiliate ON creator_attribution(affiliate_user_id, assigned_at);
+
+  CREATE TABLE attribution_transfers (
+    id           INTEGER PRIMARY KEY,
+    creator_id   INTEGER NOT NULL REFERENCES creators(id),
+    from_user_id INTEGER REFERENCES users(id),
+    to_user_id   INTEGER NOT NULL REFERENCES users(id),
+    reason       TEXT NOT NULL,
+    by_user_id   INTEGER REFERENCES users(id),
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- A claim link: a tracked link that hands out free credits.
+  CREATE TABLE claim_offers (
+    id         INTEGER PRIMARY KEY,
+    link_id    INTEGER NOT NULL UNIQUE REFERENCES tracked_links(id),
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    credits    INTEGER NOT NULL CHECK (credits > 0),
+    max_claims INTEGER NOT NULL CHECK (max_claims > 0),
+    active     INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- Credits given to one creator. "pending" = claimed on the website, waiting for the
+  -- creator to sign in to the app; its credits are reserved until then.
+  CREATE TABLE credit_grants (
+    id                INTEGER PRIMARY KEY,
+    ref               TEXT NOT NULL UNIQUE,
+    user_id           INTEGER NOT NULL REFERENCES users(id),
+    creator_id        INTEGER REFERENCES creators(id),
+    offer_id          INTEGER REFERENCES claim_offers(id),
+    link_id           INTEGER,
+    click_id          TEXT,
+    claim_code        TEXT UNIQUE,
+    email_hash        TEXT,
+    ip_hash           TEXT,
+    credits           INTEGER NOT NULL CHECK (credits > 0),
+    credits_remaining INTEGER NOT NULL CHECK (credits_remaining >= 0),
+    status            TEXT NOT NULL,
+    source            TEXT NOT NULL,
+    override_by       INTEGER REFERENCES users(id),
+    expires_at        TEXT,
+    activated_at      TEXT,
+    closed_at         TEXT,
+    close_reason      TEXT,
+    created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (credits_remaining <= credits)
+  );
+  CREATE INDEX idx_grants_user ON credit_grants(user_id, status);
+  CREATE INDEX idx_grants_creator ON credit_grants(creator_id, status, id);
+  CREATE INDEX idx_grants_email ON credit_grants(email_hash, status);
+  CREATE INDEX idx_grants_offer ON credit_grants(offer_id, status);
+
+  -- Which batch funded which part of a grant (a grant can span two batches).
+  CREATE TABLE credit_grant_parts (
+    id        INTEGER PRIMARY KEY,
+    grant_id  INTEGER NOT NULL REFERENCES credit_grants(id),
+    batch_id  INTEGER NOT NULL REFERENCES credit_batches(id),
+    credits   INTEGER NOT NULL CHECK (credits > 0),
+    remaining INTEGER NOT NULL CHECK (remaining >= 0),
+    CHECK (remaining <= credits)
+  );
+  CREATE INDEX idx_parts_grant ON credit_grant_parts(grant_id, id);
+  CREATE INDEX idx_parts_batch ON credit_grant_parts(batch_id);
+
+  -- Credits spent in the app (one row per completed video), reported by the app.
+  CREATE TABLE credit_consumptions (
+    id          INTEGER PRIMARY KEY,
+    ref         TEXT NOT NULL UNIQUE,
+    creator_id  INTEGER NOT NULL REFERENCES creators(id),
+    credits     INTEGER NOT NULL CHECK (credits > 0),
+    job_id      TEXT,
+    status      TEXT NOT NULL DEFAULT 'consumed',
+    reversed_at TEXT,
+    reverse_reason TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_consumptions_creator ON credit_consumptions(creator_id, id);
+
+  CREATE TABLE credit_consumption_parts (
+    consumption_id INTEGER NOT NULL REFERENCES credit_consumptions(id),
+    part_id        INTEGER NOT NULL REFERENCES credit_grant_parts(id),
+    credits        INTEGER NOT NULL CHECK (credits > 0),
+    PRIMARY KEY (consumption_id, part_id)
+  );
+
+  -- Append-only record of every credit movement. Never updated or deleted.
+  CREATE TABLE credit_ledger (
+    id             INTEGER PRIMARY KEY,
+    ref            TEXT NOT NULL UNIQUE,
+    type           TEXT NOT NULL,
+    user_id        INTEGER REFERENCES users(id),
+    creator_id     INTEGER REFERENCES creators(id),
+    batch_id       INTEGER REFERENCES credit_batches(id),
+    grant_id       INTEGER REFERENCES credit_grants(id),
+    consumption_id INTEGER REFERENCES credit_consumptions(id),
+    credits        INTEGER NOT NULL,
+    source         TEXT,
+    status         TEXT NOT NULL DEFAULT 'posted',
+    reversal_of    INTEGER REFERENCES credit_ledger(id),
+    actor_id       INTEGER REFERENCES users(id),
+    note           TEXT,
+    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_ledger_user ON credit_ledger(user_id, id);
+  CREATE INDEX idx_ledger_creator ON credit_ledger(creator_id, id);
+  CREATE INDEX idx_ledger_batch ON credit_ledger(batch_id);
+  CREATE TRIGGER credit_ledger_no_update BEFORE UPDATE ON credit_ledger
+    BEGIN SELECT RAISE(ABORT, 'credit_ledger is append-only'); END;
+  CREATE TRIGGER credit_ledger_no_delete BEFORE DELETE ON credit_ledger
+    BEGIN SELECT RAISE(ABORT, 'credit_ledger is append-only'); END;
+
+  -- Attribution enforced in the database: a creator only ever receives credits from
+  -- the wholesale affiliate they are assigned to.
+  CREATE TRIGGER grants_match_attribution_ins BEFORE INSERT ON credit_grants
+    WHEN NEW.creator_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM creator_attribution WHERE creator_id = NEW.creator_id AND affiliate_user_id != NEW.user_id)
+    BEGIN SELECT RAISE(ABORT, 'creator_assigned_elsewhere'); END;
+  CREATE TRIGGER grants_match_attribution_upd BEFORE UPDATE OF creator_id ON credit_grants
+    WHEN NEW.creator_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM creator_attribution WHERE creator_id = NEW.creator_id AND affiliate_user_id != NEW.user_id)
+    BEGIN SELECT RAISE(ABORT, 'creator_assigned_elsewhere'); END;
+
+  -- Revenue events from the app carry the creator; commissions get their basis,
+  -- payout reference and a link to the entry they reverse.
+  ALTER TABLE events ADD COLUMN creator_id INTEGER REFERENCES creators(id);
+  ALTER TABLE commissions ADD COLUMN basis TEXT;
+  ALTER TABLE commissions ADD COLUMN payout_ref TEXT;
+  ALTER TABLE commissions ADD COLUMN reversal_of INTEGER REFERENCES commissions(id);
+
+  ALTER TABLE tracked_links ADD COLUMN utm_campaign TEXT;
+
+  ALTER TABLE content_assets ADD COLUMN format TEXT;
+  ALTER TABLE content_assets ADD COLUMN download_allowed INTEGER NOT NULL DEFAULT 1;
+
+  ALTER TABLE training_modules ADD COLUMN track TEXT NOT NULL DEFAULT 'general';
+  ALTER TABLE training_lessons ADD COLUMN coming_soon INTEGER NOT NULL DEFAULT 0;
+
+  -- Approved copy: ready-to-use ads, giveaway templates and the creator FAQ.
+  CREATE TABLE promo_copy (
+    id        INTEGER PRIMARY KEY,
+    kind      TEXT NOT NULL,
+    audience  TEXT,
+    title     TEXT NOT NULL,
+    body      TEXT NOT NULL,
+    guidance  TEXT,
+    sort      INTEGER NOT NULL DEFAULT 0,
+    published INTEGER NOT NULL DEFAULT 1
+  );
+
+  -- "Become a Business Affiliate" inquiries, routed to sales/admin.
+  CREATE TABLE business_leads (
+    id          INTEGER PRIMARY KEY,
+    name        TEXT NOT NULL,
+    email       TEXT NOT NULL,
+    phone       TEXT NOT NULL,
+    company     TEXT,
+    audience    TEXT NOT NULL,
+    volume      TEXT NOT NULL,
+    consent_at  TEXT NOT NULL,
+    lead_source TEXT,
+    page        TEXT,
+    affiliate_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    status      TEXT NOT NULL DEFAULT 'new',
+    notes       TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  `,
 ];

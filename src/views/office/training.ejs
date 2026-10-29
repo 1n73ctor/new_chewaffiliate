@@ -2,16 +2,28 @@
 <p class="page-intro">Short, step-by-step lessons. <%= progress.done %> of <%= progress.total %> complete.</p>
 <progress class="progress mw-420" value="<%= progress.pct %>" max="100" aria-label="Training progress"><%= progress.pct %>%</progress>
 <% if (progress.next) { %><p class="mt-1"><a class="btn btn-green" href="/office/training/<%= progress.next.id %>">Continue: <%= progress.next.title %> →</a></p><% } %>
-<div class="grid-2 mt-1">
-  <% modules.forEach(function (m) { %>
-  <section class="card">
-    <div class="card-head"><h2><%= m.title %></h2><span class="badge <%= m.done === m.lessons.length && m.lessons.length ? 'badge-live' : 'badge-grey' %>"><%= m.done %>/<%= m.lessons.length %></span></div>
-    <% if (m.summary) { %><p class="fs-sm muted"><%= m.summary %></p><% } %>
-    <ul class="lesson-list">
-      <% m.lessons.forEach(function (l) { %>
-      <li class="<%= l.done ? 'done' : '' %>"><a href="/office/training/<%= l.id %>"><span class="tick"><%- icon('check') %></span><span><strong class="fw-600"><%= l.title %></strong><% if (l.summary) { %><br><span class="fine"><%= l.summary %></span><% } %></span><span class="fine nowrap"><%= l.minutes ? l.minutes + ' min' : '' %></span></a></li>
-      <% }) %>
-    </ul>
-  </section>
-  <% }) %>
-</div>
+<nav class="pills mt-1" aria-label="Training tracks"><% Object.entries(tracks).forEach(function ([key, label]) { if (modules.some(function (m) { return m.track === key; })) { %><a class="pill" href="#track-<%= key %>"><%= label %></a><% } }) %></nav>
+<% Object.entries(tracks).forEach(function ([key, label]) { const list = modules.filter(function (m) { return m.track === key; }); if (!list.length) return; %>
+<section class="training-track" id="track-<%= key %>">
+  <% if (key !== 'general') { %>
+  <div class="row-between mt-2"><h2 class="fs-120 m-0"><%= label.toUpperCase() %></h2><a class="btn btn-light btn-sm" href="/office/training/checklist/<%= key %>"><%- icon('download') %> Download checklist</a></div>
+  <% } %>
+  <div class="grid-2 mt-1">
+    <% list.forEach(function (m) { %>
+    <section class="card">
+      <div class="card-head"><h2><%= m.title %></h2><span class="badge <%= m.done === m.ready && m.ready ? 'badge-live' : 'badge-grey' %>"><%= m.done %>/<%= m.ready %></span></div>
+      <% if (m.summary) { %><p class="fs-sm muted"><%= m.summary %></p><% } %>
+      <ul class="lesson-list">
+        <% m.lessons.forEach(function (l) { %>
+        <% if (l.coming_soon) { %>
+        <li class="is-soon"><span class="lesson-soon"><span class="tick"><%- icon('clock') %></span><span><strong class="fw-600"><%= l.title %></strong><% if (l.summary) { %><br><span class="fine"><%= l.summary %></span><% } %></span><span class="badge badge-soon">COMING SOON</span></span></li>
+        <% } else { %>
+        <li class="<%= l.done ? 'done' : '' %>"><a href="/office/training/<%= l.id %>"><span class="tick"><%- icon('check') %></span><span><strong class="fw-600"><%= l.title %></strong><% if (l.summary) { %><br><span class="fine"><%= l.summary %></span><% } %></span><span class="fine nowrap"><%= l.minutes ? l.minutes + ' min' : '' %></span></a></li>
+        <% } %>
+        <% }) %>
+      </ul>
+    </section>
+    <% }) %>
+  </div>
+</section>
+<% }) %>

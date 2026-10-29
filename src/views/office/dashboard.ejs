@@ -37,6 +37,34 @@
   <p class="fine mt-1">No activity yet — that’s normal for a new account. Share Today’s 3 or your link and your numbers will appear here as they happen.</p>
 <% } %>
 
+<% if (sic) { const inv = sic.inventory; %>
+<section class="card sic-overview mt-2" aria-labelledby="sic-overview-title">
+  <div class="card-head"><h2 id="sic-overview-title"><%- icon('phone') %> See It. Cook It. · Wholesale</h2><span class="mono fine"><%= sic.account.wholesale_id %></span></div>
+  <% sic.alerts.forEach(function (a) { %><div class="alert alert-<%= a.tone %>" role="status"><%- icon(a.tone === 'warn' ? 'bell' : 'sparkle') %><div><%= a.text %> <a href="<%= a.href %>"><%= a.cta %> →</a></div></div><% }) %>
+  <div class="stats stats-5">
+    <div class="stat"><span class="label">Credit balance</span><span class="value"><%= u.num(inv.available) %></span><span class="meta">available to give</span></div>
+    <div class="stat"><span class="label">Credits distributed</span><span class="value"><%= u.num(inv.issued) %></span><span class="meta"><%= u.num(inv.pending) %> reserved in claims</span></div>
+    <div class="stat"><span class="label">Attributed creators</span><span class="value"><%= u.num(sic.creators) %></span><span class="meta">assigned to you</span></div>
+    <div class="stat"><span class="label">Active subscribers</span><span class="value"><%= u.num(sic.subscribers) %></span><span class="meta">of your creators</span></div>
+    <div class="stat"><span class="label">Commissions paid</span><span class="value"><%= u.money(sic.commissions.paid) %></span><span class="meta"><%= u.money(sic.commissions.pending + sic.commissions.approved) %> pending / approved</span></div>
+  </div>
+  <div class="sic-actions">
+    <a class="btn btn-cta" href="/office/see-it-cook-it#issue"><%- icon('gift') %> GIVE AWAY CREDITS</a>
+    <a class="btn btn-light" href="/office/links#sic-links"><%- icon('link') %> GET PROMO LINKS</a>
+    <a class="btn btn-light" href="/office/analytics#sic-users"><%- icon('users') %> VIEW MY USERS</a>
+    <a class="btn btn-light" href="/office/commissions?tab=sic"><%- icon('dollar') %> SEE MY EARNINGS</a>
+    <a class="btn btn-light" href="/office/training#track-wholesale"><%- icon('play') %> WATCH TRAINING</a>
+  </div>
+</section>
+<% } else if (sicProgramOn) { %>
+<section class="card sic-invite mt-2">
+  <div><p class="eyebrow eyebrow-orange">See It. Cook It. · Wholesale</p>
+    <h2 class="fs-120">Grow Your Own Audience by Giving Away AI Cooking Credits.</h2>
+    <p class="muted mb-0">An optional paid program: buy promotional credits, give them to creators for free, and track your creators and eligible commissions here.</p></div>
+  <a class="btn btn-cta" href="/office/see-it-cook-it#wholesale">EXPLORE WHOLESALE AFFILIATE PROGRAM <%- icon('arrow') %></a>
+</section>
+<% } %>
+
 <section class="mb-0 t3-banner mt-2">
       <h2><%- icon('flame') %> TODAY’S 3 — Fresh Out of the Kitchen</h2>
       <p>Approved, ready-to-post picks. Copy the caption, get your link, post.</p>

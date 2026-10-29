@@ -7,7 +7,7 @@
 const db = require('../db');
 const config = require('../config');
 const settings = require('./settings');
-const { randomCode, randomToken, hmac, safeEqual, ipHash } = require('./util');
+const { randomCode, randomToken, hmac, safeEqual, ipHash, money } = require('./util');
 
 const EVENT_TYPES = {
   affiliate_signup: 'Referred affiliate joined',
@@ -17,11 +17,16 @@ const EVENT_TYPES = {
   qualifying_action: 'Qualifying action',
   purchase: 'Purchase',
   qualified_click: 'Paid click (verified)',
+  sic_subscription: 'See It. Cook It. subscription payment',
+  sic_download: 'See It. Cook It. watermark-free download',
+  sic_refund: 'See It. Cook It. refund / chargeback',
 };
+// See It. Cook It. revenue categories reported by the app (commission rules can use these).
+const SIC_REVENUE_TYPES = ['sic_subscription', 'sic_download'];
 // Event types whose commissions add up into one ledger line per affiliate per day.
 const DAILY_AGGREGATE_TYPES = ['qualified_click'];
 // Activity that counts as "qualifying" in dashboards (clicks never do).
-const QUALIFYING_TYPES = ['affiliate_signup', 'app_account_linked', 'activation_completed', 'qualifying_action', 'purchase'];
+const QUALIFYING_TYPES = ['affiliate_signup', 'app_account_linked', 'activation_completed', 'qualifying_action', 'purchase', ...SIC_REVENUE_TYPES];
 // Types external systems (the app backend, commerce partners) may report through the API.
 const API_EVENT_TYPES = ['app_account_linked', 'activation_completed', 'qualifying_action', 'purchase'];
 
@@ -164,6 +169,7 @@ function recordEvent(e) {
     type: e.type,
     affiliate_user_id: e.affiliateUserId ?? null,
     subject_user_id: e.subjectUserId ?? null,
+    creator_id: e.creatorId ?? null,
     click_id: e.clickId ?? null,
     link_id: null,
     campaign_id: e.campaignId ?? null,
@@ -198,15 +204,23 @@ function recordEvent(e) {
   }
 
   const info = db.run(
-    `INSERT INTO events (type, affiliate_user_id, subject_user_id, click_id, link_id, campaign_id, content_id, source,
+    `INSERT INTO events (type, affiliate_user_id, subject_user_id, creator_id, click_id, link_id, campaign_id, content_id, source,
                          destination_key, value_cents, currency, external_id, origin, metadata)
-     VALUES (@type, @affiliate_user_id, @subject_user_id, @click_id, @link_id, @campaign_id, @content_id, @source,
+     VALUES (@type, @affiliate_user_id, @subject_user_id, @creator_id, @click_id, @link_id, @campaign_id, @content_id, @source,
              @destination_key, @value_cents, @currency, @external_id, @origin, @metadata)`,
     ev,
   );
   const event = db.get('SELECT * FROM events WHERE id = ?', info.lastInsertRowid);
   applyCommissionRules(event);
   return { event, duplicate: false };
+}
+
+// How an amount was worked out, in the affiliate-facing terms of the rule.
+function commissionBasis(rule, event) {
+  const parts = [];
+  if (rule.amount_cents) parts.push(`${money(rule.amount_cents, rule.currency)} fixed`);
+  if (rule.percent_bps && event.value_cents) parts.push(`${rule.percent_bps / 100}% of ${money(event.value_cents, event.currency || rule.currency)}`);
+  return parts.join(' + ') || null;
 }
 
 function applyCommissionRules(event) {
@@ -237,14 +251,15 @@ function applyCommissionRules(event) {
       continue;
     }
     const r = db.run(
-      `INSERT OR IGNORE INTO commissions (user_id, event_id, rule_id, amount_cents, currency, status, description)
-       VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
+      `INSERT OR IGNORE INTO commissions (user_id, event_id, rule_id, amount_cents, currency, status, description, basis)
+       VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
       event.affiliate_user_id,
       event.id,
       rule.id,
       amount,
       rule.currency,
       rule.name,
+      commissionBasis(rule, event),
     );
     if (r.changes) created.push(r.lastInsertRowid);
   }
@@ -438,6 +453,7 @@ function getOrCreateLink(userId, { destinationKey, campaignId = null, contentId 
 
 module.exports = {
   EVENT_TYPES,
+  SIC_REVENUE_TYPES,
   DAILY_AGGREGATE_TYPES,
   REJECT_REASONS,
   ppcActive,

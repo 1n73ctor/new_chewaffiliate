@@ -63,3 +63,45 @@
     </tbody>
   </table></div>
 </section>
+
+<% if (sicReport) { const r = sicReport; const f = sicFilters; const qs = new URLSearchParams(Object.entries(f).filter(function (e) { return e[1]; })).toString(); %>
+<section class="mt-2" id="sic-users">
+  <div class="row-between"><h2 class="fs-110 m-0"><%- icon('users') %> MY SEE IT. COOK IT. USERS</h2><a class="btn btn-light btn-sm" href="/office/analytics/sic-users.csv<%= qs ? '?' + qs : '' %>"><%- icon('download') %> Export CSV</a></div>
+  <p class="fine">Only creators assigned to you. IDs are masked — creators’ names, emails and payment details are never shown.</p>
+  <div class="stats stats-6">
+    <div class="stat"><span class="label">Assigned creators</span><span class="value"><%= u.num(r.summary.total) %></span></div>
+    <div class="stat"><span class="label">With credits</span><span class="value"><%= u.num(r.summary.with_credits) %></span><span class="meta">enough for a video</span></div>
+    <div class="stat"><span class="label">Subscribers</span><span class="value"><%= u.num(r.summary.subscribers) %></span></div>
+    <div class="stat"><span class="label">Credits used</span><span class="value"><%= u.num(r.summary.consumed) %></span></div>
+    <div class="stat"><span class="label">Conversions</span><span class="value"><%= u.num(r.summary.conversions) %></span><span class="meta">paid subscription or download</span></div>
+    <div class="stat"><span class="label">Attribution exceptions</span><span class="value"><%= u.num(r.summary.exceptions) %></span><span class="meta">claims released or reassigned</span></div>
+  </div>
+  <form class="sic-filters mt-1" method="get" action="/office/analytics#sic-users">
+    <div class="field"><label for="f-from">Joined from</label><input id="f-from" type="date" name="from" value="<%= f.from %>"></div>
+    <div class="field"><label for="f-to">to</label><input id="f-to" type="date" name="to" value="<%= f.to %>"></div>
+    <div class="field"><label for="f-link">Campaign / link</label><select id="f-link" name="link"><option value="">All</option><% r.links.forEach(function (l) { %><option value="<%= l.id %>" <%= String(f.link) === String(l.id) ? 'selected' : '' %>><%= l.label %></option><% }) %></select></div>
+    <div class="field"><label for="f-sub">Subscription</label><select id="f-sub" name="subscribed"><option value="">All</option><option value="yes" <%= f.subscribed === 'yes' ? 'selected' : '' %>>Subscribed</option><option value="no" <%= f.subscribed === 'no' ? 'selected' : '' %>>Not subscribed</option></select></div>
+    <div class="field"><label for="f-act">Activity</label><select id="f-act" name="activity"><option value="">All</option><option value="active" <%= f.activity === 'active' ? 'selected' : '' %>>Active (30 days)</option><option value="inactive" <%= f.activity === 'inactive' ? 'selected' : '' %>>Inactive</option></select></div>
+    <div class="sic-filter-actions"><button class="btn btn-green" type="submit">Filter</button><% if (qs) { %><a class="btn btn-ghost" href="/office/analytics#sic-users">Clear</a><% } %></div>
+  </form>
+  <div class="table-wrap mt-1"><table class="table">
+    <thead><tr><th>Creator</th><th>Joined</th><th>Referral campaign</th><th class="num">Grants</th><th class="num">Credits used</th><th class="num">Remaining</th><th>Subscription</th><th>Last activity</th><th>Affiliate ID</th></tr></thead>
+    <tbody>
+      <% if (!r.rows.length) { %><tr><td colspan="9" class="table-empty"><%= qs ? 'No creators match these filters.' : 'No creators yet. Share a claim link — creators appear here once they redeem it in the app.' %></td></tr><% } %>
+      <% r.rows.forEach(function (c) { %>
+      <tr>
+        <td class="mono nowrap"><%= c.ref %></td>
+        <td class="nowrap"><%= u.fmtDate(c.assigned_at) %></td>
+        <td><%= c.campaign_name || c.link_label || (c.source === 'app_referral' ? 'App referral' : '—') %></td>
+        <td class="num"><%= u.num(c.grants) %> <span class="fine">(<%= u.num(c.granted) %>)</span></td>
+        <td class="num"><%= u.num(c.used) %></td>
+        <td class="num"><%= u.num(c.remaining) %></td>
+        <td><span class="badge <%= ['active','trialing'].includes(c.subscription_status) ? 'badge-live' : 'badge-grey' %>"><%= c.subscription_status === 'none' ? 'Not subscribed' : c.subscription_status %></span></td>
+        <td class="nowrap"><%= c.last_active_at ? u.timeAgo(c.last_active_at) : '—' %></td>
+        <td class="mono"><%= c.affiliate_id %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+</section>
+<% } %>

@@ -1,0 +1,52 @@
+<h1 class="page-title">Commissions</h1>
+<nav class="pills" aria-label="Commission views"><a class="pill" href="/office/commissions">All earnings</a><a class="pill on" href="/office/commissions?tab=sic" aria-current="page">See It. Cook It.</a></nav>
+<div class="row-between">
+  <p class="page-intro mb-0">Eligible earnings from creators assigned to you, calculated under your signed affiliate terms.</p>
+  <details class="tip"><summary><%- icon('help') %> HOW EARNINGS WORK</summary>
+    <div class="tip-body">
+      <p>When a creator assigned to you pays for a subscription or a watermark-free download, the app reports it. If an approved commission schedule applies, an entry is added here as <strong>Pending review</strong>, then <strong>Approved</strong> and <strong>Paid</strong>.</p>
+      <p>Refunds and chargebacks reverse the related entry, or add a negative adjustment if it was already paid. Payouts are made on approved earnings of at least <%= site.sic_payout_threshold %>.</p>
+      <p class="mb-0">Read the <a href="/wholesale-terms">Wholesale Terms</a>, your <a href="/affiliate-agreement">Affiliate Agreement</a> and the <a href="/earnings-disclosure">Earnings Disclosure</a>.</p>
+    </div>
+  </details>
+</div>
+<div class="stats mt-1">
+  <div class="stat"><span class="label">Pending review</span><span class="value"><%= u.money(totals.pending) %></span></div>
+  <div class="stat"><span class="label">Approved</span><span class="value"><%= u.money(totals.approved) %></span></div>
+  <div class="stat"><span class="label">Paid</span><span class="value"><%= u.money(totals.paid) %></span></div>
+  <div class="stat"><span class="label">Reversed</span><span class="value"><%= u.money(totals.reversed) %></span></div>
+</div>
+
+<section class="card mt-1">
+  <div class="card-head"><h2>Commission schedule in effect</h2></div>
+  <% if (!rules.length) { %>
+    <p class="mb-0 muted">No See It. Cook It. commission schedule is active yet. Once Chew publishes the schedule from the signed agreement, eligible activity is recorded here automatically.</p>
+  <% } else { %>
+    <ul class="plain-list"><% rules.forEach(function (r) { %><li><strong><%= r.name %></strong> — <%= eventTypes[r.event_type] %>: <%= r.amount_cents ? u.money(r.amount_cents, r.currency) : '' %><%= r.amount_cents && r.percent_bps ? ' + ' : '' %><%= r.percent_bps ? (r.percent_bps / 100) + '% of the eligible amount' : '' %><% if (r.description) { %><br><span class="fine"><%= r.description %></span><% } %></li><% }) %></ul>
+  <% } %>
+</section>
+
+<section class="mt-2">
+  <div class="row-between"><h2 class="fs-110 m-0">See It. Cook It. earnings</h2>
+    <nav class="p-0 pills" aria-label="Filter by status"><a class="pill <%= !status ? 'on' : '' %>" href="?tab=sic">All</a><% Object.entries(C.COMMISSION_STATUSES).forEach(function ([k, v]) { %><a class="pill <%= status === k ? 'on' : '' %>" href="?tab=sic&status=<%= k %>"><%= v %></a><% }) %></nav>
+  </div>
+  <div class="table-wrap mt-1"><table class="table">
+    <thead><tr><th>Date</th><th>Creator</th><th>Revenue category</th><th>Calculation basis</th><th class="num">Your amount</th><th>Status</th><th>Adjustment / refund</th><th>Payout ref.</th></tr></thead>
+    <tbody>
+      <% if (!rows.length) { %><tr><td colspan="8" class="table-empty"><%= isWholesaler ? 'No See It. Cook It. earnings' + (status ? ' with this status' : ' yet') + '.' : 'See It. Cook It. earnings appear here once you join the Wholesale Affiliate program.' %></td></tr><% } %>
+      <% rows.forEach(function (c) { %>
+      <tr class="<%= c.amount_cents < 0 ? 'is-adjust' : '' %>">
+        <td class="nowrap"><%= u.fmtDate(c.created_at) %></td>
+        <td class="mono nowrap"><%= c.creator_ref || "—" %></td>
+        <td><%= c.category %></td>
+        <td><%= c.basis || c.description || '—' %></td>
+        <td class="num"><%= u.money(c.amount_cents, c.currency) %></td>
+        <td><span class="badge <%= c.status === 'paid' || c.status === 'approved' ? 'badge-live' : c.status === 'reversed' ? 'badge-red' : 'badge-soon' %>"><%= C.COMMISSION_STATUSES[c.status] %></span></td>
+        <td><%= c.reversal_of ? (c.description + ' · reverses #' + c.reversal_of) : (c.reversedBy || '—') %></td>
+        <td class="mono"><%= c.payout_ref || '—' %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+  <p class="fine mt-1">Only affiliate-facing amounts from your signed terms are shown. Creators are identified by masked IDs.</p>
+</section>

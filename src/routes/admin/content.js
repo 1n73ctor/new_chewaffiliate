@@ -171,6 +171,9 @@ async function save(req, res, existing) {
     file_path: existing ? existing.file_path : null,
     thumb_path: existing ? existing.thumb_path : null,
     media_type: existing ? existing.media_type : 'image',
+    format: clampStr(b.format, 60) || null,
+    // Only the edit form carries this checkbox; anything else keeps the current value.
+    download_allowed: b.download_allowed_shown ? (b.download_allowed === '1' ? 1 : 0) : existing ? existing.download_allowed : 1,
   };
   const errors = {};
   for (const f of [file, thumb].filter(Boolean)) {
@@ -213,16 +216,16 @@ async function save(req, res, existing) {
     db.run(
       `UPDATE content_assets SET title=@title, category_id=@category_id, description=@description, caption=@caption, platforms=@platforms,
          external_url=@external_url, destination_key=@destination_key, campaign_id=@campaign_id, status=@status, file_path=@file_path,
-         thumb_path=@thumb_path, media_type=@media_type, updated_at=datetime('now') WHERE id=@id`,
+         thumb_path=@thumb_path, media_type=@media_type, format=@format, download_allowed=@download_allowed, updated_at=datetime('now') WHERE id=@id`,
       { ...v, id: existing.id },
     );
     audit(req, 'content.update', 'content_asset', existing.id, { title: v.title, status: v.status });
   } else {
     const { lastInsertRowid } = db.run(
       `INSERT INTO content_assets (title, category_id, description, caption, platforms, external_url, destination_key, campaign_id, status,
-         file_path, thumb_path, media_type, created_by)
+         file_path, thumb_path, media_type, format, download_allowed, created_by)
        VALUES (@title, @category_id, @description, @caption, @platforms, @external_url, @destination_key, @campaign_id, @status,
-         @file_path, @thumb_path, @media_type, @created_by)`,
+         @file_path, @thumb_path, @media_type, @format, @download_allowed, @created_by)`,
       { ...v, created_by: req.user.id },
     );
     audit(req, 'content.create', 'content_asset', lastInsertRowid, { title: v.title });

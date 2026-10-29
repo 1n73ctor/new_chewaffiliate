@@ -1,0 +1,23 @@
+<%
+  const f = locals.form || {};
+  const errs = locals.errors || {};
+  const err = (k) => errs[k] ? `<p class="error">${u.esc(errs[k])}</p>` : '';
+%>
+<form class="form biz-form" method="post" action="/wholesale/inquiry" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <input type="hidden" name="page" value="<%= locals.page || 'wholesale' %>">
+  <div class="form-row two">
+    <div class="field <%= errs.name ? 'has-error' : '' %>"><label for="biz-name">Name</label><input id="biz-name" type="text" name="name" value="<%= f.name || '' %>" autocomplete="name" required><%- err('name') %></div>
+    <div class="field <%= errs.email ? 'has-error' : '' %>"><label for="biz-email">Email</label><input id="biz-email" type="email" name="email" value="<%= f.email || '' %>" autocomplete="email" required><%- err('email') %></div>
+  </div>
+  <div class="form-row two">
+    <div class="field <%= errs.phone ? 'has-error' : '' %>"><label for="biz-phone">Phone</label><input id="biz-phone" type="tel" name="phone" value="<%= f.phone || '' %>" autocomplete="tel" required><%- err('phone') %></div>
+    <div class="field"><label for="biz-company">Company <span class="fine">(optional)</span></label><input id="biz-company" type="text" name="company" value="<%= f.company || '' %>" autocomplete="organization"></div>
+  </div>
+  <div class="field <%= errs.audience ? 'has-error' : '' %>"><label for="biz-audience">Your audience or channel</label><input id="biz-audience" type="text" name="audience" value="<%= f.audience || '' %>" placeholder="e.g. Instagram food page, 40k followers" required><%- err('audience') %></div>
+  <div class="field <%= errs.volume ? 'has-error' : '' %>"><label for="biz-volume">Estimated promotion volume</label>
+    <select id="biz-volume" name="volume" required><option value="">Choose one</option><% volumes.forEach(function (v) { %><option value="<%= v %>" <%= f.volume === v ? 'selected' : '' %>><%= v %></option><% }) %></select><%- err('volume') %></div>
+  <label class="check-row <%= errs.consent ? 'has-error' : '' %>"><input type="checkbox" name="consent" value="1" <%= f.consent ? 'checked' : '' %>><span>Chew Network may contact me about the Wholesale Affiliate program by email or phone. See the <a href="/privacy">Privacy Policy</a>.</span></label>
+  <%- err('consent') %>
+  <div><button class="btn btn-cta btn-lg" type="submit">BECOME A BUSINESS AFFILIATE <%- icon('arrow') %></button></div>
+</form>

@@ -18,6 +18,9 @@ const PERMISSIONS = {
   'tracking.view': 'Tracking reports and exports',
   'commissions.view': 'View commission ledger',
   'commissions.manage': 'Commission rules, approvals, payouts and adjustments',
+  'wholesale.view': 'See It. Cook It. wholesale accounts, creators, credit ledger and reconciliation',
+  'wholesale.manage': 'Add credits, revoke grants, reverse batches, transfer creators, packages',
+  'leads.manage': 'Business affiliate inquiries',
   'tickets.view': 'View support tickets',
   'tickets.manage': 'Reply to and resolve support tickets',
   'staff.manage': 'Staff accounts and roles',
@@ -30,7 +33,7 @@ const ROLES = {
   admin: { label: 'Administrator', perms: ['*'] },
   support: {
     label: 'Support',
-    perms: ['admin.dashboard', 'affiliates.view', 'affiliates.support', 'affiliates.status', 'tickets.view', 'tickets.manage', 'tracking.view', 'commissions.view'],
+    perms: ['admin.dashboard', 'affiliates.view', 'affiliates.support', 'affiliates.status', 'tickets.view', 'tickets.manage', 'tracking.view', 'commissions.view', 'wholesale.view'],
   },
   content: {
     label: 'Content',
@@ -38,11 +41,11 @@ const ROLES = {
   },
   finance: {
     label: 'Finance',
-    perms: ['admin.dashboard', 'affiliates.view', 'tracking.view', 'commissions.view', 'commissions.manage'],
+    perms: ['admin.dashboard', 'affiliates.view', 'tracking.view', 'commissions.view', 'commissions.manage', 'wholesale.view', 'wholesale.manage'],
   },
   sales: {
     label: 'Sales',
-    perms: ['admin.dashboard', 'affiliates.view', 'tracking.view', 'tickets.view'],
+    perms: ['admin.dashboard', 'affiliates.view', 'tracking.view', 'tickets.view', 'wholesale.view', 'leads.manage'],
   },
 };
 

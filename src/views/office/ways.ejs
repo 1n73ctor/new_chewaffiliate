@@ -1,3 +1,24 @@
 <h1 class="page-title">Ways to Earn</h1>
 <p class="page-intro"><%= total %> pathways across the Chew ecosystem. Management updates each status as programs open.</p>
+<% if (sic.on || sic.isWholesaler) { %>
+<section class="card sic-ways mb-2" id="sic-wholesale">
+  <div class="card-head"><h2><%- icon('phone') %> See It. Cook It. Wholesale Affiliate</h2><span class="badge badge-partner">Optional paid program</span></div>
+  <p>Buy promotional credits and <strong>give them away free</strong> to creators — credits are never resold. Creators you invite are assigned to you for the life of the app. <strong>Eligible earnings depend on attributed customer activity and your signed affiliate terms</strong>; nothing is guaranteed.</p>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Revenue category</th><th>What counts</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Subscriptions</strong></td><td>Subscription payments (<%= site.sic_price_monthly %> or <%= site.sic_price_annual %>) by creators assigned to you</td><td><span class="badge <%= sic.subscriptionRule ? 'badge-live' : 'badge-soon' %>"><%= sic.subscriptionRule ? 'Available Now' : 'Terms being finalized' %></span></td></tr>
+      <tr><td><strong>Individual downloads</strong></td><td>Watermark-free downloads (<%= site.sic_price_download %>) by creators assigned to you</td><td><span class="badge <%= sic.downloadRule ? 'badge-live' : 'badge-soon' %>"><%= sic.downloadRule ? 'Available Now' : 'Terms being finalized' %></span></td></tr>
+      <% ['Advertising revenue share', 'Affiliate marketing in the app', 'Gamification & challenges', 'Other future monetization'].forEach(function (name) { %>
+      <tr class="is-dim"><td><strong><%= name %></strong></td><td>Future category — not live, not guaranteed</td><td><span class="badge badge-soon">COMING SOON</span></td></tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+  <div class="row mt-1">
+    <a class="btn btn-cta" href="/office/see-it-cook-it#wholesale">VIEW WHOLESALE DETAILS</a>
+    <a class="btn btn-light" href="/office/commissions?tab=sic">OPEN COMMISSION CENTER</a>
+  </div>
+</section>
+<% } %>
+
 <%- include('../partials/ways-list', { baseHref: '/office/ways-to-earn' }) %>

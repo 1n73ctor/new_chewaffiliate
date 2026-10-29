@@ -1,0 +1,15 @@
+<h1>Creators &amp; attribution</h1>
+<p class="page-intro">See It. Cook It. app users. Each creator belongs to at most one wholesale affiliate; reassign only after reviewing a dispute.</p>
+<form class="toolbar" method="get">
+  <div class="field"><label for="cq">Creator ID, app user ID or Affiliate ID</label><input id="cq" type="text" name="q" value="<%= q %>"></div>
+  <button class="btn btn-light" type="submit">Search</button>
+</form>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Creator</th><th>App user ID</th><th>Assigned to</th><th>Source</th><th class="num">Balance</th><th>Subscription</th><th>Since</th></tr></thead>
+  <tbody>
+    <% if (!rows.length) { %><tr><td colspan="7" class="table-empty"><%= q ? 'No creators match.' : 'No creators yet.' %></td></tr><% } %>
+    <% rows.forEach(function (c) { %>
+    <tr><td><a class="mono" href="/admin/wholesale/creators/<%= c.id %>"><%= c.ref %></a></td><td class="mono fine"><%= c.app_user_id %></td><td><%= c.affiliate_id ? c.affiliate_id : 'Unassigned' %></td><td><%= c.source || '—' %></td><td class="num"><%= u.num(c.balance) %></td><td><%= c.subscription_status %></td><td class="nowrap"><%= u.fmtDate(c.assigned_at || c.created_at) %></td></tr>
+    <% }) %>
+  </tbody>
+</table></div>

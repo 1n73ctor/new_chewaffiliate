@@ -1,0 +1,51 @@
+<p class="fine"><a href="/admin/wholesale/creators">← Creators</a></p>
+<h1 class="mono"><%= c.ref %></h1>
+<p class="page-intro">App user <span class="mono"><%= c.app_user_id %></span> · joined <%= u.fmtDate(c.created_at) %> · subscription <strong><%= c.subscription_status %></strong><%= c.subscription_plan ? ' (' + c.subscription_plan + ')' : '' %> · balance <strong><%= u.num(balance) %></strong> credits</p>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head"><h2>Attribution</h2></div>
+    <% if (attr) { %>
+    <dl class="dl"><dt>Assigned to</dt><dd><a href="/admin/wholesale/accounts/<%= affiliate.id %>"><%= affiliate.first_name %> <%= affiliate.last_name %></a> (<span class="mono"><%= affiliate.affiliate_id %></span>)</dd><dt>How</dt><dd><%= attr.source.replace(/_/g, ' ') %></dd><dt>Since</dt><dd><%= u.fmtDateTime(attr.assigned_at) %></dd></dl>
+    <% } else { %><p class="mb-0 muted">Not assigned to a wholesale affiliate.</p><% } %>
+    <% if (transfers.length) { %><h3 class="fs-100 mt-1">Transfer history</h3><ul class="plain-list fs-sm"><% transfers.forEach(function (t) { %><li><%= t.from_id || 'Unassigned' %> → <strong><%= t.to_id %></strong> · <%= t.reason %> · <span class="fine"><%= t.by_email %> · <%= u.fmtDateTime(t.created_at) %></span></li><% }) %></ul><% } %>
+  </section>
+  <% if (can('wholesale.manage')) { %>
+  <section class="card">
+    <div class="card-head"><h2>Resolve a dispute</h2></div>
+    <p class="fine">Reassigns the creator to another wholesale affiliate. Credits already given stay with the creator; future grants and earnings go to the new affiliate. Recorded permanently.</p>
+    <form class="form" method="post" action="/admin/wholesale/creators/<%= c.id %>/transfer" data-confirm="Reassign this creator?">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="field"><label for="tr-aff">New wholesale Affiliate ID</label><input id="tr-aff" type="text" name="affiliate_id" required></div>
+      <div class="field"><label for="tr-reason">Reason (required)</label><input id="tr-reason" type="text" name="reason" required></div>
+      <div><button class="btn btn-light" type="submit">Reassign creator</button></div>
+    </form>
+  </section>
+  <% } %>
+</div>
+
+<h2 class="fs-110 mt-2">Grants &amp; claims</h2>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Grant</th><th>From</th><th>Source</th><th class="num">Credits</th><th class="num">Remaining</th><th>Status</th><th>Created</th></tr></thead>
+  <tbody>
+    <% if (!grants.length) { %><tr><td colspan="7" class="table-empty">None.</td></tr><% } %>
+    <% grants.forEach(function (g) { %><tr><td class="mono"><%= g.ref %></td><td class="mono"><%= g.affiliate_id %></td><td><%= g.source %></td><td class="num"><%= u.num(g.credits) %></td><td class="num"><%= u.num(g.credits_remaining) %></td><td><%= g.status %><%= g.close_reason ? ' · ' + g.close_reason.replace(/_/g, ' ') : '' %></td><td class="nowrap"><%= u.fmtDate(g.created_at) %></td></tr><% }) %>
+  </tbody>
+</table></div>
+
+<div class="grid-2 mt-2">
+  <section>
+    <h2 class="fs-110">Videos (credit use)</h2>
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>Transaction</th><th class="num">Credits</th><th>Status</th><th>When</th></tr></thead>
+      <tbody><% if (!consumptions.length) { %><tr><td colspan="4" class="table-empty">None.</td></tr><% } %><% consumptions.forEach(function (k) { %><tr><td class="mono fine"><%= k.ref %></td><td class="num"><%= u.num(k.credits) %></td><td><%= k.status %></td><td class="nowrap"><%= u.fmtDateTime(k.created_at) %></td></tr><% }) %></tbody>
+    </table></div>
+  </section>
+  <section>
+    <h2 class="fs-110">Payments reported by the app</h2>
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>Transaction</th><th>Type</th><th class="num">Eligible amount</th><th>When</th></tr></thead>
+      <tbody><% if (!revenue.length) { %><tr><td colspan="4" class="table-empty">None.</td></tr><% } %><% revenue.forEach(function (e) { %><tr><td class="mono fine"><%= e.external_id %></td><td><%= e.type.replace('sic_', '') %></td><td class="num"><%= e.value_cents != null ? u.money(e.value_cents, e.currency || 'USD') : '—' %></td><td class="nowrap"><%= u.fmtDateTime(e.created_at) %></td></tr><% }) %></tbody>
+    </table></div>
+  </section>
+</div>

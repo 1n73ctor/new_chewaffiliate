@@ -179,6 +179,18 @@ Turn it on by creating a commission rule with the event **“Paid click (verifie
 
 No click-fraud filter is perfect — attackers with many real devices or residential IPs can still get through, which is why click lines start as Pending and the daily cap exists.
 
+## See It. Cook It. wholesale credits
+
+An optional paid program next to the free affiliate program. Wholesale affiliates buy packages of promotional credits (Stripe Checkout) and **give** them to creators for free; creators use them in the app (399 credits per completed video by default).
+
+- **Settings → See It. Cook It. wholesale credits**: credits per video, grant min/max, claim expiry, claims per network per day, low-inventory alert, replenishment rule, displayed prices, payout minimum, attribution-policy version. **Admin → Credit packages**: package prices and credits.
+- **Ledger**: every movement is an append-only `credit_ledger` row (the database refuses updates/deletes). Balances have `CHECK >= 0` constraints and every change runs in one `BEGIN IMMEDIATE` transaction. **Admin → Wholesale & credits** shows a live reconciliation of every batch and grant.
+- **Attribution**: a creator belongs to one wholesale affiliate — the first whose claim they redeem in the app — enforced by the `creator_attribution` primary key and a trigger on grants. Admins resolve disputes in **Creators & attribution** (recorded in `attribution_transfers`).
+- **Claim links** (`/r/<code>` → `/claim/<code>`): visitors enter an email, credits are reserved and released after the expiry if the creator never signs in to the app.
+- **App integration**: `docs/API.md` → *See It. Cook It. credits*.
+- **Stripe**: set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in `.env`, and add a webhook endpoint `https://<domain>/webhooks/stripe` for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired` and `charge.refunded`. Without the webhook, credits still arrive when the buyer returns to the site.
+- Commission rules for *See It. Cook It. subscription payment* and *watermark-free download* start inactive — set them from the signed agreement.
+
 ## Roles
 
 | Role | For | Can |

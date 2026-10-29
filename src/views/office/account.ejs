@@ -53,3 +53,62 @@
     </section>
   </div>
 </div>
+
+<% if (wsAccount) { const w = wsAccount; const ackOk = w.attribution_ack_at && w.attribution_ack_version === termsVersion; %>
+<h2 class="fs-120 mt-2" id="wholesale">See It. Cook It. wholesale</h2>
+<div class="items-start grid-2">
+  <div class="stack">
+    <section class="card">
+      <div class="card-head"><h2>Wholesale account</h2><span class="badge <%= w.status === 'active' ? 'badge-live' : w.status === 'suspended' ? 'badge-red' : 'badge-soon' %>"><%= w.status === 'prospect' ? 'Setting up' : w.status %></span></div>
+      <dl class="dl">
+        <dt>Wholesale affiliate ID</dt><dd class="mono"><%= w.wholesale_id %> <span class="fine">(read-only)</span></dd>
+        <dt>Attribution policy</dt><dd><% if (ackOk) { %>Acknowledged <%= u.fmtDate(w.attribution_ack_at) %> · version <%= w.attribution_ack_version %><% } else { %><a href="/office/see-it-cook-it#policy">Acknowledge version <%= termsVersion %> →</a><% } %></dd>
+      </dl>
+      <p class="fine mt-1 mb-0"><a href="/wholesale-terms">Wholesale Terms</a> · Questions or a dispute about a creator? <a href="/help#contact">Send a support request</a>.</p>
+    </section>
+    <section class="card" id="domains">
+      <div class="card-head"><h2>Promotional domains</h2></div>
+      <p class="fs-sm muted">Websites where you promote See It. Cook It. Verify each one with a DNS TXT record.</p>
+      <% if (domains.length) { %>
+      <ul class="domain-list">
+        <% domains.forEach(function (d) { %>
+        <li>
+          <div class="row-between"><strong><%= d.domain %></strong><span class="badge <%= d.status === 'verified' ? 'badge-live' : 'badge-soon' %>"><%= d.status === 'verified' ? 'Verified' : 'Not verified' %></span></div>
+          <% if (d.status !== 'verified') { %>
+          <p class="fine mb-040">Add a TXT record to <strong><%= d.domain %></strong> with the value:</p>
+          <div class="copy-field"><input id="txt-<%= d.id %>" type="text" value="chew-verify=<%= d.token %>" readonly aria-label="TXT record value"><button class="btn btn-light" type="button" data-copy data-copy-target="#txt-<%= d.id %>"><%- icon('copy') %></button></div>
+          <% } %>
+          <div class="row mt-050">
+            <% if (d.status !== 'verified') { %><form class="inline-form" method="post" action="/office/account/domains/<%= d.id %>/verify"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-green btn-xs" type="submit">Verify</button></form><% } %>
+            <form class="inline-form" method="post" action="/office/account/domains/<%= d.id %>/delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-ghost btn-xs" type="submit">Remove</button></form>
+            <span class="fine"><%= d.checked_at ? 'Checked ' + u.timeAgo(d.checked_at) : '' %></span>
+          </div>
+        </li>
+        <% }) %>
+      </ul>
+      <% } %>
+      <form class="row mt-1" method="post" action="/office/account/domains"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input class="grow minw-150" type="text" name="domain" placeholder="mycookingsite.com" aria-label="Domain"><button class="btn btn-light" type="submit"><%- icon('plus') %> Add domain</button></form>
+    </section>
+  </div>
+  <div class="stack">
+    <section class="card">
+      <div class="card-head"><h2>Notifications &amp; branded site</h2></div>
+      <form class="form" method="post" action="/office/account/wholesale">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="check-row"><input type="checkbox" name="notify_low_balance" value="1" <%= w.notify_low_balance ? 'checked' : '' %>><span><strong>Low credit balance</strong><br><span class="fine">When your available credits drop below the alert level</span></span></label>
+        <label class="check-row"><input type="checkbox" name="notify_claims" value="1" <%= w.notify_claims ? 'checked' : '' %>><span><strong>Claims redeemed</strong><br><span class="fine">When a creator redeems your free credits in the app</span></span></label>
+        <label class="check-row"><input type="checkbox" name="notify_earnings" value="1" <%= w.notify_earnings ? 'checked' : '' %>><span><strong>New earnings</strong><br><span class="fine">When eligible earnings are recorded</span></span></label>
+        <div class="field"><label for="site_request_url">Branded site URL (optional)</label><input id="site_request_url" type="url" name="site_request_url" value="<%= w.site_request_url || '' %>" placeholder="https://"><p class="hint">Request a branded giveaway site, or tell us about the one you have.</p></div>
+        <div class="field"><label for="site_request_note">Branded site request (optional)</label><textarea id="site_request_note" name="site_request_note" rows="2" maxlength="1000"><%= w.site_request_note || '' %></textarea><% if (w.site_request_status) { %><p class="hint">Status: <%= w.site_request_status %> · <%= u.fmtDate(w.site_requested_at) %></p><% } %></div>
+        <div><button class="btn btn-green" type="submit">Save wholesale settings</button></div>
+      </form>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Account history</h2></div>
+      <% if (!history.length) { %><p class="fine mb-0">No account changes recorded yet.</p><% } else { %>
+      <ul class="plain-list fs-sm"><% history.forEach(function (h) { %><li><%= h.action.replace(/^wholesale\./, '').replace(/_/g, ' ') %> · <span class="fine"><%= u.fmtDateTime(h.created_at) %></span></li><% }) %></ul>
+      <% } %>
+    </section>
+  </div>
+</div>
+<% } %>

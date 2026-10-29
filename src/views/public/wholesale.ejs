@@ -1,0 +1,69 @@
+<%
+  const signedIn = user && user.status === 'active' && user.affiliate_id;
+  const exploreHref = signedIn ? '/office/see-it-cook-it' : '/join';
+  const pkg = packages[0];
+%>
+<section class="hero ws-hero">
+  <div class="wrap ws-hero-grid">
+    <div>
+      <p class="eyebrow eyebrow-orange">See It. Cook It. · Wholesale Affiliate Program</p>
+      <h1 class="hero-title">Grow Your Own Audience by Giving Away AI Cooking Credits.</h1>
+      <p class="hero-sub">Share your personal link, invite creators to make cooking videos, and track your assigned users, available credits, and eligible commissions from your private dashboard.</p>
+      <div class="hero-cta">
+        <a class="btn btn-cta btn-xl" href="<%= exploreHref %>">EXPLORE WHOLESALE AFFILIATE PROGRAM <%- icon('arrow') %></a>
+        <p class="hero-signin">An optional paid program. Joining Chew as an affiliate stays <strong>free</strong>.</p>
+      </div>
+    </div>
+    <div class="ws-hero-card card">
+      <% if (pkg) { %>
+      <p class="label-sm">Starter package</p>
+      <p class="ws-price"><%= u.money(pkg.price_cents, pkg.currency) %></p>
+      <p class="mb-0"><strong><%= u.num(pkg.credits) %> promotional credits</strong> to give to creators for free.</p>
+      <p class="fine mt-050 mb-0">Current video generation uses <%= u.num(videoCost) %> credits per completed video.</p>
+      <% } else { %>
+      <p class="mb-0">Packages are being updated — send us an inquiry below.</p>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="section-head"><p class="eyebrow">How it works</p><h2>Give credits. Creators make videos. Purchases are handled centrally.</h2></div>
+    <ol class="steps steps-3">
+      <% [['Give free credits', 'Share your claim link or give credits directly. Creators never pay for them.'], ['Creators make videos', 'They upload a dish, choose themselves or an AI chef and a kitchen, and create a cooking video.'], ['Handled centrally', 'Subscriptions and downloads are sold and supported by See It. Cook It. — no checkout for you to run.']].forEach(function (s, i) { %>
+      <li class="step"><span class="step-num"><%= i + 1 %></span><div><h3><%= s[0] %></h3><p><%= s[1] %></p></div></li>
+      <% }) %>
+    </ol>
+  </div>
+</section>
+
+<section class="section section-soft">
+  <div class="wrap grid-2">
+    <div class="card">
+      <div class="card-head"><h2>What creators get</h2></div>
+      <ul class="checklist">
+        <li><span class="check"><%- icon('check') %></span><span>Free sponsored credits to start creating</span></li>
+        <li><span class="check"><%- icon('check') %></span><span>Videos made without a subscription include Chew branding</span></li>
+        <li><span class="check"><%- icon('check') %></span><span>Watermark-free download: <%= site.sic_price_download %> each, or subscribe for <%= site.sic_price_monthly %> or <%= site.sic_price_annual %></span></li>
+      </ul>
+      <p class="fine mb-0"><%= site.sic_fair_use %></p>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>How the program works</h2></div>
+      <ul class="checklist">
+        <li><span class="check"><%- icon('check') %></span><span>You buy credits and <strong>give</strong> them away — credits are never resold</span></li>
+        <li><span class="check"><%- icon('check') %></span><span>Each creator is assigned to one wholesale affiliate for the life of the app</span></li>
+        <li><span class="check"><%- icon('check') %></span><span>Your dashboard shows assigned creators, credits and eligible commissions</span></li>
+      </ul>
+      <p class="fine mb-0">Eligible earnings depend on attributed customer activity and your signed affiliate terms. Earnings are not guaranteed — see the <a href="/earnings-disclosure">Earnings Disclosure</a> and <a href="/wholesale-terms">Wholesale Terms</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="business-affiliate">
+  <div class="wrap ws-form-wrap">
+    <div class="section-head"><p class="eyebrow">Talk to us</p><h2>Become a Business Affiliate</h2><p>Tell us about your audience and we’ll walk you through the program.</p></div>
+    <div class="card"><%- include('../partials/business-form', { page: 'wholesale' }) %></div>
+  </div>
+</section>

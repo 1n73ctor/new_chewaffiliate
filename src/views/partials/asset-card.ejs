@@ -9,12 +9,14 @@
   <div class="asset-body">
     <h3><a href="/office/content-kitchen/<%= a.id %>"><%= a.title %></a></h3>
     <% if (plats.length) { %><div class="asset-meta"><strong>Best on:</strong> <%= plats.join(' · ') %></div><% } %>
-    <% if (a.category_name) { %><div class="asset-meta"><%= a.category_name %></div><% } %>
+    <% if (a.format) { %><div class="asset-meta"><strong>Format:</strong> <%= a.format %></div><% } %>
+    <% if (locals.sic && a.caption) { %><p class="asset-caption"><%= String(a.caption).replace('{link}', '[your link]') %></p><% } %>
+    <% if (a.category_name && !locals.sic) { %><div class="asset-meta"><%= a.category_name %></div><% } %>
   </div>
   <div class="asset-actions">
     <a class="btn btn-light" href="/office/content-kitchen/<%= a.id %>"><%- icon('eye') %> Preview</a>
     <form method="post" action="/office/content-kitchen/<%= a.id %>/caption" data-ajax="caption"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-light" type="submit"><%- icon('copy') %> Copy Caption</button></form>
-    <form method="post" action="/office/content-kitchen/<%= a.id %>/link" data-ajax="link"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-green" type="submit"><%- icon('link') %> Get My Link</button></form>
-    <a class="btn btn-light" href="/office/content-kitchen/<%= a.id %>/download"><%- icon('download') %> Download</a>
+    <form method="post" action="/office/content-kitchen/<%= a.id %>/link" data-ajax="link"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-green" type="submit"><%- icon('link') %> <%= locals.sic ? 'Copy Link' : 'Get My Link' %></button></form>
+    <% if (a.download_allowed !== 0) { %><a class="btn btn-light" href="/office/content-kitchen/<%= a.id %>/download"><%- icon('download') %> <%= locals.sic ? 'Download Promo Asset' : 'Download' %></a><% } else { %><span class="btn btn-light is-disabled" title="Share-only: the rights don’t allow downloading">Share only</span><% } %>
   </div>
 </article>

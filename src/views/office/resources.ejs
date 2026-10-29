@@ -6,5 +6,23 @@
   <h2 class="group-heading"><%= g %></h2>
   <div class="res-list"><% groups[g].forEach(function (r) { %><a class="res-item" href="<%= r.url %>"><span class="ri"><%- icon(r.audience === 'affiliate' ? 'lock' : 'book') %></span><div><strong><%= r.title %></strong><span class="sub"><%= r.description %></span></div><span class="go"><%- icon('arrow') %></span></a><% }) %></div>
 <% }) %>
+  <% if (promo.ad.length || promo.giveaway.length || promo.creator_faq.length) { %>
+  <h2 class="group-heading" id="sic-toolkit">See It. Cook It. promo copy</h2>
+  <div class="alert alert-info"><%- icon('bell') %><div>Copy as-is or adapt. Always disclose <strong>#ad</strong> or <strong>#sponsored</strong>. Free credits are not a cash prize — never present them as one. See the <a href="/giveaway-guidelines">Credit Giveaway Guidelines</a>.</div></div>
+  <% ['ad', 'giveaway', 'creator_faq'].forEach(function (kind) { if (!promo[kind].length) return; %>
+  <h3 class="fs-100 mt-1"><%= promoKinds[kind] %><%= kind === 'creator_faq' ? '' : 's' %></h3>
+  <div class="ad-grid">
+    <% promo[kind].forEach(function (p) { %>
+    <article class="ad-card">
+      <% if (p.audience) { %><span class="chip"><%= p.audience %></span><% } %>
+      <h4><%= p.title %></h4>
+      <textarea id="copy-<%= p.id %>" class="caption-box" readonly aria-label="<%= p.title %>"><%= p.text %></textarea>
+      <% if (p.guidance) { %><p class="fine mb-0"><strong>Usage:</strong> <%= p.guidance %></p><% } %>
+      <div class="row"><button class="btn btn-green btn-sm" type="button" data-copy data-copy-target="#copy-<%= p.id %>"><%- icon('copy') %> Copy</button><a class="btn btn-light btn-sm" href="/office/resources/copy/<%= p.id %>.txt"><%- icon('download') %> Download</a></div>
+    </article>
+    <% }) %>
+  </div>
+  <% }) %>
+  <% } %>
   <div class="panel-green mt-2"><strong>Need help?</strong> <a href="/help#contact">Contact affiliate support</a> — we reply by email.</div>
 </div>

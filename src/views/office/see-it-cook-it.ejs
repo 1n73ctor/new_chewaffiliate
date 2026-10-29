@@ -1,6 +1,168 @@
-<h1 class="page-title">See It. Cook It.</h1>
-<p class="page-intro">Capture food. Get the recipe. Watch it come to life. Activate the app on your account, then share it.</p>
+<%
+  const inv = ws && ws.inventory;
+  const isWs = !!acct;
+  const ackOk = acct && acct.attribution_ack_at && acct.attribution_ack_version === termsVersion;
+%>
+<h1 class="page-title">See It. Cook It.<%= isWs ? ' · Wholesale Command Center' : '' %></h1>
+<p class="page-intro"><%= isWs ? 'Your hub for giving away free credits, tracking your creators and following your eligible earnings.' : 'Capture food. Get the recipe. Watch it come to life. Activate the app on your account, then share it.' %></p>
 
+<% if (isWs) { %>
+  <% if (acct.status === 'suspended') { %><div class="alert alert-error" role="status"><%- icon('x') %><div>Your wholesale account is suspended. Existing creators keep their credits. <a href="/help#contact">Contact support</a>.</div></div><% } %>
+  <% ws.alerts.forEach(function (a) { %><div class="alert alert-<%= a.tone %>" role="status"><%- icon(a.tone === 'warn' ? 'bell' : 'sparkle') %><div><%= a.text %> <a href="<%= a.href %>"><%= a.cta %> →</a></div></div><% }) %>
+
+  <% if (checklist.done < checklist.total) { %>
+  <section class="card start-here" id="start-here">
+    <div class="card-head"><h2>START HERE</h2><span class="badge badge-soon"><%= checklist.done %> of <%= checklist.total %> done</span></div>
+    <ol class="activation-steps">
+      <% checklist.steps.forEach(function (st, i) { %>
+      <li class="<%= st.done ? 'done' : '' %>"><span class="dot"><%- st.done ? icon('check') : i + 1 %></span><div><strong><% if (!st.done) { %><a href="<%= st.href %>"><%= st.label %></a><% } else { %><%= st.label %><% } %></strong><span class="sub"><%= st.detail %></span></div></li>
+      <% }) %>
+    </ol>
+  </section>
+  <% } %>
+
+  <div class="grid-2 mt-1">
+    <section class="card" id="package">
+      <div class="card-head"><h2>Package &amp; balance</h2><span class="mono fine"><%= acct.wholesale_id %></span></div>
+      <p class="big-number"><%= u.num(inv.available) %> <span class="fine">credits available to give</span></p>
+      <p class="fine">Each completed video uses <%= u.num(limits.cost) %> credits — about <%= u.num(Math.floor(inv.available / limits.cost)) %> videos’ worth.</p>
+      <div class="row">
+        <% if (packages.length) { %><a class="btn btn-cta" href="/office/see-it-cook-it/packages">VIEW AVAILABLE PACKAGES</a><% } %>
+        <details class="request-more"><summary class="btn btn-light">REQUEST MORE CREDITS</summary>
+          <form class="form mt-050" method="post" action="/office/see-it-cook-it/request-credits"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><div class="field"><label for="req-note">Anything we should know? (optional)</label><textarea id="req-note" name="note" rows="2" maxlength="2000"></textarea></div><div><button class="btn btn-green btn-sm" type="submit">Send request</button></div></form>
+        </details>
+      </div>
+    </section>
+    <section class="card" id="inventory">
+      <div class="card-head"><h2>Credit inventory</h2><a class="fine" href="/office/analytics#sic-users">Details →</a></div>
+      <div class="funnel">
+        <div class="funnel-row"><span>Purchased / allocated</span><strong><%= u.num(inv.purchased) %></strong></div>
+        <div class="funnel-row"><span>Issued to creators</span><strong><%= u.num(inv.issued) %></strong></div>
+        <div class="funnel-row"><span>Consumed by videos</span><strong><%= u.num(inv.consumed) %></strong></div>
+        <div class="funnel-row"><span>Pending (reserved in claims)</span><strong><%= u.num(inv.pending) %></strong></div>
+        <div class="funnel-row"><span>Expired / reversed (returned or written off)</span><strong><%= u.num(inv.expiredOrReversed) %></strong></div>
+        <div class="funnel-row funnel-total"><span>Remaining to give</span><strong><%= u.num(inv.available) %></strong></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card mt-1" id="issue">
+    <div class="card-head"><h2><%- icon('gift') %> ISSUE FREE CREDITS</h2><span class="fine">Grants: <%= u.num(limits.min) %>–<%= u.num(limits.max) %> credits (set by Chew)</span></div>
+    <% if (acct.status !== 'active') { %>
+      <p class="muted mb-0"><%= acct.status === 'prospect' ? 'Get your first credit package to start giving credits.' : 'Giving credits is paused for this account.' %></p>
+    <% } else { %>
+    <div class="grid-2">
+      <form class="form issue-form" method="post" action="/office/see-it-cook-it/claim-links">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <h3 class="fs-100 m-0">Create a claim link</h3>
+        <p class="fine m-0">Share it anywhere. Each person who claims gets free credits and is assigned to you once they sign in to the app. Credits are reserved only when someone claims.</p>
+        <div class="form-row two">
+          <div class="field"><label for="cl-videos">Credits per creator</label><select id="cl-videos" name="videos" required><% limits.options.forEach(function (o) { %><option value="<%= o.videos %>"><%= u.num(o.credits) %> credits · <%= o.videos %> video<%= o.videos === 1 ? '' : 's' %></option><% }) %></select></div>
+          <div class="field"><label for="cl-max">Creators who can claim</label><input id="cl-max" type="number" name="max_claims" min="1" max="10000" value="5" required></div>
+        </div>
+        <div class="form-row two">
+          <div class="field"><label for="cl-label">Label</label><input id="cl-label" type="text" name="label" maxlength="80" placeholder="e.g. Instagram giveaway"></div>
+          <div class="field"><label for="cl-source">Where you’ll share it</label><select id="cl-source" name="source"><option value="">Anywhere</option><% sources.forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }) %></select></div>
+        </div>
+        <div class="form-row two">
+          <div class="field"><label for="cl-campaign">Campaign (optional)</label><select id="cl-campaign" name="campaign_id"><option value="">None</option><% campaigns.forEach(function (c) { %><option value="<%= c.id %>"><%= c.name %></option><% }) %></select></div>
+          <div class="field"><label for="cl-utm">Campaign label / UTM (optional)</label><input id="cl-utm" type="text" name="utm_campaign" maxlength="60"></div>
+        </div>
+        <div><button class="btn btn-cta" type="submit"><%- icon('link') %> Create claim link</button></div>
+      </form>
+      <form class="form issue-form" method="post" action="/office/see-it-cook-it/grant">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <h3 class="fs-100 m-0">Give credits to one of your creators</h3>
+        <p class="fine m-0">For creators already assigned to you whose previous credits are used. You’ll confirm on the next screen.</p>
+        <div class="field"><label for="gr-creator">Creator</label>
+          <select id="gr-creator" name="creator" required <%= creators.length ? '' : 'disabled' %>><% if (!creators.length) { %><option value="">No eligible creators right now</option><% } %><% creators.forEach(function (c) { %><option value="<%= c.ref %>"><%= c.ref %> · <%= u.num(c.remaining) %> credits left</option><% }) %></select></div>
+        <div class="field"><label for="gr-videos">Amount</label><select id="gr-videos" name="videos" required><% limits.options.forEach(function (o) { %><option value="<%= o.videos %>"><%= u.num(o.credits) %> credits · <%= o.videos %> video<%= o.videos === 1 ? '' : 's' %></option><% }) %></select></div>
+        <div><button class="btn btn-green" type="submit" <%= creators.length ? '' : 'disabled' %>>Review &amp; confirm →</button></div>
+      </form>
+    </div>
+    <% } %>
+  </section>
+
+  <section class="mt-2" id="claims">
+    <h2 class="fs-110">Claim links</h2>
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>Claim link</th><th class="num">Credits / creator</th><th class="num">Clicks</th><th class="num">Redeemed</th><th class="num">Pending</th><th class="num">Limit</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <% if (!claimLinks.length) { %><tr><td colspan="8" class="table-empty">No claim links yet. Create one above.</td></tr><% } %>
+        <% claimLinks.forEach(function (o) { const open = o.active && o.link_active; %>
+        <tr class="<%= open ? '' : 'is-dim' %>">
+          <td><strong><%= o.label || o.code %></strong><br><span class="mono fine"><%= o.url.replace(/^https?:\/\//, '') %></span><% if (o.campaign_name) { %> <span class="chip"><%= o.campaign_name %></span><% } %></td>
+          <td class="num"><%= u.num(o.credits) %></td>
+          <td class="num"><%= u.num(o.clicks) %></td>
+          <td class="num"><%= u.num(o.redeemed) %></td>
+          <td class="num"><%= u.num(o.pending) %></td>
+          <td class="num"><%= u.num(o.claims) %> / <%= u.num(o.max_claims) %></td>
+          <td><span class="badge <%= open ? (o.claims >= o.max_claims ? 'badge-soon' : 'badge-live') : 'badge-grey' %>"><%= open ? (o.claims >= o.max_claims ? 'Full' : 'Open') : 'Closed' %></span></td>
+          <td class="actions">
+            <button class="btn btn-light btn-xs" type="button" data-copy="<%= o.url %>">Copy link</button>
+            <a class="btn btn-light btn-xs" href="/office/qr/<%= o.code %>.png?download=1">Download QR</a>
+            <a class="btn btn-light btn-xs" href="/r/<%= o.code %>?preview=1" target="_blank" rel="noopener">Test link</a>
+            <form class="inline-form" method="post" action="/office/see-it-cook-it/claim-links/<%= o.id %>/toggle"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-ghost btn-xs" type="submit"><%= o.active ? 'Close' : 'Reopen' %></button></form>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+  </section>
+
+  <div class="grid-3 mt-2">
+    <section class="card">
+      <div class="card-head"><h2>Assigned creators</h2><a class="fine" href="/office/analytics#sic-users">View all →</a></div>
+      <p class="big-number"><%= u.num(ws.creators) %> <span class="fine"><%= u.num(ws.subscribers) %> subscribed</span></p>
+      <% if (recentCreators.length) { %><ul class="plain-list fs-sm"><% recentCreators.forEach(function (c) { %><li><span class="mono"><%= c.ref %></span> · <%= u.num(c.remaining) %> credits left · <span class="fine"><%= u.timeAgo(c.assigned_at) %></span></li><% }) %></ul><% } else { %><p class="fine mb-0">Creators appear once they redeem a claim in the app.</p><% } %>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Earnings summary</h2><a class="fine" href="/office/commissions?tab=sic">Open →</a></div>
+      <div class="funnel">
+        <div class="funnel-row"><span>Pending review</span><strong><%= u.money(ws.commissions.pending) %></strong></div>
+        <div class="funnel-row"><span>Approved</span><strong><%= u.money(ws.commissions.approved) %></strong></div>
+        <div class="funnel-row"><span>Paid</span><strong><%= u.money(ws.commissions.paid) %></strong></div>
+      </div>
+      <p class="fine mt-050 mb-0">Eligible earnings depend on your creators’ activity and your signed terms.</p>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Campaign tools &amp; training</h2></div>
+      <ul class="plain-list fs-sm">
+        <li><a href="/office/content-kitchen#ads">Ready-to-use ads</a></li>
+        <li><a href="/office/resources#sic-toolkit">Giveaway templates &amp; creator FAQ</a></li>
+        <li><a href="/office/links#sic-links">Promo links &amp; QR codes</a></li>
+        <li><a href="/office/training#track-wholesale">Wholesale training</a> · <a href="/office/training#track-creators">Creator training</a></li>
+        <li><a href="/giveaway-guidelines">Giveaway do’s &amp; don’ts</a></li>
+      </ul>
+    </section>
+  </div>
+<% } %>
+
+<% if (!ackOk && (programOn || isWs)) { %>
+<section class="card mt-1 <%= isWs ? '' : 'sic-invite-card' %>" id="<%= isWs ? 'policy' : 'wholesale' %>">
+  <% if (!isWs) { %>
+  <p class="eyebrow eyebrow-orange">See It. Cook It. · Wholesale Affiliate Program</p>
+  <h2 class="fs-130">Grow Your Own Audience by Giving Away AI Cooking Credits.</h2>
+  <p>Share your personal link, invite creators to make cooking videos, and track your assigned users, available credits, and eligible commissions from your private dashboard. An optional paid program — your free affiliate account stays free.</p>
+  <% if (packages.length) { %><p><strong><%= packages[0].name %>:</strong> <%= u.money(packages[0].price_cents, packages[0].currency) %> includes <%= u.num(packages[0].credits) %> promotional credits. Each completed video uses <%= u.num(limits.cost) %> credits.</p><% } %>
+  <% } else { %>
+  <div class="card-head"><h2>Attribution policy</h2><span class="badge badge-soon">Needs acknowledgment</span></div>
+  <% } %>
+  <ul class="checklist">
+    <li><span class="check"><%- icon('check') %></span><span>Credits are given to creators <strong>for free</strong> — never resold or presented as a cash prize.</span></li>
+    <li><span class="check"><%- icon('check') %></span><span>Each creator is assigned to <strong>one</strong> wholesale affiliate for the life of the app: the first whose credits they redeem.</span></li>
+    <li><span class="check"><%- icon('check') %></span><span>You see masked creator IDs and activity only — never personal data.</span></li>
+  </ul>
+  <form class="form" method="post" action="/office/see-it-cook-it/acknowledge"<% if (!isWs) { %> id="policy"<% } %>>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="next" value="<%= isWs ? '' : 'packages' %>">
+    <label class="check-row"><input type="checkbox" name="ack" value="1" required><span>I have read the <a href="/wholesale-terms" target="_blank">See It. Cook It. Wholesale Terms</a> (version <%= termsVersion %>) and acknowledge the attribution policy.</span></label>
+    <div><button class="btn btn-cta" type="submit"><%= isWs ? 'Acknowledge' : 'EXPLORE WHOLESALE AFFILIATE PROGRAM' %> <%- icon('arrow') %></button></div>
+  </form>
+</section>
+<% } %>
+
+<h2 class="fs-110 mt-2"><%= isWs ? 'Your app' : 'Get the app' %></h2>
 <div class="grid-2">
   <section class="card">
     <div class="card-head"><h2>Activation</h2><span class="badge <%= activation.activated ? 'badge-live' : 'badge-soon' %>"><%= activation.activated ? 'Activated' : activation.completed + ' of ' + activation.total + ' done' %></span></div>

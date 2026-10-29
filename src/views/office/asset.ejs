@@ -51,6 +51,8 @@
       <% } %>
     </section>
 
-    <a class="btn btn-light btn-lg btn-block" href="/office/content-kitchen/<%= asset.id %>/download"><%- icon('download') %> <%= !asset.file_path && asset.external_url && player && player.type === 'iframe' ? 'Watch on ' + (/vimeo/i.test(asset.external_url) ? 'Vimeo' : 'YouTube') : 'Download ' + (asset.media_type === 'video' ? 'video' : asset.media_type === 'document' ? 'file' : 'image') %></a>
+    <% if (asset.format) { %><p class="fine mb-0"><strong>Format:</strong> <%= asset.format %></p><% } %>
+    <% if (!asset.download_allowed) { %><p class="fine mb-0">Share-only asset: the rights don’t allow downloading. Share it with your link.</p><% } else { %>
+    <a class="btn btn-light btn-lg btn-block" href="/office/content-kitchen/<%= asset.id %>/download"><%- icon('download') %> <%= !asset.file_path && asset.external_url && player && player.type === 'iframe' ? 'Watch on ' + (/vimeo/i.test(asset.external_url) ? 'Vimeo' : 'YouTube') : 'Download ' + (asset.media_type === 'video' ? 'video' : asset.media_type === 'document' ? 'file' : 'image') %></a><% } %>
   </div>
 </div>

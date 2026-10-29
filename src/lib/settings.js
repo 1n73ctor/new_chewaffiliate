@@ -84,6 +84,33 @@ const GROUPS = [
     ],
   },
   {
+    id: 'sic',
+    title: 'See It. Cook It. wholesale credits',
+    fields: [
+      { key: 'sic_wholesale_enabled', label: 'Offer the Wholesale Affiliate program', type: 'checkbox', default: '1', help: 'Turn off to hide package purchases. Existing balances, grants and claims keep working.' },
+      { key: 'sic_video_cost', label: 'Credits used per completed video', type: 'number', default: '399', help: 'The app reports each completed video; this many credits are taken from the creator’s grants.' },
+      { key: 'sic_grant_min', label: 'Minimum credits per grant', type: 'number', default: '399' },
+      { key: 'sic_grant_max', label: 'Maximum credits per grant', type: 'number', default: '1995', help: 'Affiliates choose a number of videos; the credits must land between the minimum and maximum.' },
+      { key: 'sic_claim_expiry_days', label: 'Days a website claim waits for the creator to sign in to the app', type: 'number', default: '14', help: 'Unredeemed claims expire and their credits go back to the affiliate’s inventory.' },
+      { key: 'sic_claims_per_ip_day', label: 'Free-credit claims allowed per network per day', type: 'number', default: '3' },
+      { key: 'sic_low_balance', label: 'Low-inventory alert below (credits)', type: 'number', default: '1197' },
+      { key: 'sic_repurchase_below', label: 'Allow buying more credits only below (credits, 0 = any time)', type: 'number', default: '0', help: 'Replenishment rule for package purchases.' },
+      { key: 'sic_price_monthly', label: 'Creator subscription — monthly (display)', default: '$24.95/month' },
+      { key: 'sic_price_annual', label: 'Creator subscription — annual (display)', default: '$199/year' },
+      { key: 'sic_price_download', label: 'Watermark-free download without subscription (display)', default: '$1.99' },
+      {
+        key: 'sic_fair_use',
+        label: 'Fair-use / technical limits (shown wherever subscriptions are described)',
+        type: 'textarea',
+        default: 'Subscribers download watermark-free, subject to available credits and fair-use and technical limits. Every video uses credits, so generation is not unlimited.',
+      },
+      { key: 'sic_payout_threshold', label: 'Minimum approved balance before payout (display)', default: '$50.00' },
+      { key: 'sic_site_url', label: 'Consumer site URL (Try See It. Cook It.)', default: 'https://seeitcookit.com', type: 'url' },
+      { key: 'sales_email', label: 'Business-affiliate inquiries go to', default: '', type: 'email', help: 'Leave blank to use the support email.' },
+      { key: 'wholesale_terms_version', label: 'Wholesale attribution policy version', default: '1.0', help: 'Wholesale affiliates acknowledge this version; change it when the Wholesale Terms change.' },
+    ],
+  },
+  {
     id: 'tracking',
     title: 'Tracking & attribution',
     fields: [
@@ -139,6 +166,11 @@ function load() {
 
 const all = () => cache || load();
 const get = (key) => all()[key];
+// Positive whole number from a setting, or the fallback.
+function int(key, fallback) {
+  const n = Math.floor(Number(get(key)));
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
 
 function set(key, value, userId = null) {
   db.run(
@@ -151,6 +183,16 @@ function set(key, value, userId = null) {
   cache = null;
 }
 
+// "{{sic_video_cost}} credits" → "399 credits": keeps prices and credit settings in
+// lessons, legal pages and promo copy in step with Settings.
+function fill(text) {
+  return String(text ?? '').replace(/\{\{([a-z0-9_]+)\}\}/g, (m, key) => {
+    if (!KNOWN.has(key)) return m;
+    const v = get(key);
+    return /^\d+$/.test(String(v)) ? Number(v).toLocaleString('en-US') : String(v ?? '');
+  });
+}
+
 function lines(key) {
   return String(get(key) || '')
     .split(/\r?\n/)
@@ -158,4 +200,4 @@ function lines(key) {
     .filter(Boolean);
 }
 
-module.exports = { GROUPS, DEFAULTS, KNOWN, all, get, set, lines, reload: load };
+module.exports = { GROUPS, DEFAULTS, KNOWN, all, get, int, set, fill, lines, reload: load };

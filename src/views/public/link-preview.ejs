@@ -1,0 +1,19 @@
+<section class="section">
+  <div class="wrap mw-720">
+    <div class="card">
+      <div class="card-head"><h1 class="fs-130 m-0">Test link</h1><span class="badge <%= link.active ? 'badge-live' : 'badge-grey' %>"><%= link.active ? 'Active' : 'Paused' %></span></div>
+      <p class="muted">This preview is only shown to you. <strong>No click was recorded.</strong></p>
+      <dl class="dl">
+        <dt>Link</dt><dd class="mono"><%= baseUrl %>/r/<%= link.code %></dd>
+        <dt>Credited to</dt><dd><span class="mono"><%= user.affiliate_id %></span> (you)</dd>
+        <dt>Sends visitors to</dt><dd><%= dest ? dest.label : 'Homepage' %><br><span class="fine mono"><%= target %></span></dd>
+        <dt>Source / channel</dt><dd><%= link.source || '—' %></dd>
+        <dt>Campaign</dt><dd><%= campaign ? campaign.name : '—' %><%= link.utm_campaign ? ' · label “' + link.utm_campaign + '”' : '' %></dd>
+        <dt>Content</dt><dd><%= content ? content.title : '—' %></dd>
+        <% if (offer) { %><dt>Free-credit offer</dt><dd><%= u.num(offer.credits) %> credits per creator · up to <%= u.num(offer.max_claims) %> creators<%= offer.active ? '' : ' · closed' %></dd><% } %>
+      </dl>
+      <p class="fine">Each real click records: who shared it (you), the content, the source, the link, the destination and the time. Creators who claim through a claim link are assigned to you when they sign in to the app.</p>
+      <div class="row"><a class="btn btn-light" href="/office/links">← My Links</a><% if (link.active) { %><a class="btn btn-green" href="<%= dest && dest.key === 'claim' ? '/claim/' + link.code : (dest && dest.kind === 'site' ? dest.url : '/') %>" target="_blank" rel="noopener">Open the destination</a><% } %></div>
+    </div>
+  </div>
+</section>

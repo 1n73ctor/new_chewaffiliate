@@ -14,6 +14,7 @@ const { hashPassword } = require('../lib/auth');
 const { generateAffiliateId } = require('../lib/tracking');
 const PATHWAYS = require('./seed-data/pathways');
 const C = require('./seed-data/content');
+const SIC = require('./seed-data/sic');
 
 const count = (table) => db.get(`SELECT COUNT(*) AS n FROM ${table}`).n;
 
@@ -66,7 +67,51 @@ function ensureBaseData() {
       }
     }
   });
+  ensureSicData();
   ensureAdmin();
+}
+
+// See It. Cook It. wholesale content. Runs once per database (fresh or already live),
+// so anything an admin later edits or deletes stays that way.
+function ensureSicData() {
+  if (db.get("SELECT 1 FROM settings WHERE key = 'seed_sic_v1'")) return;
+  db.tx(() => {
+    SIC.packages.forEach((p, i) =>
+      db.run('INSERT INTO credit_packages (name, description, price_cents, credits, sort) VALUES (?, ?, ?, ?, ?)', p.name, p.description, p.price_cents, p.credits, i + 1),
+    );
+    const sort = db.get('SELECT COALESCE(MAX(sort), 0) AS n FROM destinations').n;
+    SIC.destinations.forEach(([key, label, kind, url], i) =>
+      db.run('INSERT OR IGNORE INTO destinations (key, label, kind, url, sort) VALUES (?, ?, ?, ?, ?)', key, label, kind, url, sort + i + 1),
+    );
+    for (const p of SIC.pages) db.run('INSERT OR IGNORE INTO pages (slug, title, body, version) VALUES (?, ?, ?, ?)', p.slug, p.title, p.body, '1.0');
+    const moduleSort = db.get('SELECT COALESCE(MAX(sort), 0) AS n FROM training_modules').n;
+    SIC.trainingModules.forEach((m, mi) => {
+      const { lastInsertRowid: moduleId } = db.run('INSERT INTO training_modules (title, summary, track, sort) VALUES (?, ?, ?, ?)', m.title, m.summary, m.track, moduleSort + mi + 1);
+      m.lessons.forEach(([title, summary, minutes, comingSoon, body], li) =>
+        db.run(
+          'INSERT INTO training_lessons (module_id, title, summary, minutes, coming_soon, body, sort) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          moduleId,
+          title,
+          summary,
+          minutes,
+          comingSoon,
+          body,
+          li + 1,
+        ),
+      );
+    });
+    const resSort = db.get('SELECT COALESCE(MAX(sort), 0) AS n FROM resources').n;
+    SIC.resources.forEach(([title, description, category, url, audience], i) =>
+      db.run('INSERT INTO resources (title, description, category, url, audience, sort) VALUES (?, ?, ?, ?, ?, ?)', title, description, category, url, audience, resSort + i + 1),
+    );
+    SIC.promoCopy.forEach(([kind, audience, title, body, guidance], i) =>
+      db.run('INSERT INTO promo_copy (kind, audience, title, body, guidance, sort) VALUES (?, ?, ?, ?, ?, ?)', kind, audience, title, body, guidance, i + 1),
+    );
+    if (!db.get("SELECT 1 FROM content_categories WHERE slug = 'see-it-cook-it'")) {
+      db.run("INSERT INTO content_categories (slug, name, sort) VALUES ('see-it-cook-it', 'See It. Cook It.', 3)");
+    }
+    db.run("INSERT INTO settings (key, value) VALUES ('seed_sic_v1', datetime('now'))");
+  });
 }
 
 function ensureAdmin() {
@@ -158,6 +203,32 @@ function seedDemo() {
         role,
       );
     }
+    for (const [title, img, format] of [
+      ['See It. Cook It.: mango chia pudding', 'pancakes', 'Vertical 9:16 · 0:30'],
+      ['See It. Cook It.: pesto farfalle', 'pasta-salad', 'Square 1:1 · 0:45'],
+    ]) {
+      if (db.get('SELECT 1 FROM content_assets WHERE title = ?', title)) continue;
+      db.run(
+        `INSERT INTO content_assets (category_id, title, description, caption, platforms, media_type, file_path, thumb_path, destination_key, status, format)
+         VALUES (?, ?, 'Sample — replace with an approved See It. Cook It. video.', ?, 'TikTok,Instagram,YouTube Shorts', 'image', ?, ?, 'see-it-cook-it', 'published', ?)`,
+        cats['see-it-cook-it'] || null,
+        title,
+        'Made from one food photo with See It. Cook It. Try it with free sponsored credits 👉 {link} #ad',
+        `/img/food/${img}.webp`,
+        `/img/food/${img}.webp`,
+        format,
+      );
+    }
+    if (!db.get("SELECT 1 FROM users WHERE email = 'wholesale@chew.local'")) {
+      db.run(
+        `INSERT INTO users (affiliate_id, first_name, last_name, email, mobile, country, password_hash, role, status,
+                            email_verified_at, terms_accepted_at, agreement_version, agreement_accepted_at)
+         VALUES (?, 'Demo', 'Wholesaler', 'wholesale@chew.local', '+15555550101', 'US', ?, 'affiliate', 'active',
+                 datetime('now'), datetime('now'), '1.0', datetime('now'))`,
+        generateAffiliateId(),
+        hashPassword(demoPassword),
+      );
+    }
     if (!db.get("SELECT 1 FROM users WHERE email = 'affiliate@chew.local'")) {
       db.run(
         `INSERT INTO users (affiliate_id, first_name, last_name, email, mobile, country, password_hash, role, status,
@@ -171,13 +242,14 @@ function seedDemo() {
   });
   console.log(`Demo data ready. Demo logins (password: ${demoPassword}):
   affiliate@chew.local  (affiliate back office)
+  wholesale@chew.local  (affiliate for trying the wholesale program — no credits until you add some)
   support@chew.local    (support-level admin)
   content@chew.local    (content manager)
   finance@chew.local    (finance)
   sales@chew.local      (sales, read-only)`);
 }
 
-module.exports = { ensureBaseData, seedDemo };
+module.exports = { ensureBaseData, ensureSicData, seedDemo };
 
 if (require.main === module) {
   db.migrate();

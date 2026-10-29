@@ -32,9 +32,9 @@ router.get('/commissions', requirePerm('commissions.view'), (req, res) => {
   const total = db.get(`SELECT COUNT(*) AS n FROM commissions c JOIN users u ON u.id = c.user_id ${w}`, ...params).n;
   const pg = paginate(total, req.query.page, 50);
   const rows = db.all(
-    `SELECT c.*, u.affiliate_id, u.first_name, u.last_name, e.type AS event_type, e.created_at AS event_at, r.name AS rule_name
+    `SELECT c.*, u.affiliate_id, u.first_name, u.last_name, e.type AS event_type, e.created_at AS event_at, r.name AS rule_name, cr.ref AS creator_ref
      FROM commissions c JOIN users u ON u.id = c.user_id
-     LEFT JOIN events e ON e.id = c.event_id LEFT JOIN commission_rules r ON r.id = c.rule_id
+     LEFT JOIN events e ON e.id = c.event_id LEFT JOIN commission_rules r ON r.id = c.rule_id LEFT JOIN creators cr ON cr.id = e.creator_id
      ${w} ORDER BY c.id DESC LIMIT ${pg.perPage} OFFSET ${pg.offset}`,
     ...params,
   );
@@ -53,14 +53,21 @@ router.get('/commissions', requirePerm('commissions.view'), (req, res) => {
   });
 });
 
-function changeStatus(req, ids, to) {
+function changeStatus(req, ids, to, payoutRef = null) {
   let changed = 0;
   db.tx(() => {
     for (const id of ids) {
       const c = db.get('SELECT * FROM commissions WHERE id = ?', id);
       if (!c || !TRANSITIONS[c.status].includes(to)) continue;
-      db.run("UPDATE commissions SET status = ?, status_changed_by = ?, status_changed_at = datetime('now') WHERE id = ?", to, req.user.id, id);
-      audit(req, `commission.${to}`, 'commission', id, { from: c.status, amount_cents: c.amount_cents });
+      db.run(
+        "UPDATE commissions SET status = ?, status_changed_by = ?, status_changed_at = datetime('now'), payout_ref = CASE WHEN ? = 'paid' THEN COALESCE(?, payout_ref) ELSE payout_ref END WHERE id = ?",
+        to,
+        req.user.id,
+        to,
+        payoutRef,
+        id,
+      );
+      audit(req, `commission.${to}`, 'commission', id, { from: c.status, amount_cents: c.amount_cents, payout_ref: to === 'paid' ? payoutRef : undefined });
       changed++;
     }
   });
@@ -73,7 +80,7 @@ router.post('/commissions/status', requirePerm('commissions.manage'), (req, res)
   if (!COMMISSION_STATUSES[to] || !ids.length) {
     res.flash('error', 'Select entries and an action.');
   } else {
-    const n = changeStatus(req, ids, to);
+    const n = changeStatus(req, ids, to, clampStr(req.body.payout_ref, 80) || null);
     res.flash(n ? 'success' : 'error', n ? `${n} entr${n === 1 ? 'y' : 'ies'} marked ${COMMISSION_STATUSES[to].toLowerCase()}.` : 'None of the selected entries can move to that status.');
   }
   res.redirect('/admin/commissions' + (req.body.back ? `?${new URLSearchParams(req.body.back)}` : ''));

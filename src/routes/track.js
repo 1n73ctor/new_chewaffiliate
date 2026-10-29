@@ -17,9 +17,18 @@ const activeAffiliate = (affiliateId) =>
   db.get("SELECT * FROM users WHERE affiliate_id = ? AND status = 'active'", String(affiliateId || '').toUpperCase().slice(0, 20));
 
 // Destination → redirect URL. App destinations also record app_download_clicked.
-function resolve(req, res, dest, attribution) {
+function resolve(req, res, dest, attribution, link = null) {
+  // Claim links open their own free-credit claim page.
+  if (dest.key === 'claim') return link ? `/claim/${link.code}` : '/';
   if (dest.kind === 'app') return trackAppDownload(req, res, ['ios', 'android'].includes(dest.url) ? dest.url : 'auto', attribution);
-  if (dest.kind === 'external' && /^https?:\/\//i.test(dest.url || '')) return dest.url;
+  if (dest.kind === 'external' && /^https?:\/\//i.test(dest.url || '')) {
+    if (!link || !link.utm_campaign) return dest.url;
+    const url = new URL(dest.url);
+    url.searchParams.set('utm_source', 'chew_affiliate');
+    url.searchParams.set('utm_medium', 'affiliate');
+    url.searchParams.set('utm_campaign', link.utm_campaign);
+    return url.toString();
+  }
   return dest.url && dest.url.startsWith('/') && !dest.url.startsWith('//') ? dest.url : '/';
 }
 
@@ -44,6 +53,8 @@ router.get('/a/:affiliateId', (req, res) => {
 // Tracked link created in the back office / Content Kitchen: /r/AB3K9QZ
 router.get('/r/:code', (req, res) => {
   const link = db.get('SELECT * FROM tracked_links WHERE code = ?', String(req.params.code).toUpperCase().slice(0, 20));
+  // "Test link": the owner sees where it goes and what it records — no click is counted.
+  if (link && req.query.preview && req.user && req.user.id === link.user_id) return previewLink(req, res, link);
   const affiliate = link && link.active ? db.get("SELECT * FROM users WHERE id = ? AND status = 'active'", link.user_id) : null;
   if (!affiliate) return res.redirect('/');
   const dest = getDestination(link.destination_key) || getDestination('home');
@@ -56,8 +67,24 @@ router.get('/r/:code', (req, res) => {
     destinationKey: dest ? dest.key : link.destination_key,
     ppc: ppcActive(),
   });
-  forward(res, dest ? resolve(req, res, dest, { affiliate, clickId: click.clickId }) : '/', click);
+  forward(res, dest ? resolve(req, res, dest, { affiliate, clickId: click.clickId }, link) : '/', click);
 });
+
+function previewLink(req, res, link) {
+  const dest = getDestination(link.destination_key) || getDestination('home');
+  const offer = dest && dest.key === 'claim' ? db.get('SELECT * FROM claim_offers WHERE link_id = ?', link.id) : null;
+  res.set('X-Robots-Tag', 'noindex');
+  res.page('public/link-preview', {
+    title: 'Test link',
+    noindex: true,
+    link,
+    dest,
+    offer,
+    campaign: link.campaign_id ? db.get('SELECT name FROM campaigns WHERE id = ?', link.campaign_id) : null,
+    content: link.content_id ? db.get('SELECT title FROM content_assets WHERE id = ?', link.content_id) : null,
+    target: link.active ? (dest ? (dest.key === 'claim' ? `/claim/${link.code}` : dest.kind === 'app' ? 'The App Store or Google Play (detected from the visitor’s phone)' : dest.url) : '/') : '/ (paused — no tracking)',
+  });
+}
 
 // Called by /js/redirect.js on the "Opening…" page. Always 204: the visitor is
 // never told whether the click earned (that would help someone game the checks).

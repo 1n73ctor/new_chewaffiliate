@@ -2,6 +2,8 @@
   // Homepage build order (blueprint §14): 01 eyebrow · 02 headline · 03 free line · 04 CTA ·
   // 05 benefit strip · 06 See It. Cook It. · 07 125+ Ways · 08 Back Office · 09 How It Works ·
   // 10 final CTA · 11 footer (layout)
+  // See It. Cook It. integration: creator / wholesale block after the benefit strip,
+  // "Become a Business Affiliate" form before the final CTA.
   const bullets = String(site.hero_bullets || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   const benefits = String(site.benefit_strip || '').split(/\r?\n/).map(l => l.split('|').map(s => s.trim())).filter(b => b[0]);
   const benefitIcons = ['office', 'kitchen', 'training', 'chart', 'grid'];
@@ -45,6 +47,32 @@
       <div><strong><%= b[0] %></strong><span class="sub"><%= b[1] || '' %></span></div>
     </div>
     <% }) %>
+  </div>
+</section>
+
+<section class="section sic-offer" id="see-it-cook-it-opportunity" aria-labelledby="sic-offer-title">
+  <div class="wrap">
+    <div class="section-head"><p class="eyebrow eyebrow-orange">New · See It. Cook It.</p><h2 id="sic-offer-title">Two ways to take part in See It. Cook It.</h2></div>
+    <div class="sic-offer-grid">
+      <article class="sic-card sic-card-creator">
+        <p class="sic-card-tag"><%- icon('camera') %> For creators</p>
+        <h3>Turn a Food Photo Into Your Next Cooking Video.</h3>
+        <p>Upload a dish, choose yourself or an AI chef, select a kitchen, and let See It. Cook It. create a cooking video. Get free sponsored credits to start.</p>
+        <div class="row"><a class="btn btn-cta btn-lg" href="<%= site.sic_site_url || '/see-it-cook-it' %>" rel="noopener">TRY SEE IT. COOK IT. <%- icon('arrow') %></a><a class="btn btn-light btn-lg" href="/see-it-cook-it">EXPLORE THE APP</a></div>
+      </article>
+      <article class="sic-card sic-card-business">
+        <p class="sic-card-tag"><%- icon('store') %> For businesses &amp; affiliates</p>
+        <h3>Grow Your Own Audience by Giving Away AI Cooking Credits.</h3>
+        <p>Share your personal link, invite creators to make cooking videos, and track your assigned users, available credits, and eligible commissions from your private dashboard.</p>
+        <div class="row"><a class="btn btn-outline btn-lg" href="/wholesale">LEARN ABOUT WHOLESALE CREDITS <%- icon('arrow') %></a></div>
+        <p class="fine mb-0">Optional paid program. Joining Chew stays free.</p>
+      </article>
+    </div>
+    <ol class="sic-how" aria-label="How See It. Cook It. credits work">
+      <li><span class="step-num">1</span><div><strong>Affiliates give free credits</strong><span>Through a claim link or directly to a creator.</span></div></li>
+      <li><span class="step-num">2</span><div><strong>Creators generate videos</strong><span>Each completed video uses credits.</span></div></li>
+      <li><span class="step-num">3</span><div><strong>Handled centrally</strong><span>Subscriptions and downloads are sold and supported by See It. Cook It.</span></div></li>
+    </ol>
   </div>
 </section>
 
@@ -131,6 +159,13 @@
       <% }) %>
     </ol>
     <p class="center mt-2"><a href="/how-it-works">See the full walkthrough →</a></p>
+  </div>
+</section>
+
+<section class="section section-soft" id="business-affiliate">
+  <div class="wrap ws-form-wrap">
+    <div class="section-head"><p class="eyebrow">Wholesale Affiliate program</p><h2>Become a Business Affiliate</h2><p>Want to give away See It. Cook It. credits to your audience? Tell us about it and we’ll be in touch.</p></div>
+    <div class="card"><%- include('../partials/business-form', { page: 'home', form: {}, errors: {} }) %></div>
   </div>
 </section>
 

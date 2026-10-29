@@ -37,4 +37,6 @@ module.exports = {
   all: (sql, ...params) => stmt(sql).all(...params),
   run: (sql, ...params) => stmt(sql).run(...params),
   tx: (fn) => db.transaction(fn)(),
+  // BEGIN IMMEDIATE: takes the write lock up front, for balance-changing work.
+  txImmediate: (fn) => db.transaction(fn).immediate(),
 };

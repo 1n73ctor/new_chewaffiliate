@@ -1,0 +1,54 @@
+<div class="row-between">
+  <div><h1>Wholesale &amp; credits</h1><p class="page-intro mb-0">See It. Cook It. wholesale affiliates, their credit inventory and package orders. Settings: <a href="/admin/settings#sic">credits per video, grant limits, prices</a> · <a href="/admin/m/credit_packages">packages</a>.</p></div>
+</div>
+
+<% if (!stripeReady || !webhookReady) { %>
+<div class="alert alert-warn mt-1" role="status"><%- icon('bell') %><div><strong>Stripe isn’t fully set up.</strong> <%= !stripeReady ? 'Add STRIPE_SECRET_KEY to the server’s .env so affiliates can buy packages.' : '' %> <%= !webhookReady ? 'Add STRIPE_WEBHOOK_SECRET and the webhook endpoint /webhooks/stripe so payments are confirmed even if a buyer closes the page.' : '' %></div></div>
+<% } %>
+<div class="alert <%= recon.ok ? 'alert-success' : 'alert-error' %> mt-1" role="status"><%- icon(recon.ok ? 'check' : 'x') %><div><strong>Reconciliation <%= recon.ok ? 'OK' : 'FAILED' %></strong> — <%= u.num(recon.batches) %> batches, <%= u.num(recon.grants) %> grants and <%= u.num(recon.ledgerRows) %> ledger entries checked<%= recon.ok ? '; every credit is accounted for.' : ':' %>
+  <% if (!recon.ok) { %><ul class="mb-0"><% recon.problems.slice(0, 10).forEach(function (p) { %><li><%= p.kind %> <span class="mono"><%= p.ref %></span>: expected <%= p.expected %>, found <%= p.actual %></li><% }) %></ul><% } %></div></div>
+
+<div class="stats stats-6 mt-1">
+  <div class="stat"><span class="label">Credits sold / allocated</span><span class="value"><%= u.num(totals.purchased) %></span></div>
+  <div class="stat"><span class="label">Unissued inventory</span><span class="value"><%= u.num(totals.available) %></span></div>
+  <div class="stat"><span class="label">Consumed by videos</span><span class="value"><%= u.num(totals.consumed) %></span></div>
+  <div class="stat"><span class="label">Creators</span><span class="value"><%= u.num(totals.creators) %></span><span class="meta"><%= u.num(totals.assigned) %> assigned</span></div>
+  <div class="stat"><span class="label">Pending claims</span><span class="value"><%= u.num(totals.pending_claims) %></span></div>
+  <div class="stat"><span class="label">Wholesale accounts</span><span class="value"><%= u.num(accounts.length) %></span></div>
+</div>
+
+<h2 class="fs-110 mt-2">Accounts</h2>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Wholesale ID</th><th>Affiliate</th><th>Status</th><th class="num">Purchased</th><th class="num">Available</th><th class="num">Creators</th><th class="num">Pending claims</th><th>Policy</th></tr></thead>
+  <tbody>
+    <% if (!accounts.length) { %><tr><td colspan="8" class="table-empty">No wholesale accounts yet.</td></tr><% } %>
+    <% accounts.forEach(function (a) { %>
+    <tr><td><a class="mono" href="/admin/wholesale/accounts/<%= a.user_id %>"><%= a.wholesale_id %></a></td><td><%= a.first_name %> <%= a.last_name %><br><span class="fine"><%= a.email %></span></td>
+      <td><span class="badge <%= a.status === 'active' ? 'badge-live' : a.status === 'suspended' ? 'badge-red' : 'badge-soon' %>"><%= a.status %></span></td>
+      <td class="num"><%= u.num(a.purchased) %></td><td class="num"><%= u.num(a.available) %></td><td class="num"><%= u.num(a.creators) %></td><td class="num"><%= u.num(a.pending_claims) %></td>
+      <td><%= a.attribution_ack_at ? 'v' + a.attribution_ack_version : '—' %></td></tr>
+    <% }) %>
+  </tbody>
+</table></div>
+
+<h2 class="fs-110 mt-2">Recent package orders</h2>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Order</th><th>Affiliate</th><th>Package</th><th class="num">Credits</th><th class="num">Price</th><th>Status</th><th>Date</th></tr></thead>
+  <tbody>
+    <% if (!orders.length) { %><tr><td colspan="7" class="table-empty">No orders yet.</td></tr><% } %>
+    <% orders.forEach(function (o) { %><tr><td class="mono"><%= o.ref %></td><td><a class="mono" href="/admin/wholesale/accounts/<%= o.user_id %>"><%= o.affiliate_id %></a></td><td><%= o.package_name %></td><td class="num"><%= u.num(o.credits) %></td><td class="num"><%= u.money(o.price_cents, o.currency) %></td><td><span class="badge <%= o.status === 'paid' ? 'badge-live' : o.status === 'refunded' ? 'badge-red' : 'badge-grey' %>"><%= o.status %></span></td><td class="nowrap"><%= u.fmtDateTime(o.paid_at || o.created_at) %></td></tr><% }) %>
+  </tbody>
+</table></div>
+
+<div class="grid-2 mt-2">
+  <section class="card">
+    <div class="card-head"><h2>Branded site requests</h2></div>
+    <% if (!siteRequests.length) { %><p class="fine mb-0">None waiting.</p><% } %>
+    <ul class="plain-list fs-sm"><% siteRequests.forEach(function (s) { %><li><a class="mono" href="/admin/wholesale/accounts/<%= s.user_id %>"><%= s.affiliate_id %></a> · <%= s.site_request_url || 'No URL' %> · <span class="fine"><%= u.fmtDate(s.site_requested_at) %></span></li><% }) %></ul>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Promotional domains</h2></div>
+    <% if (!domains.length) { %><p class="fine mb-0">No domains added yet.</p><% } %>
+    <ul class="plain-list fs-sm"><% domains.forEach(function (d) { %><li><a class="mono" href="/admin/wholesale/accounts/<%= d.user_id %>"><%= d.affiliate_id %></a> · <%= d.domain %> · <span class="badge <%= d.status === 'verified' ? 'badge-live' : d.status === 'rejected' ? 'badge-red' : 'badge-soon' %>"><%= d.status %></span></li><% }) %></ul>
+  </section>
+</div>

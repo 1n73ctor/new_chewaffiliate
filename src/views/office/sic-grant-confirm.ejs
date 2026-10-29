@@ -1,0 +1,23 @@
+<p class="fine"><a href="/office/see-it-cook-it#issue">← Issue free credits</a></p>
+<h1 class="page-title">Confirm free credits</h1>
+<section class="card mw-620">
+  <dl class="dl">
+    <dt>Creator</dt><dd class="mono"><%= creator.ref %> <span class="fine">(<%= u.num(creatorBalance) %> credits left)</span></dd>
+    <dt>Amount</dt><dd><strong><%= u.num(opt.credits) %> credits</strong> · <%= opt.videos %> video<%= opt.videos === 1 ? '' : 's' %></dd>
+    <dt>Your balance now</dt><dd><%= u.num(balance) %> credits</dd>
+    <dt>After this grant</dt><dd><strong><%= u.num(Math.max(0, balance - opt.credits)) %> credits</strong></dd>
+  </dl>
+  <% if (blocked) { %>
+    <div class="alert alert-warn mt-1" role="status"><%- icon('bell') %><div>This creator still has unused credits. New credits can be given once the previous grant is used.</div></div>
+  <% } else if (balance < opt.credits) { %>
+    <div class="alert alert-warn mt-1" role="status"><%- icon('bell') %><div>Not enough credits for this grant. <a href="/office/see-it-cook-it/packages">Get more credits →</a></div></div>
+  <% } else { %>
+    <form method="post" action="/office/see-it-cook-it/grant/confirm" class="mt-1">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="creator" value="<%= creator.ref %>">
+      <input type="hidden" name="videos" value="<%= opt.videos %>">
+      <p class="fine">Credits are free for the creator and can’t be taken back once used. The grant is recorded permanently with its own transaction reference.</p>
+      <div class="row"><button class="btn btn-cta" type="submit" data-once><%- icon('gift') %> Confirm &amp; give credits</button><a class="btn btn-ghost" href="/office/see-it-cook-it#issue">Cancel</a></div>
+    </form>
+  <% } %>
+</section>

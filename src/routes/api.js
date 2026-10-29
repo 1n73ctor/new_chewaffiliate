@@ -6,6 +6,8 @@ const router = require('express').Router();
 const db = require('../db');
 const rateLimit = require('../lib/rateLimit');
 const activation = require('../lib/activation');
+const credits = require('../lib/credits');
+const wholesale = require('../lib/wholesale');
 const { recordEvent, API_EVENT_TYPES } = require('../lib/tracking');
 const { sha256, clampStr } = require('../lib/util');
 
@@ -130,5 +132,101 @@ router.post('/events', (req, res) => {
   const commissions = db.get('SELECT COUNT(*) AS n FROM commissions WHERE event_id = ?', event.id).n;
   res.json({ ok: true, duplicate, event_id: event.id, commissions_created: commissions });
 });
+
+// ---- See It. Cook It. credits (app backend) -----------------------------------------
+// Errors: { error: <code>, message } with 400 / 404 / 409 / 410 / 429. Every write is
+// idempotent on the app's transaction_id, so retries and duplicate webhooks are safe.
+function sic(handler) {
+  return (req, res) => {
+    try {
+      handler(req, res, req.body || {});
+    } catch (err) {
+      if (!(err instanceof credits.CreditError)) throw err;
+      res.status(err.status).json({ error: err.code, message: err.message });
+    }
+  };
+}
+
+function creatorJson(c) {
+  const attr = credits.attribution(c.id);
+  const affiliate = attr && db.get('SELECT affiliate_id FROM users WHERE id = ?', attr.affiliate_user_id);
+  return {
+    creator_ref: c.ref,
+    app_user_id: c.app_user_id,
+    assigned: !!attr,
+    affiliate_id: affiliate ? affiliate.affiliate_id : null,
+    balance: credits.creatorBalance(c.id),
+    video_cost: credits.videoCost(),
+    subscription_status: c.subscription_status,
+  };
+}
+
+// Creator signed up / signed in. Redeems their free-credit claim and assigns them.
+// { app_user_id, email?, email_verified?, claim_code?, referrer_affiliate_id? }
+router.post('/sic/creators', sic((req, res, b) => {
+  const email = b.email && b.email_verified === true ? clampStr(b.email, 200) : null;
+  const { creator, claims } = credits.linkCreator({
+    appUserId: b.app_user_id,
+    email,
+    claimCode: b.claim_code ? clampStr(b.claim_code, 20) : null,
+    referrerAffiliateId: b.referrer_affiliate_id ? clampStr(b.referrer_affiliate_id, 20) : null,
+  });
+  wholesale.notifyRedeemed(claims);
+  res.json({ ok: true, creator: creatorJson(creator), claims });
+}));
+
+router.get('/sic/creators/:appUserId', sic((req, res) => {
+  const c = db.get('SELECT * FROM creators WHERE app_user_id = ?', String(req.params.appUserId));
+  if (!c) return res.status(404).json({ error: 'unknown_creator', message: 'Unknown app_user_id.' });
+  res.json({ ok: true, creator: creatorJson(c) });
+}));
+
+// A video finished: take credits. { transaction_id, app_user_id, job_id?, credits? (default: current cost) }
+router.post('/sic/consumptions', sic((req, res, b) => {
+  const r = credits.consume({ ref: b.transaction_id, appUserId: b.app_user_id, credits: b.credits ?? null, jobId: b.job_id || null });
+  res.status(r.duplicate ? 200 : 201).json({ ok: true, duplicate: r.duplicate, transaction_id: r.consumption.ref, credits: r.consumption.credits, balance: r.balance });
+}));
+
+// A video failed after credits were taken: give them back. { reason? }
+router.post('/sic/consumptions/:transactionId/reverse', sic((req, res, b) => {
+  const r = credits.reverseConsumption(req.params.transactionId, { reason: b.reason ? clampStr(b.reason, 200) : 'generation_failed' });
+  res.json({ ok: true, duplicate: r.duplicate, balance: r.balance });
+}));
+
+// Subscription payment or $1.99 download.
+// { transaction_id, app_user_id, category: subscription|download, amount_cents, net_cents?, currency?, plan?, occurred_at? }
+router.post('/sic/revenue', sic((req, res, b) => {
+  const r = wholesale.recordRevenue({
+    ref: b.transaction_id ? clampStr(b.transaction_id, 120) : '',
+    appUserId: b.app_user_id,
+    category: b.category,
+    amountCents: b.amount_cents,
+    netCents: b.net_cents ?? null,
+    currency: b.currency || 'USD',
+    plan: b.plan ? clampStr(b.plan, 40) : null,
+    occurredAt: b.occurred_at ? clampStr(b.occurred_at, 40) : null,
+  });
+  res.status(r.duplicate ? 200 : 201).json({ ok: true, duplicate: r.duplicate, event_id: r.event.id, attributed: !!r.event.affiliate_user_id, commissions_created: r.commissions.length });
+}));
+
+// Refund or chargeback of an earlier payment. { transaction_id, original_transaction_id, amount_cents?, kind: refund|chargeback }
+router.post('/sic/refunds', sic((req, res, b) => {
+  const r = wholesale.recordRefund({
+    ref: b.transaction_id ? clampStr(b.transaction_id, 120) : '',
+    originalRef: b.original_transaction_id ? clampStr(b.original_transaction_id, 120) : '',
+    amountCents: b.amount_cents ?? null,
+    kind: b.kind,
+  });
+  res.status(r.duplicate ? 200 : 201).json({ ok: true, duplicate: r.duplicate, adjustments: r.adjustments });
+}));
+
+// Subscription status changes (renewal, cancel, payment failure). { app_user_id, status, plan? }
+router.post('/sic/subscriptions', sic((req, res, b) => {
+  if (!wholesale.SUB_STATUSES.includes(b.status)) return bad(res, `status must be one of: ${wholesale.SUB_STATUSES.join(', ')}`);
+  const c = db.get('SELECT * FROM creators WHERE app_user_id = ?', String(b.app_user_id || ''));
+  if (!c) return res.status(404).json({ error: 'unknown_creator', message: 'Unknown app_user_id.' });
+  wholesale.setSubscription(c, b.status, b.plan ? clampStr(b.plan, 40) : null);
+  res.json({ ok: true, creator: creatorJson(db.get('SELECT * FROM creators WHERE id = ?', c.id)) });
+}));
 
 module.exports = router;

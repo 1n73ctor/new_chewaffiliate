@@ -21,6 +21,33 @@
 </section>
 <% } %>
 
+<section class="card mt-1 sic-links" id="sic-links">
+  <div class="card-head"><h2><%- icon('phone') %> See It. Cook It. promo links</h2><span class="fine">Tracked URL + QR code for each</span></div>
+  <div class="sic-link-grid">
+    <% sicDestinations.forEach(function (d) { %>
+    <form class="sic-link-tile" method="post" action="/office/links">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="destination_key" value="<%= d.key %>">
+      <input type="hidden" name="label" value="<%= d.label %>">
+      <strong><%= d.key === 'see-it-cook-it' ? 'App landing page' : d.key === 'wholesale' ? 'Wholesale information page' : 'App download (detects the phone)' %></strong>
+      <span class="fine"><%= d.label %></span>
+      <select name="source" aria-label="Where you’ll share it"><option value="">Anywhere</option><% sources.forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }) %></select>
+      <button class="btn btn-green btn-sm" type="submit"><%- icon('link') %> Get link</button>
+    </form>
+    <% }) %>
+    <a class="sic-link-tile" href="<%= isWholesaler ? '/office/see-it-cook-it#issue' : '/office/see-it-cook-it#wholesale' %>">
+      <strong>Free-credit claim page</strong>
+      <span class="fine"><%= isWholesaler ? 'Create claim links (credits per creator, number of creators) in See It. Cook It.' : 'For wholesale affiliates: claim links give creators free credits.' %></span>
+      <span class="btn btn-light btn-sm"><%- icon('gift') %> <%= isWholesaler ? 'Create a claim link' : 'Learn about wholesale' %></span>
+    </a>
+    <a class="sic-link-tile" href="/office/content-kitchen#see-it-cook-it">
+      <strong>Approved creator demos</strong>
+      <span class="fine">Each video in the Content Kitchen gallery has its own tracked link.</span>
+      <span class="btn btn-light btn-sm"><%- icon('play') %> Open the gallery</span>
+    </a>
+  </div>
+</section>
+
 <section class="card mt-1">
   <div class="card-head"><h2>Create a tracked link</h2></div>
   <form class="form" method="post" action="/office/links">
@@ -33,6 +60,7 @@
       <div class="field"><label for="campaign_id">Campaign (optional)</label><select id="campaign_id" name="campaign_id"><option value="">None</option><% campaigns.forEach(function (c) { %><option value="<%= c.id %>"><%= c.name %></option><% }) %></select></div>
       <div class="field"><label for="label">Label (optional)</label><input id="label" type="text" name="label" maxlength="80" placeholder="e.g. Instagram bio"></div>
     </div>
+    <div class="field"><label for="utm_campaign">Campaign label / UTM (optional)</label><input id="utm_campaign" type="text" name="utm_campaign" maxlength="60" placeholder="e.g. spring-giveaway"><p class="hint">Shown in your reports and added as utm_campaign when the link goes to an outside site.</p></div>
     <div><button class="btn btn-green btn-lg" type="submit"><%- icon('plus') %> Create link</button></div>
   </form>
 </section>
@@ -41,21 +69,25 @@
   <h2 class="fs-110">All my links</h2>
   <div class="table-wrap">
     <table class="table">
-      <thead><tr><th>Link</th><th>Goes to</th><th>Source</th><th>Campaign / content</th><th class="num">Clicks</th><% if (ppcOn) { %><th class="num">Paid</th><% } %><th class="num">Results</th><th></th></tr></thead>
+      <thead><tr><th>Link</th><th>Goes to</th><th>Source</th><th>Campaign / content</th><th class="num">Clicks</th><% if (ppcOn) { %><th class="num">Paid</th><% } %><th class="num">Sign-ups</th><th class="num">Results</th><th class="num" title="Free-credit claims redeemed in the app">Claims</th><th class="num" title="See It. Cook It. creators attributed to this link">Creators</th><th></th></tr></thead>
       <tbody>
-        <% if (!links.length) { %><tr><td colspan="<%= ppcOn ? 8 : 7 %>" class="table-empty">No tracked links yet. Create one above, or use “Get My Link” in the Content Kitchen.</td></tr><% } %>
+        <% if (!links.length) { %><tr><td colspan="<%= ppcOn ? 11 : 10 %>" class="table-empty">No tracked links yet. Create one above, or use “Get My Link” in the Content Kitchen.</td></tr><% } %>
         <% links.forEach(function (l) { %>
         <tr class="<%= l.active ? '' : 'is-dim' %>">
           <td><strong><%= l.label || l.code %></strong><br><span class="mono fine"><%= l.url.replace(/^https?:\/\//, '') %></span></td>
           <td><%= l.destination_label || l.destination_key %></td>
           <td><%= l.source || '—' %></td>
-          <td><%= l.campaign_name || '' %><%= l.campaign_name && l.content_title ? ' · ' : '' %><%= l.content_title || (l.campaign_name ? '' : '—') %></td>
+          <td><%= l.campaign_name || '' %><%= l.campaign_name && l.content_title ? ' · ' : '' %><%= l.content_title || (l.campaign_name ? '' : (l.utm_campaign ? '' : '—')) %><% if (l.utm_campaign) { %><br><span class="chip"><%= l.utm_campaign %></span><% } %></td>
           <td class="num"><%= u.num(l.clicks) %></td>
           <% if (ppcOn) { %><td class="num"><%= u.num(l.paid) %></td><% } %>
+          <td class="num"><%= u.num(l.signups) %></td>
           <td class="num"><%= u.num(l.results) %></td>
+          <td class="num"><%= l.destination_key === 'claim' ? u.num(l.claims) : '—' %></td>
+          <td class="num"><%= u.num(l.creators) %></td>
           <td class="actions">
-            <button class="btn btn-light btn-xs" type="button" data-copy="<%= l.url %>">Copy</button>
-            <a class="btn btn-light btn-xs" href="/office/qr/<%= l.code %>.png?download=1">QR</a>
+            <button class="btn btn-light btn-xs" type="button" data-copy="<%= l.url %>">Copy link</button>
+            <a class="btn btn-light btn-xs" href="/office/qr/<%= l.code %>.png?download=1">Download QR</a>
+            <a class="btn btn-light btn-xs" href="/r/<%= l.code %>?preview=1" target="_blank" rel="noopener" title="See where it goes and what it records — no click is counted">Test link</a>
             <form class="inline-form" method="post" action="/office/links/<%= l.code %>/toggle"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-ghost btn-xs" type="submit"><%= l.active ? 'Pause' : 'Resume' %></button></form>
           </td>
         </tr>

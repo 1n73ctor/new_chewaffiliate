@@ -1,0 +1,90 @@
+<% const m = can('wholesale.manage'); %>
+<p class="fine"><a href="/admin/wholesale">← Wholesale &amp; credits</a></p>
+<div class="row-between">
+  <div>
+    <h1><%= a.first_name %> <%= a.last_name %></h1>
+    <p class="page-intro mb-0"><span class="mono"><strong><%= a.wholesale_id %></strong></span> · <a href="/admin/affiliates/<%= a.user_id %>">affiliate profile</a> · <span class="badge <%= a.status === 'active' ? 'badge-live' : a.status === 'suspended' ? 'badge-red' : 'badge-soon' %>"><%= a.status %></span></p>
+  </div>
+  <% if (m) { %><form method="post" action="/admin/wholesale/accounts/<%= a.user_id %>/status" data-confirm="<%= a.status === 'suspended' ? 'Reactivate this wholesale account?' : 'Suspend this wholesale account? New grants and claims stop; creators keep their credits.' %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="status" value="<%= a.status === 'suspended' ? 'active' : 'suspended' %>"><button class="btn <%= a.status === 'suspended' ? 'btn-green' : 'btn-danger' %> btn-sm" type="submit"><%= a.status === 'suspended' ? 'Reactivate' : 'Suspend' %></button></form><% } %>
+</div>
+
+<div class="stats stats-6 mt-1">
+  <div class="stat"><span class="label">Purchased</span><span class="value"><%= u.num(inv.purchased) %></span></div>
+  <div class="stat"><span class="label">Available</span><span class="value"><%= u.num(inv.available) %></span></div>
+  <div class="stat"><span class="label">Issued</span><span class="value"><%= u.num(inv.issued) %></span></div>
+  <div class="stat"><span class="label">Consumed</span><span class="value"><%= u.num(inv.consumed) %></span></div>
+  <div class="stat"><span class="label">Pending</span><span class="value"><%= u.num(inv.pending) %></span></div>
+  <div class="stat"><span class="label">Expired / reversed</span><span class="value"><%= u.num(inv.expiredOrReversed) %></span></div>
+</div>
+
+<% if (m) { %>
+<div class="grid-2 mt-1">
+  <section class="card">
+    <div class="card-head"><h2>Add credits manually</h2></div>
+    <form class="form" method="post" action="/admin/wholesale/accounts/<%= a.user_id %>/credits" data-confirm="Add these credits to the affiliate’s inventory?">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="form-row two"><div class="field"><label for="add-cr">Credits</label><input id="add-cr" type="number" name="credits" min="1" required></div><div class="field"><label for="add-note">Reason (required)</label><input id="add-note" type="text" name="note" placeholder="e.g. Paid by bank transfer, invoice 123" required></div></div>
+      <div><button class="btn btn-light" type="submit">Add credits</button></div>
+    </form>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Override grant</h2></div>
+    <p class="fine">Gives credits to one of this affiliate’s creators even if they still have unused credits or the amount is outside the normal limits (<%= u.num(limits.min) %>–<%= u.num(limits.max) %>).</p>
+    <form class="form" method="post" action="/admin/wholesale/accounts/<%= a.user_id %>/grant" data-confirm="Create an override grant?">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="form-row two"><div class="field"><label for="ov-cr">Creator ID</label><input id="ov-cr" type="text" name="creator" placeholder="CR-XXXXXX" required></div><div class="field"><label for="ov-amt">Credits</label><input id="ov-amt" type="number" name="credits" min="1" required></div></div>
+      <div class="field"><label for="ov-reason">Reason (required)</label><input id="ov-reason" type="text" name="reason" required></div>
+      <div><button class="btn btn-light" type="submit">Create override grant</button></div>
+    </form>
+  </section>
+</div>
+<% } %>
+
+<h2 class="fs-110 mt-2">Inventory batches</h2>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Batch</th><th>Source</th><th class="num">Total</th><th class="num">Available</th><th class="num">Written off</th><th>Status</th><th>Created</th><% if (m) { %><th></th><% } %></tr></thead>
+  <tbody>
+    <% if (!batches.length) { %><tr><td colspan="8" class="table-empty">No batches yet.</td></tr><% } %>
+    <% batches.forEach(function (b) { %>
+    <tr><td class="mono"><%= b.ref %></td><td><%= b.source %><%= b.order_ref ? ' · ' + b.order_ref : '' %><% if (b.note) { %><br><span class="fine"><%= b.note %></span><% } %></td><td class="num"><%= u.num(b.credits_total) %></td><td class="num"><%= u.num(b.credits_available) %></td><td class="num"><%= u.num(b.credits_written_off) %></td><td><span class="badge <%= b.status === 'active' ? 'badge-live' : 'badge-red' %>"><%= b.status %></span></td><td class="nowrap"><%= u.fmtDate(b.created_at) %></td>
+      <% if (m) { %><td class="actions"><% if (b.status === 'active') { %><form class="inline-form row" method="post" action="/admin/wholesale/batches/<%= b.id %>/reverse" data-confirm="Reverse this batch? Its unissued credits are written off."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="text" name="reason" placeholder="Reason" required aria-label="Reason"><button class="btn btn-ghost btn-xs" type="submit">Reverse</button></form><% } %></td><% } %></tr>
+    <% }) %>
+  </tbody>
+</table></div>
+
+<h2 class="fs-110 mt-2">Grants &amp; claims <span class="fine">(latest 50)</span></h2>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Grant</th><th>Creator</th><th>Source</th><th class="num">Credits</th><th class="num">Remaining</th><th>Status</th><th>Created</th><% if (m) { %><th></th><% } %></tr></thead>
+  <tbody>
+    <% if (!grants.length) { %><tr><td colspan="8" class="table-empty">No grants yet.</td></tr><% } %>
+    <% grants.forEach(function (g) { %>
+    <tr><td class="mono"><%= g.ref %></td><td class="mono"><%= g.creator_ref || (g.status === 'pending' ? 'waiting for app sign-in' : '—') %></td><td><%= g.source %><%= g.override_by ? ' (override)' : '' %></td><td class="num"><%= u.num(g.credits) %></td><td class="num"><%= u.num(g.credits_remaining) %></td>
+      <td><span class="badge <%= g.status === 'active' ? 'badge-live' : g.status === 'pending' ? 'badge-soon' : 'badge-grey' %>"><%= g.status %></span><% if (g.close_reason) { %><br><span class="fine"><%= g.close_reason.replace(/_/g, ' ') %></span><% } %></td><td class="nowrap"><%= u.fmtDate(g.created_at) %></td>
+      <% if (m) { %><td class="actions"><% if (['pending','active'].includes(g.status)) { %><form class="inline-form" method="post" action="/admin/wholesale/grants/<%= g.id %>/revoke" data-confirm="Revoke this grant? Unused credits go back to the affiliate."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-ghost btn-xs" type="submit">Revoke</button></form><% } %></td><% } %></tr>
+    <% }) %>
+  </tbody>
+</table></div>
+
+<h2 class="fs-110 mt-2">Assigned creators</h2>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Creator</th><th>Joined</th><th>Source</th><th class="num">Used</th><th class="num">Remaining</th><th>Subscription</th></tr></thead>
+  <tbody>
+    <% if (!creators.length) { %><tr><td colspan="6" class="table-empty">No creators yet.</td></tr><% } %>
+    <% creators.forEach(function (c) { %><tr><td><a class="mono" href="/admin/wholesale/creators/<%= c.id %>"><%= c.ref %></a></td><td class="nowrap"><%= u.fmtDate(c.assigned_at) %></td><td><%= c.source %></td><td class="num"><%= u.num(c.used) %></td><td class="num"><%= u.num(c.remaining) %></td><td><%= c.subscription_status %></td></tr><% }) %>
+  </tbody>
+</table></div>
+
+<div class="grid-2 mt-2">
+  <section class="card">
+    <div class="card-head"><h2>Promotional domains</h2></div>
+    <% if (!domains.length) { %><p class="fine mb-0">None.</p><% } %>
+    <ul class="plain-list fs-sm"><% domains.forEach(function (d) { %><li class="row-between"><span><%= d.domain %> · <span class="badge <%= d.status === 'verified' ? 'badge-live' : d.status === 'rejected' ? 'badge-red' : 'badge-soon' %>"><%= d.status %></span></span><% if (m) { %><span class="row"><% ['verified','rejected'].forEach(function (s) { if (d.status !== s) { %><form class="inline-form" method="post" action="/admin/wholesale/domains/<%= d.id %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="status" value="<%= s %>"><button class="btn btn-ghost btn-xs" type="submit"><%= s === 'verified' ? 'Mark verified' : 'Reject' %></button></form><% } }) %></span><% } %></li><% }) %></ul>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Branded site request</h2></div>
+    <% if (!a.site_request_status) { %><p class="fine mb-0">No request.</p><% } else { %>
+    <dl class="dl"><dt>URL</dt><dd><%= a.site_request_url || '—' %></dd><dt>Note</dt><dd><%= a.site_request_note || '—' %></dd><dt>Status</dt><dd><%= a.site_request_status %> · <%= u.fmtDate(a.site_requested_at) %></dd></dl>
+    <% if (m) { %><form class="row mt-1" method="post" action="/admin/wholesale/accounts/<%= a.user_id %>/site-request"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><select name="status" aria-label="Status"><% ['requested','in_progress','live','declined'].forEach(function (s) { %><option value="<%= s %>" <%= a.site_request_status === s ? 'selected' : '' %>><%= s.replace('_', ' ') %></option><% }) %></select><button class="btn btn-light btn-sm" type="submit">Update</button></form><% } %>
+    <% } %>
+  </section>
+</div>

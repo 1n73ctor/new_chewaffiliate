@@ -1,0 +1,17 @@
+<h1>Credit ledger</h1>
+<p class="page-intro">Every credit movement, permanently recorded (entries can’t be edited or deleted). Reversals point to the entry they reverse.</p>
+<form class="toolbar" method="get">
+  <div class="field"><label for="la">Affiliate ID</label><input id="la" type="text" name="affiliate" value="<%= aff %>"></div>
+  <div class="field"><label for="lt">Type</label><select id="lt" name="type"><option value="">All</option><% types.forEach(function (t) { %><option value="<%= t %>" <%= type === t ? 'selected' : '' %>><%= t.replace(/_/g, ' ') %></option><% }) %></select></div>
+  <button class="btn btn-light" type="submit">Filter</button>
+</form>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Transaction</th><th>When</th><th>Type</th><th>Affiliate</th><th>Creator</th><th>Batch</th><th>Grant</th><th class="num">Credits</th><th>Reverses</th><th>By / note</th></tr></thead>
+  <tbody>
+    <% if (!rows.length) { %><tr><td colspan="10" class="table-empty">No ledger entries.</td></tr><% } %>
+    <% rows.forEach(function (l) { %>
+    <tr><td class="mono fine"><%= l.ref %></td><td class="nowrap fine"><%= u.fmtDateTime(l.created_at) %></td><td><%= l.type.replace(/_/g, ' ') %></td><td class="mono"><%= l.affiliate_id || '—' %></td><td class="mono"><%= l.creator_ref || '—' %></td><td class="mono fine"><%= l.batch_ref || '—' %></td><td class="mono fine"><%= l.grant_ref || '—' %><%= l.consumption_ref ? ' · ' + l.consumption_ref : '' %></td><td class="num"><%= u.num(l.credits) %></td><td class="fine"><%= l.reversal_of ? '#' + l.reversal_of : '—' %></td><td class="fine"><%= l.actor_email || (l.source || '') %><%= l.note ? ' · ' + l.note : '' %></td></tr>
+    <% }) %>
+  </tbody>
+</table></div>
+<%- include('../partials/pager', { pg: pg, base: '?' + new URLSearchParams(Object.entries({ affiliate: aff, type: type }).filter(function (e) { return e[1]; })).toString() + '&' }) %>

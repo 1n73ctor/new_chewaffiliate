@@ -1,0 +1,49 @@
+<p class="fine"><a href="/office/see-it-cook-it">← See It. Cook It.</a></p>
+<h1 class="page-title">Credit packages</h1>
+<p class="page-intro">Promotional credits you give to creators for free. Each completed video uses <%= u.num(videoCost) %> credits. Credits can’t be resold.</p>
+
+<% if (canceled) { %><div class="alert alert-info" role="status"><%- icon('bell') %><div>Payment canceled — nothing was charged.</div></div><% } %>
+<% if (needsAck) { %>
+  <section class="card">
+    <div class="card-head"><h2>Before you buy</h2></div>
+    <form class="form" method="post" action="/office/see-it-cook-it/acknowledge">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="next" value="packages">
+      <label class="check-row"><input type="checkbox" name="ack" value="1" required><span>I have read the <a href="/wholesale-terms" target="_blank">See It. Cook It. Wholesale Terms</a> (version <%= termsVersion %>) and acknowledge the attribution policy: credits are given away free, never resold, and each creator is assigned to one wholesale affiliate.</span></label>
+      <div><button class="btn btn-green" type="submit">Acknowledge</button></div>
+    </form>
+  </section>
+<% } else if (blocker) { %>
+  <div class="alert alert-warn" role="status"><%- icon('bell') %><div><%= blocker %> <% if (!/acknowledge/i.test(blocker)) { %><a href="/office/see-it-cook-it#package">Request more credits →</a><% } %></div></div>
+<% } %>
+
+<div class="pkg-grid mt-1">
+  <% if (!packages.length) { %><div class="empty"><%- icon('gift') %><h3>No packages right now</h3><p>Use “Request more credits” and our team will help.</p></div><% } %>
+  <% packages.forEach(function (p) { %>
+  <section class="card pkg-card">
+    <h2 class="fs-110"><%= p.name %></h2>
+    <p class="ws-price"><%= u.money(p.price_cents, p.currency) %></p>
+    <p class="mb-0"><strong><%= u.num(p.credits) %> promotional credits</strong></p>
+    <p class="fine">About <%= u.num(Math.floor(p.credits / videoCost)) %> videos at today’s <%= u.num(videoCost) %> credits per video.</p>
+    <% if (p.description) { %><p class="fs-sm muted"><%= p.description %></p><% } %>
+    <form method="post" action="/office/see-it-cook-it/checkout">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="package_id" value="<%= p.id %>">
+      <button class="btn btn-cta btn-block" type="submit" <%= blocker ? 'disabled' : '' %>><%- icon('lock') %> Pay securely with Stripe</button>
+    </form>
+  </section>
+  <% }) %>
+</div>
+<p class="fine mt-1">You’ll be taken to Stripe to pay. Credits are added to your inventory as soon as the payment is confirmed. Chew never sees or stores your card details.</p>
+
+<% if (orders.length) { %>
+<section class="mt-2">
+  <h2 class="fs-110">Your orders</h2>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Order</th><th>Package</th><th class="num">Credits</th><th class="num">Price</th><th>Status</th><th>Date</th></tr></thead>
+    <tbody><% orders.forEach(function (o) { %>
+      <tr><td class="mono"><%= o.ref %></td><td><%= o.package_name %></td><td class="num"><%= u.num(o.credits) %></td><td class="num"><%= u.money(o.price_cents, o.currency) %></td><td><span class="badge <%= o.status === 'paid' ? 'badge-live' : o.status === 'refunded' ? 'badge-red' : 'badge-grey' %>"><%= o.status %></span></td><td class="nowrap"><%= u.fmtDate(o.paid_at || o.created_at) %></td></tr>
+    <% }) %></tbody>
+  </table></div>
+</section>
+<% } %>

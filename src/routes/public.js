@@ -19,6 +19,7 @@ router.get('/', (req, res) => {
   res.page('public/home', {
     categories: pathwayCategories(),
     pathwayTotal: db.get('SELECT COUNT(*) AS n FROM pathways').n,
+    volumes: require('./wholesale-public').VOLUMES,
     bodyClass: 'page-home',
   });
 });
@@ -176,7 +177,7 @@ router.get('/search', (req, res) => {
 router.get(`/:slug(${LEGAL_PAGES.join('|')})`, (req, res, next) => {
   const page = db.get('SELECT * FROM pages WHERE slug = ?', req.params.slug);
   if (!page) return next();
-  res.page('public/legal', { title: page.title, page });
+  res.page('public/legal', { title: page.title, page: { ...page, body: settings.fill(page.body) } });
 });
 
 module.exports = router;

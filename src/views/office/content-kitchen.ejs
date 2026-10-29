@@ -11,6 +11,32 @@
   <% } else { %><p class="mb-0 muted">Today’s picks are being plated. Check back soon.</p><% } %>
 </section>
 
+<% if (sicGallery.length || ads.length || (category && sicCategory && category.id === sicCategory.id)) { %>
+<section class="sic-gallery" id="see-it-cook-it" aria-labelledby="sic-gallery-title">
+  <div class="row-between"><h2 id="sic-gallery-title" class="fs-120 m-0"><%- icon('play') %> See It. Cook It. video gallery</h2><span class="fine">Approved sample and affiliate-authorized app videos</span></div>
+  <% if (sicGallery.length) { %>
+    <div class="asset-grid mt-1"><% sicGallery.forEach(function (a) { %><%- include('../partials/asset-card', { a: a, rank: null, sic: true }) %><% }) %></div>
+  <% } else { %>
+    <div class="empty mt-1"><%- icon('film') %><h3>Videos are on their way</h3><p>Approved See It. Cook It. videos will appear here, ready to share with your link.</p></div>
+  <% } %>
+  <% if (ads.length) { %>
+  <h3 class="fs-100 mt-2" id="ads">Ready-to-use ads</h3>
+  <p class="fine"><%= ads[0].viaClaim ? 'Your newest claim link is already in each ad.' : 'Your tracked See It. Cook It. link is already in each ad.' %> Never promise earnings or instant rendering.</p>
+  <div class="ad-grid">
+    <% ads.forEach(function (ad) { %>
+    <article class="ad-card">
+      <div class="row-between"><span class="chip"><%= ad.audience || 'Everyone' %></span></div>
+      <h4><%= ad.title %></h4>
+      <textarea id="ad-<%= ad.id %>" class="caption-box" readonly aria-label="<%= ad.title %>"><%= ad.text %></textarea>
+      <% if (ad.guidance) { %><p class="fine mb-0"><%= ad.guidance %></p><% } %>
+      <button class="btn btn-green btn-sm" type="button" data-copy data-copy-target="#ad-<%= ad.id %>"><%- icon('copy') %> Copy ad</button>
+    </article>
+    <% }) %>
+  </div>
+  <% } %>
+</section>
+<% } %>
+
 <div class="kitchen-filters">
   <nav class="pills" aria-label="Content categories">
     <a class="pill <%= !category ? 'on' : '' %>" href="/office/content-kitchen">All</a>
@@ -22,7 +48,8 @@
   </form>
 </div>
 
-<% if (!assets.length) { %>
+<% if (category && sicCategory && category.id === sicCategory.id && !q) { %>
+<% } else if (!assets.length) { %>
   <div class="empty mt-1"><%- icon('kitchen') %><h3>Nothing here yet</h3><p><%= q ? 'No assets match your search.' : 'New content for this category is on its way.' %></p></div>
 <% } else { %>
   <div class="asset-grid mt-1"><% assets.forEach(function (a) { %><%- include('../partials/asset-card', { a: a, rank: null }) %><% }) %></div>
