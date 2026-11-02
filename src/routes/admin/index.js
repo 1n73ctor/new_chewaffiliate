@@ -47,6 +47,7 @@ const NAV = [
     section: 'See It. Cook It.',
     items: [
       { key: 'wholesale', href: '/admin/wholesale', label: 'Wholesale & credits', icon: 'gift', perm: 'wholesale.view' },
+      { key: 'wholesale-purchases', href: '/admin/wholesale/purchases', label: 'Credit purchases', icon: 'dollar', perm: 'wholesale.view' },
       { key: 'wholesale-creators', href: '/admin/wholesale/creators', label: 'Creators & attribution', icon: 'users', perm: 'wholesale.view' },
       { key: 'wholesale-ledger', href: '/admin/wholesale/ledger', label: 'Credit ledger', icon: 'list', perm: 'wholesale.view' },
       { key: 'm-credit_packages', href: '/admin/m/credit_packages', label: 'Credit packages', icon: 'store', perm: 'wholesale.manage' },

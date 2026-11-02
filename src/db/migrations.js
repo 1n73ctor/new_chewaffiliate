@@ -733,4 +733,36 @@ module.exports = [
     updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
   );
   `,
+
+  /* 6: direct credit purchases from the homepage ("Buy credits") — paid through
+        Stripe by email, credited to an affiliate account by an admin */ `
+  CREATE TABLE credit_purchases (
+    id                INTEGER PRIMARY KEY,
+    ref               TEXT NOT NULL UNIQUE,
+    email             TEXT NOT NULL COLLATE NOCASE,
+    name              TEXT NOT NULL,
+    phone             TEXT,
+    package_id        INTEGER REFERENCES credit_packages(id) ON DELETE SET NULL,
+    package_name      TEXT NOT NULL,
+    price_cents       INTEGER NOT NULL,
+    currency          TEXT NOT NULL,
+    credits           INTEGER NOT NULL,
+    terms_version     TEXT NOT NULL,
+    terms_accepted_at TEXT NOT NULL,
+    status            TEXT NOT NULL DEFAULT 'pending',
+    stripe_session_id TEXT UNIQUE,
+    stripe_payment_intent TEXT,
+    ip_hash           TEXT,
+    paid_at           TEXT,
+    refunded_at       TEXT,
+    credited_user_id  INTEGER REFERENCES users(id),
+    credited_batch_id INTEGER UNIQUE REFERENCES credit_batches(id),
+    credited_by       INTEGER REFERENCES users(id),
+    credited_at       TEXT,
+    admin_note        TEXT,
+    created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX idx_purchases_status ON credit_purchases(status, id);
+  CREATE INDEX idx_purchases_email ON credit_purchases(email);
+  `,
 ];

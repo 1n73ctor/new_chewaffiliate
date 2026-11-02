@@ -5,6 +5,9 @@
 <% if (!stripeReady || !webhookReady) { %>
 <div class="alert alert-warn mt-1" role="status"><%- icon('bell') %><div><strong>Stripe isn’t fully set up.</strong> <%= !stripeReady ? 'Add STRIPE_SECRET_KEY to the server’s .env so affiliates can buy packages.' : '' %> <%= !webhookReady ? 'Add STRIPE_WEBHOOK_SECRET and the webhook endpoint /webhooks/stripe so payments are confirmed even if a buyer closes the page.' : '' %></div></div>
 <% } %>
+<% if (purchasesWaiting.n) { %>
+<div class="alert alert-warn mt-1" role="status"><%- icon('dollar') %><div><strong><%= purchasesWaiting.n %> paid purchase<%= purchasesWaiting.n === 1 ? '' : 's' %> waiting for credits</strong> (<%= u.num(purchasesWaiting.credits) %> credits). <a href="/admin/wholesale/purchases?status=paid">Add the credits →</a></div></div>
+<% } %>
 <div class="alert <%= recon.ok ? 'alert-success' : 'alert-error' %> mt-1" role="status"><%- icon(recon.ok ? 'check' : 'x') %><div><strong>Reconciliation <%= recon.ok ? 'OK' : 'FAILED' %></strong> — <%= u.num(recon.batches) %> batches, <%= u.num(recon.grants) %> grants and <%= u.num(recon.ledgerRows) %> ledger entries checked<%= recon.ok ? '; every credit is accounted for.' : ':' %>
   <% if (!recon.ok) { %><ul class="mb-0"><% recon.problems.slice(0, 10).forEach(function (p) { %><li><%= p.kind %> <span class="mono"><%= p.ref %></span>: expected <%= p.expected %>, found <%= p.actual %></li><% }) %></ul><% } %></div></div>
 

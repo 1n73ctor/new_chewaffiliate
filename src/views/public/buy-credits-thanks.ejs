@@ -1,0 +1,27 @@
+<section class="section claim-page">
+  <div class="wrap claim-wrap">
+    <div class="card claim-card">
+      <% if (['paid', 'credited'].includes(purchase.status)) { %>
+        <p class="eyebrow">Payment received</p>
+        <h1 class="claim-title">Thank you, <%= purchase.name.split(' ')[0] %>!</h1>
+        <p class="lead">Your payment for <strong><%= purchase.package_name %></strong> (<%= u.num(purchase.credits) %> credits) is confirmed.</p>
+        <dl class="dl">
+          <dt>Reference</dt><dd class="mono"><%= purchase.ref %></dd>
+          <dt>Email</dt><dd><%= purchase.email %></dd>
+          <dt>Amount</dt><dd><%= u.money(purchase.price_cents, purchase.currency) %></dd>
+        </dl>
+        <p class="mt-1"><%= purchase.status === 'credited' ? 'Your credits are already in your account.' : 'Our team will add the credits to your Chew affiliate account and email you when they’re ready.' %></p>
+        <% if (hasAccount) { %>
+          <a class="btn btn-green" href="/office/see-it-cook-it">Go to my back office</a>
+        <% } else { %>
+          <p class="fine">We couldn’t find a Chew affiliate account with this email yet. Join free with <strong><%= purchase.email %></strong> so we can add your credits.</p>
+          <a class="btn btn-cta" href="/join">JOIN CHEW FREE</a>
+        <% } %>
+      <% } else { %>
+        <h1 class="claim-title">We’re confirming your payment</h1>
+        <p class="lead">This usually takes a moment. You’ll get an email at <strong><%= purchase.email %></strong> as soon as Stripe confirms it.</p>
+        <p class="fine mb-0">Reference <span class="mono"><%= purchase.ref %></span></p>
+      <% } %>
+    </div>
+  </div>
+</section>

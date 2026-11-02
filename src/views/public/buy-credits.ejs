@@ -1,0 +1,43 @@
+<% const f = form || {}; const err = (k) => errors[k] ? `<p class="error">${u.esc(errors[k])}</p>` : ''; const pkg = packages[0]; %>
+<section class="section buy-page">
+  <div class="wrap buy-grid">
+    <div class="buy-copy">
+      <p class="eyebrow eyebrow-orange">See It. Cook It. · Wholesale credits</p>
+      <h1 class="claim-title">Buy credits to give away</h1>
+      <p class="lead">Promotional credits you give to creators <strong>for free</strong> so they can turn a food photo into a cooking video. Each completed video uses <%= u.num(videoCost) %> credits.</p>
+      <ol class="claim-steps">
+        <li><strong>Pay securely with Stripe</strong> using the email you use (or will use) for your Chew affiliate account.</li>
+        <li><strong>We add the credits</strong> to that account and email you when they’re ready.</li>
+        <li><strong>Give them away</strong> from your back office with a claim link.</li>
+      </ol>
+      <p class="fine">No Chew account yet? <a href="/join">Join free</a> with the same email — joining stays free. Credits can’t be resold and have no cash value. Earnings are never guaranteed; see the <a href="/earnings-disclosure">Earnings Disclosure</a>.</p>
+    </div>
+    <div class="card claim-card">
+      <% if (canceled) { %><div class="alert alert-info" role="status"><%- icon('bell') %><div>Payment canceled — nothing was charged.</div></div><% } %>
+      <% if (errors._) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div><%= errors._ %></div></div><% } %>
+      <% if (!packages.length) { %>
+        <p class="mb-0">Packages are being updated. <a href="/wholesale#business-affiliate">Send us an inquiry</a> and we’ll help.</p>
+      <% } else { %>
+      <form class="form" method="post" action="/buy-credits" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <% if (packages.length === 1) { %>
+          <input type="hidden" name="package_id" value="<%= pkg.id %>">
+          <div class="buy-pkg"><span><strong><%= pkg.name %></strong><br><span class="fine"><%= u.num(pkg.credits) %> promotional credits · about <%= u.num(Math.floor(pkg.credits / videoCost)) %> videos</span></span><span class="ws-price"><%= u.money(pkg.price_cents, pkg.currency) %></span></div>
+        <% } else { %>
+          <fieldset class="field"><legend class="label">Package</legend>
+            <% packages.forEach(function (p, i) { %><label class="check-row"><input type="radio" name="package_id" value="<%= p.id %>" <%= String(f.package_id || packages[0].id) === String(p.id) ? 'checked' : '' %>><span><strong><%= p.name %></strong> — <%= u.money(p.price_cents, p.currency) %><br><span class="fine"><%= u.num(p.credits) %> credits</span></span></label><% }) %>
+          </fieldset>
+        <% } %>
+        <div class="field <%= errors.name ? 'has-error' : '' %>"><label for="buy-name">Your name</label><input id="buy-name" type="text" name="name" value="<%= f.name || '' %>" autocomplete="name" required><%- err('name') %></div>
+        <div class="field <%= errors.email ? 'has-error' : '' %>"><label for="buy-email">Email</label><input id="buy-email" type="email" name="email" value="<%= f.email || '' %>" autocomplete="email" required><p class="hint">We use this to match your payment to your Chew account and send your receipt.</p><%- err('email') %></div>
+        <div class="field"><label for="buy-phone">Phone <span class="fine">(optional)</span></label><input id="buy-phone" type="tel" name="phone" value="<%= f.phone || '' %>" autocomplete="tel"></div>
+        <label class="check-row <%= errors.terms ? 'has-error' : '' %>"><input type="checkbox" name="terms" value="1" <%= f.terms ? 'checked' : '' %>><span>I accept the <a href="/wholesale-terms" target="_blank">Wholesale Terms</a> (version <%= termsVersion %>): credits are given to creators for free, never resold, and each creator is assigned to one wholesale affiliate.</span></label>
+        <%- err('terms') %>
+        <button class="btn btn-cta btn-lg btn-block" type="submit" <%= blocker ? 'disabled' : '' %>><%- icon('lock') %> PAY SECURELY WITH STRIPE</button>
+        <% if (blocker) { %><p class="fine mb-0"><%= blocker %></p><% } %>
+      </form>
+      <p class="fine mt-1 mb-0">Card details go straight to Stripe — Chew never sees them.</p>
+      <% } %>
+    </div>
+  </div>
+</section>

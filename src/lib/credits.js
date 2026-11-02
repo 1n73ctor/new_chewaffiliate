@@ -37,7 +37,7 @@ function grantLimits() {
 }
 
 // ---- References & hashing -----------------------------------------------------------
-const PREFIX = { batch: 'B', grant: 'G', ledger: 'L', creator: 'CR', order: 'ORD' };
+const PREFIX = { batch: 'B', grant: 'G', ledger: 'L', creator: 'CR', order: 'ORD', purchase: 'BUY' };
 function newRef(kind, table) {
   for (let i = 0; i < 20; i++) {
     const ref = `${PREFIX[kind]}-${randomCode(kind === 'creator' ? 6 : 10)}`;

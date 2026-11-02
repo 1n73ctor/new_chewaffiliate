@@ -114,17 +114,176 @@ async function syncReturn(sessionId, userId) {
   return { order: db.get('SELECT * FROM package_orders WHERE id = ?', order.id) };
 }
 
+// ---- Direct purchases ("Buy credits" on the homepage) -----------------------------------
+// Anyone can pay by email; an admin then adds the credits to the right affiliate account.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function directPurchaseBlocker() {
+  if (!enabled()) return 'Credit packages are not available right now.';
+  if (!stripe.configured()) return 'Online payment isn’t available right now. Please use the inquiry form and our team will help.';
+  return null;
+}
+
+function createPurchase({ email, name, phone = null, packageId, ipHash = null }) {
+  const pkg = db.get('SELECT * FROM credit_packages WHERE id = ? AND active = 1', Number(packageId) || 0);
+  if (!pkg) throw new credits.CreditError('invalid_request', 'Choose a package.', 400);
+  email = String(email || '').trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) throw new credits.CreditError('invalid_request', 'Enter a valid email.', 400);
+  if (!name) throw new credits.CreditError('invalid_request', 'Enter your name.', 400);
+  const ref = credits.newRef('purchase', 'credit_purchases');
+  db.run(
+    `INSERT INTO credit_purchases (ref, email, name, phone, package_id, package_name, price_cents, currency, credits, terms_version, terms_accepted_at, ip_hash)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)`,
+    ref,
+    email,
+    name,
+    phone,
+    pkg.id,
+    pkg.name,
+    pkg.price_cents,
+    pkg.currency,
+    pkg.credits,
+    termsVersion(),
+    ipHash,
+  );
+  return db.get('SELECT * FROM credit_purchases WHERE ref = ?', ref);
+}
+
+async function startPurchaseCheckout(purchase) {
+  const session = await stripe.createCheckoutSession({
+    order: purchase,
+    email: purchase.email,
+    successUrl: `${config.baseUrl}/buy-credits/thanks?session_id={CHECKOUT_SESSION_ID}`,
+    cancelUrl: `${config.baseUrl}/buy-credits?canceled=1`,
+  });
+  db.run('UPDATE credit_purchases SET stripe_session_id = ? WHERE id = ?', session.id, purchase.id);
+  return session.url;
+}
+
+const accountForEmail = (email) =>
+  db.get("SELECT id, affiliate_id, first_name, last_name, email, status FROM users WHERE email = ? AND affiliate_id IS NOT NULL", String(email || '').toLowerCase());
+
+// Paid → waiting for an admin to add the credits. Safe to call repeatedly.
+function markPurchasePaid(ref, { sessionId = null, paymentIntent = null } = {}) {
+  const changed = db.run(
+    "UPDATE credit_purchases SET status = 'paid', paid_at = datetime('now'), stripe_session_id = COALESCE(?, stripe_session_id), stripe_payment_intent = COALESCE(?, stripe_payment_intent) WHERE ref = ? AND status = 'pending'",
+    sessionId,
+    paymentIntent,
+    String(ref || ''),
+  ).changes;
+  const p = db.get('SELECT * FROM credit_purchases WHERE ref = ?', String(ref || ''));
+  if (!changed || !p) return p;
+  audit(null, 'wholesale.purchase_paid', 'credit_purchase', p.id, { ref: p.ref, email: p.email });
+  const account = accountForEmail(p.email);
+  sendEmail({
+    to: p.email,
+    subject: `Payment received — ${p.package_name} (${p.ref})`,
+    text: `Hello ${p.name},
+
+Thanks — we received your payment of ${money(p.price_cents, p.currency)} for ${p.package_name} (${p.credits.toLocaleString('en-US')} See It. Cook It. promotional credits). Your reference is ${p.ref}.
+
+Our team will add the credits to your Chew affiliate account${account ? '' : ' — if you don’t have one yet, join free with this email address: ' + config.baseUrl + '/join'} and email you when they’re ready.
+
+Credits are promotional: you give them to creators for free and they can’t be resold.
+
+Chew Network`,
+  }).catch(() => {});
+  const to = settings.get('sales_email') || settings.get('support_email');
+  if (to) {
+    sendEmail({
+      to,
+      subject: `Credits to add: ${p.ref} (${p.credits.toLocaleString('en-US')} credits)`,
+      text: `A direct credit purchase was paid.
+
+Reference: ${p.ref}
+Package: ${p.package_name} · ${p.credits.toLocaleString('en-US')} credits · ${money(p.price_cents, p.currency)}
+Buyer email: ${p.email}
+Affiliate account with this email: ${account ? account.affiliate_id : 'none yet'}
+
+Add the credits: ${config.baseUrl}/admin/wholesale/purchases`,
+    }).catch(() => {});
+  }
+  return p;
+}
+
+async function syncPurchase(sessionId) {
+  const p = db.get('SELECT * FROM credit_purchases WHERE stripe_session_id = ?', String(sessionId || ''));
+  if (!p) return null;
+  if (p.status === 'pending') {
+    const session = await stripe.retrieveSession(sessionId);
+    if (session.payment_status === 'paid' && session.client_reference_id === p.ref) markPurchasePaid(p.ref, { sessionId: session.id, paymentIntent: session.payment_intent });
+  }
+  return db.get('SELECT * FROM credit_purchases WHERE id = ?', p.id);
+}
+
+// Admin: add a paid purchase's credits to an affiliate account (once).
+function creditPurchase(purchaseId, { affiliateId, actorId, note = null }) {
+  let result;
+  db.txImmediate(() => {
+    const p = db.get('SELECT * FROM credit_purchases WHERE id = ?', purchaseId);
+    if (!p) throw new credits.CreditError('not_found', 'Purchase not found.', 404);
+    if (p.status === 'credited') throw new credits.CreditError('already_credited', 'These credits were already added.', 409);
+    if (p.status !== 'paid') throw new credits.CreditError('not_paid', 'Only paid purchases can be credited.', 400);
+    const u = db.get("SELECT * FROM users WHERE affiliate_id = ? AND status = 'active'", String(affiliateId || '').trim().toUpperCase());
+    if (!u) throw new credits.CreditError('no_account', 'Enter the Affiliate ID of an active affiliate.', 400);
+    const acct = credits.ensureAccount(u.id);
+    // The buyer accepted the Wholesale Terms at checkout.
+    if (!acct.attribution_ack_at) {
+      db.run("UPDATE wholesale_accounts SET attribution_ack_at = ?, attribution_ack_version = ?, updated_at = datetime('now') WHERE user_id = ?", p.terms_accepted_at, p.terms_version, u.id);
+    }
+    const batch = credits.addBatch({ userId: u.id, credits: p.credits, source: 'purchase', note: `Direct purchase ${p.ref} · ${p.email}${note ? ' · ' + note : ''}`, actorId });
+    db.run(
+      "UPDATE credit_purchases SET status = 'credited', credited_user_id = ?, credited_batch_id = ?, credited_by = ?, credited_at = datetime('now'), admin_note = ? WHERE id = ?",
+      u.id,
+      batch.id,
+      actorId,
+      note,
+      p.id,
+    );
+    result = { purchase: db.get('SELECT * FROM credit_purchases WHERE id = ?', p.id), user: u, batch };
+  });
+  sendEmail({
+    to: result.user.email,
+    userId: result.user.id,
+    subject: 'Your See It. Cook It. credits are ready',
+    text: `Hi ${result.user.first_name},
+
+${result.batch.credits_total.toLocaleString('en-US')} promotional credits from your purchase ${result.purchase.ref} are now in your inventory.
+
+Give them away from your back office: ${config.baseUrl}/office/see-it-cook-it
+
+Chew Network`,
+  }).catch(() => {});
+  return result;
+}
+
 function handleStripeEvent(evt) {
   const obj = (evt.data && evt.data.object) || {};
+  const ref = obj.client_reference_id || (obj.metadata && obj.metadata.order_ref) || '';
+  const isPurchase = ref.startsWith('BUY-');
   switch (evt.type) {
     case 'checkout.session.completed':
     case 'checkout.session.async_payment_succeeded':
-      if (obj.payment_status === 'paid') fulfill(obj.client_reference_id || (obj.metadata && obj.metadata.order_ref), { sessionId: obj.id, paymentIntent: obj.payment_intent });
+      if (obj.payment_status !== 'paid') return true;
+      if (isPurchase) markPurchasePaid(ref, { sessionId: obj.id, paymentIntent: obj.payment_intent });
+      else fulfill(ref, { sessionId: obj.id, paymentIntent: obj.payment_intent });
       return true;
     case 'checkout.session.expired':
       db.run("UPDATE package_orders SET status = 'canceled' WHERE stripe_session_id = ? AND status = 'pending'", obj.id);
+      db.run("UPDATE credit_purchases SET status = 'canceled' WHERE stripe_session_id = ? AND status = 'pending'", obj.id);
       return true;
     case 'charge.refunded': {
+      const purchase = obj.payment_intent && db.get('SELECT * FROM credit_purchases WHERE stripe_payment_intent = ?', obj.payment_intent);
+      if (purchase) {
+        if (!obj.refunded || !['paid', 'credited'].includes(purchase.status)) {
+          audit(null, 'wholesale.purchase_partially_refunded', 'credit_purchase', purchase.id, { ref: purchase.ref, amount_refunded: obj.amount_refunded });
+          return true;
+        }
+        db.run("UPDATE credit_purchases SET status = 'refunded', refunded_at = datetime('now') WHERE id = ?", purchase.id);
+        if (purchase.credited_batch_id) credits.reverseBatch(purchase.credited_batch_id, { reason: `Stripe refund · ${purchase.ref}` });
+        audit(null, 'wholesale.purchase_refunded', 'credit_purchase', purchase.id, { ref: purchase.ref });
+        return true;
+      }
       const order = obj.payment_intent && db.get('SELECT * FROM package_orders WHERE stripe_payment_intent = ?', obj.payment_intent);
       if (!order || order.status !== 'paid') return true;
       if (obj.refunded) {
@@ -413,6 +572,13 @@ module.exports = {
   fulfill,
   syncReturn,
   handleStripeEvent,
+  directPurchaseBlocker,
+  createPurchase,
+  startPurchaseCheckout,
+  markPurchasePaid,
+  syncPurchase,
+  creditPurchase,
+  accountForEmail,
   setSubscription,
   recordRevenue,
   recordRefund,

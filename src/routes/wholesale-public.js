@@ -80,6 +80,74 @@ router.post('/wholesale/inquiry', rateLimit({ windowMs: 3_600_000, max: 6 }), as
   res.redirect(form.page === 'home' ? '/#business-affiliate' : '/wholesale#business-affiliate');
 });
 
+// ---- Buy credits (direct purchase by email) ---------------------------------------------
+function buyPage(res, { form = {}, errors = {}, status = 200, canceled = false } = {}) {
+  res.status(status).page('public/buy-credits', {
+    title: 'Buy See It. Cook It. credits',
+    description: 'Buy promotional credits to give to creators for free. Pay securely with Stripe.',
+    packages: wholesale.packages(),
+    blocker: wholesale.directPurchaseBlocker(),
+    videoCost: credits.videoCost(),
+    termsVersion: wholesale.termsVersion(),
+    form,
+    errors,
+    canceled,
+  });
+}
+
+router.get('/buy-credits', (req, res) => {
+  // Signed-in affiliates buy from their back office, where credits arrive automatically.
+  if (req.user && req.user.affiliate_id && req.user.status === 'active') return res.redirect('/office/see-it-cook-it/packages');
+  buyPage(res, { canceled: !!req.query.canceled, form: req.user ? { email: req.user.email, name: `${req.user.first_name} ${req.user.last_name}` } : {} });
+});
+
+router.post('/buy-credits', rateLimit({ windowMs: 3_600_000, max: 10 }), async (req, res) => {
+  const form = {
+    name: clampStr(req.body.name, 120),
+    email: clampStr(req.body.email, 200).toLowerCase(),
+    phone: clampStr(req.body.phone, 40),
+    package_id: clampStr(req.body.package_id, 10),
+    terms: req.body.terms === '1',
+  };
+  const errors = {};
+  if (!form.name) errors.name = 'Please enter your name.';
+  if (!EMAIL_RE.test(form.email)) errors.email = 'Please enter the email you use (or will use) for your Chew account.';
+  if (!form.terms) errors.terms = 'Please accept the Wholesale Terms to continue.';
+  const blocker = wholesale.directPurchaseBlocker();
+  if (blocker) errors._ = blocker;
+  if (Object.keys(errors).length) return buyPage(res, { form, errors, status: 422 });
+  let purchase;
+  try {
+    purchase = wholesale.createPurchase({ email: form.email, name: form.name, phone: form.phone || null, packageId: form.package_id, ipHash: ipHash(req.ip) });
+  } catch (err) {
+    if (!(err instanceof credits.CreditError)) throw err;
+    return buyPage(res, { form, errors: { _: err.message }, status: 422 });
+  }
+  try {
+    res.redirect(303, await wholesale.startPurchaseCheckout(purchase));
+  } catch (err) {
+    console.error('Stripe checkout failed:', err.message);
+    db.run("UPDATE credit_purchases SET status = 'failed' WHERE id = ?", purchase.id);
+    buyPage(res, { form, errors: { _: 'We couldn’t start the payment. Please try again in a moment.' }, status: 502 });
+  }
+});
+
+router.get('/buy-credits/thanks', async (req, res) => {
+  let purchase = null;
+  try {
+    purchase = await wholesale.syncPurchase(clampStr(req.query.session_id, 200));
+  } catch (err) {
+    console.error('Stripe session check failed:', err.message);
+  }
+  if (!purchase) return res.redirect('/buy-credits');
+  res.page('public/buy-credits-thanks', {
+    title: 'Thank you',
+    noindex: true,
+    purchase,
+    hasAccount: !!wholesale.accountForEmail(purchase.email),
+  });
+});
+
 // ---- Free-credit claim page (claim links) ----------------------------------------------
 function offerFor(code) {
   const offer = credits.claimOffer(code);

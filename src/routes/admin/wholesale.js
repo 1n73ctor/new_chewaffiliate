@@ -41,6 +41,7 @@ router.get('/wholesale', view, (req, res) => {
               (SELECT COUNT(*) FROM credit_grants WHERE status = 'pending') AS pending_claims`,
     ),
     orders: db.all('SELECT o.*, u.affiliate_id FROM package_orders o JOIN users u ON u.id = o.user_id ORDER BY o.id DESC LIMIT 15'),
+    purchasesWaiting: db.get("SELECT COUNT(*) AS n, COALESCE(SUM(credits), 0) AS credits FROM credit_purchases WHERE status = 'paid'"),
     recon: credits.reconcile(),
     stripeReady: stripe.configured(),
     webhookReady: !!require('../../config').stripe.webhookSecret,
@@ -167,6 +168,58 @@ router.post('/wholesale/domains/:id(\\d+)', manage, (req, res) => {
     audit(req, `wholesale.domain_${req.body.status}`, 'user', d.user_id, { domain: d.domain });
   }
   res.redirect(d ? `/admin/wholesale/accounts/${d.user_id}` : '/admin/wholesale');
+});
+
+// ---- Direct purchases ("Buy credits") ------------------------------------------------------
+const PURCHASE_STATUSES = { paid: 'Paid — credits to add', credited: 'Credited', pending: 'Checkout started', refunded: 'Refunded', canceled: 'Canceled', failed: 'Failed' };
+
+router.get('/wholesale/purchases', view, (req, res) => {
+  const status = PURCHASE_STATUSES[req.query.status] ? req.query.status : '';
+  const q = clampStr(req.query.q, 200).toLowerCase();
+  const where = [];
+  const params = [];
+  if (status) {
+    where.push('p.status = ?');
+    params.push(status);
+  } else {
+    where.push("p.status != 'pending' OR p.created_at >= datetime('now', '-1 day')");
+  }
+  if (q) {
+    where.push('(p.email LIKE ? OR p.ref = ? OR p.name LIKE ?)');
+    params.push(`%${q}%`, q.toUpperCase(), `%${q}%`);
+  }
+  const rows = db.all(
+    `SELECT p.*, u.affiliate_id AS match_affiliate_id, u.first_name AS match_first, u.last_name AS match_last,
+            cu.affiliate_id AS credited_affiliate_id, b.ref AS batch_ref, a.email AS credited_by_email
+     FROM credit_purchases p
+     LEFT JOIN users u ON u.email = p.email AND u.affiliate_id IS NOT NULL
+     LEFT JOIN users cu ON cu.id = p.credited_user_id LEFT JOIN credit_batches b ON b.id = p.credited_batch_id
+     LEFT JOIN users a ON a.id = p.credited_by
+     WHERE ${where.map((w) => `(${w})`).join(' AND ')}
+     ORDER BY CASE p.status WHEN 'paid' THEN 0 ELSE 1 END, p.id DESC LIMIT 200`,
+    ...params,
+  );
+  res.page('admin/wholesale-purchases', {
+    title: 'Credit purchases',
+    nav: 'wholesale-purchases',
+    rows,
+    status,
+    q,
+    statuses: PURCHASE_STATUSES,
+    waiting: db.get("SELECT COUNT(*) AS n, COALESCE(SUM(credits), 0) AS credits FROM credit_purchases WHERE status = 'paid'"),
+  });
+});
+
+router.post('/wholesale/purchases/:id(\\d+)/credit', manage, (req, res) => {
+  const backTo = '/admin/wholesale/purchases';
+  try {
+    const r = wholesale.creditPurchase(Number(req.params.id), { affiliateId: req.body.affiliate_id, actorId: req.user.id, note: clampStr(req.body.note, 200) || null });
+    audit(req, 'wholesale.purchase_credited', 'credit_purchase', r.purchase.id, { ref: r.purchase.ref, affiliate: r.user.affiliate_id, credits: r.batch.credits_total });
+    res.flash('success', `Added ${r.batch.credits_total.toLocaleString('en-US')} credits to ${r.user.affiliate_id} (${r.purchase.ref}). They were emailed.`);
+  } catch (err) {
+    return fail(req, res, backTo, err);
+  }
+  res.redirect(backTo);
 });
 
 // ---- Creators & attribution (dispute / transfer) ----------------------------------------

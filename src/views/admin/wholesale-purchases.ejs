@@ -1,0 +1,41 @@
+<% const m = can('wholesale.manage'); %>
+<div class="row-between">
+  <div><h1>Credit purchases</h1><p class="page-intro mb-0">Paid from the homepage “Buy credits” button. Add each purchase’s credits to the buyer’s affiliate account — we match on the email they paid with.</p></div>
+</div>
+<% if (waiting.n) { %><div class="alert alert-warn mt-1" role="status"><%- icon('dollar') %><div><strong><%= waiting.n %> paid purchase<%= waiting.n === 1 ? '' : 's' %></strong> waiting for credits (<%= u.num(waiting.credits) %> credits).</div></div><% } %>
+<form class="toolbar mt-1" method="get">
+  <div class="field"><label for="ps">Status</label><select id="ps" name="status"><option value="">All recent</option><% Object.entries(statuses).forEach(function ([k, v]) { %><option value="<%= k %>" <%= status === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
+  <div class="field"><label for="pq">Email, name or reference</label><input id="pq" type="text" name="q" value="<%= q %>"></div>
+  <button class="btn btn-light" type="submit">Filter</button>
+</form>
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Reference</th><th>Buyer</th><th>Package</th><th class="num">Credits</th><th class="num">Paid</th><th>Status</th><th>Account</th></tr></thead>
+  <tbody>
+    <% if (!rows.length) { %><tr><td colspan="7" class="table-empty">No purchases<%= status ? ' with this status' : ' yet' %>.</td></tr><% } %>
+    <% rows.forEach(function (p) { %>
+    <tr>
+      <td class="mono"><%= p.ref %><br><span class="fine"><%= u.fmtDateTime(p.paid_at || p.created_at) %></span></td>
+      <td><strong><%= p.name %></strong><br><span class="fine"><%= p.email %><%= p.phone ? ' · ' + p.phone : '' %></span></td>
+      <td><%= p.package_name %></td>
+      <td class="num"><%= u.num(p.credits) %></td>
+      <td class="num"><%= u.money(p.price_cents, p.currency) %></td>
+      <td><span class="badge <%= p.status === 'credited' ? 'badge-live' : p.status === 'paid' ? 'badge-soon' : p.status === 'refunded' ? 'badge-red' : 'badge-grey' %>"><%= statuses[p.status] || p.status %></span></td>
+      <td>
+        <% if (p.status === 'credited') { %>
+          <span class="mono"><%= p.credited_affiliate_id %></span> · <span class="fine mono"><%= p.batch_ref %></span><br><span class="fine"><%= p.credited_by_email %> · <%= u.fmtDate(p.credited_at) %></span>
+        <% } else if (p.status === 'paid' && m) { %>
+          <form class="row" method="post" action="/admin/wholesale/purchases/<%= p.id %>/credit" data-confirm="Add <%= u.num(p.credits) %> credits to this affiliate?">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input class="minw-150" type="text" name="affiliate_id" value="<%= p.match_affiliate_id || '' %>" placeholder="Affiliate ID" aria-label="Affiliate ID" required>
+            <button class="btn btn-green btn-xs" type="submit">Add credits</button>
+          </form>
+          <span class="fine"><%= p.match_affiliate_id ? 'Matched by email: ' + p.match_first + ' ' + p.match_last : 'No account with this email yet — ask them to join with it, or enter their Affiliate ID.' %></span>
+        <% } else if (p.status === 'paid') { %>
+          <span class="fine"><%= p.match_affiliate_id || 'No matching account' %></span>
+        <% } else { %>—<% } %>
+      </td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table></div>
+<p class="fine mt-1">Refunds made in Stripe mark the purchase refunded and write off any of its credits not yet given away.</p>

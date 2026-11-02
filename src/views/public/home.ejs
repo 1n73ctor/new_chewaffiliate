@@ -21,12 +21,15 @@
         <% bullets.forEach(function (b) { %><li><span class="check"><%- icon('check') %></span><span><%= b %></span></li><% }) %>
       </ul>
       <div class="hero-cta">
+        <div class="hero-buttons">
         <% if (signedIn) { %>
           <a class="btn btn-cta btn-xl" href="/office">GO TO MY BACK OFFICE <%- icon('arrow') %></a>
         <% } else { %>
           <a class="btn btn-cta btn-xl" href="/join"><%= String(site.hero_cta_label || 'Join Chew Free').toUpperCase() %> <%- icon('arrow') %></a>
-          <p class="hero-signin">Already an affiliate? <a href="/signin">Sign In</a></p>
         <% } %>
+        <% if (site.sic_wholesale_enabled === '1') { %><a class="btn btn-outline btn-xl" href="/buy-credits"><%- icon('gift') %> BUY CREDITS</a><% } %>
+        </div>
+        <% if (!signedIn) { %><p class="hero-signin">Already an affiliate? <a href="/signin">Sign In</a><% if (site.sic_wholesale_enabled === '1') { %> · Credits are optional — joining is free.<% } %></p><% } %>
       </div>
     </div>
     <div class="hero-visual">

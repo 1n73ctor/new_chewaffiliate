@@ -881,6 +881,12 @@ progress.progress::-moz-progress-bar, progress.track::-moz-progress-bar { backgr
 .claim-steps .store-badges { margin-top: 0.5rem; }
 .claim-steps .link-code { margin-top: 0.5rem; }
 
+/* Buy credits */
+.hero-buttons { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
+.buy-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: start; max-width: 1040px; }
+.buy-pkg { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.9rem 1rem; border: 1.5px solid var(--orange-100); background: var(--orange-50); border-radius: 14px; }
+.buy-pkg .ws-price { font-size: 1.8rem; margin: 0; }
+
 /* Back office */
 .sic-overview .card-head h2 { display: flex; gap: 0.4rem; align-items: center; }
 .sic-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 1rem; }
@@ -935,6 +941,7 @@ details.request-more[open] { flex-basis: 100%; }
   .steps-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
   .steps-3 .step { border: 1px solid var(--line); background: #fff; padding: 1.25rem; }
   .ws-hero-grid { grid-template-columns: 1.4fr 1fr; gap: 48px; }
+  .buy-grid { grid-template-columns: 1fr 1fr; gap: 48px; }
   .sic-invite { grid-template-columns: 1fr auto; }
   .sic-filters { grid-template-columns: repeat(5, minmax(0, 1fr)) auto; }
   .sic-filter-actions { grid-column: auto; }

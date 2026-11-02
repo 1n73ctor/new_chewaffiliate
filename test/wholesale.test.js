@@ -104,7 +104,7 @@ const stripeServer = http.createServer((req, res) => {
     if (req.method === 'POST' && req.url === '/v1/checkout/sessions') {
       const p = new URLSearchParams(raw);
       const id = `cs_test_${sessions.size + 1}`;
-      sessions.set(id, { id, client_reference_id: p.get('client_reference_id'), amount: Number(p.get('line_items[0][price_data][unit_amount]')), success_url: p.get('success_url'), payment_status: 'unpaid', payment_intent: `pi_${sessions.size + 1}` });
+      sessions.set(id, { id, customer_email: p.get('customer_email'), client_reference_id: p.get('client_reference_id'), amount: Number(p.get('line_items[0][price_data][unit_amount]')), success_url: p.get('success_url'), payment_status: 'unpaid', payment_intent: `pi_${sessions.size + 1}` });
       return res.end(JSON.stringify({ id, url: `https://checkout.stripe.com/c/pay/${id}` }));
     }
     const m = req.url.match(/^\/v1\/checkout\/sessions\/(.+)$/);
@@ -539,4 +539,66 @@ test('admin: wholesale overview reconciles; permissions are respected', async ()
   // API is closed without a key
   const r = await fetch(`${BASE}/api/v1/sic/consumptions`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
   assert.equal(r.status, 401);
+});
+
+test('homepage Buy credits: pay by email → admin adds the credits once → refund writes them off', async () => {
+  const home = await new Client().get('/');
+  const join = home.text.indexOf('JOIN CHEW FREE');
+  const buy = home.text.indexOf('href="/buy-credits"');
+  assert.ok(join > 0 && buy > join, 'Buy credits sits next to Join Chew Free');
+
+  // A signed-in affiliate goes to their own packages page (automatic crediting)
+  assert.equal((await S.a.client.get('/buy-credits')).location, '/office/see-it-cook-it/packages');
+
+  // A visitor must give name, email and accept the terms
+  const v = new Client();
+  const page = await v.get('/buy-credits');
+  assert.ok(page.text.includes('$500.00'));
+  const bad = await v.post('/buy-credits', { package_id: '1', name: '', email: 'nope' });
+  assert.equal(bad.status, 422);
+  assert.ok(bad.text.includes('Please accept the Wholesale Terms'));
+  const r = await v.post('/buy-credits', { package_id: '1', name: 'Gina Grill', email: 'Gina@Example.com', phone: '+1 555 0100', terms: '1' });
+  assert.equal(r.status, 303);
+  assert.match(r.location, /^https:\/\/checkout\.stripe\.com\//);
+  const p = db.get("SELECT * FROM credit_purchases WHERE email = 'gina@example.com'");
+  assert.equal(p.status, 'pending');
+  assert.equal(sessions.get(p.stripe_session_id).customer_email, 'gina@example.com', 'Stripe gets the email to track the payment');
+
+  // Stripe confirms (twice) → paid, emails to buyer and team, nothing credited automatically
+  const evt = { type: 'checkout.session.completed', data: { object: { id: p.stripe_session_id, payment_status: 'paid', client_reference_id: p.ref, payment_intent: 'pi_gina' } } };
+  await signedWebhook(evt);
+  await signedWebhook(evt);
+  assert.equal(db.get('SELECT status FROM credit_purchases WHERE id = ?', p.id).status, 'paid');
+  assert.ok(db.get("SELECT 1 FROM outbox WHERE recipient = 'gina@example.com' AND subject LIKE 'Payment received%'"));
+  assert.equal(db.get("SELECT COUNT(*) AS n FROM outbox WHERE subject LIKE 'Credits to add:%'").n, 1);
+  // Thank-you page tells her to join with the same email
+  const thanks = await v.get(`/buy-credits/thanks?session_id=${p.stripe_session_id}`);
+  assert.ok(thanks.text.includes(p.ref));
+  assert.ok(thanks.text.includes('Join free with'));
+
+  // She joins with that email; admin sees the match and adds the credits
+  const g = await signup('gina@example.com', 'Gina');
+  const list = await admin.get('/admin/wholesale/purchases?status=paid');
+  assert.ok(list.text.includes('gina@example.com'));
+  assert.ok(list.text.includes(`value="${g.user.affiliate_id}"`), 'account matched by email');
+  assert.ok((await admin.get('/admin/wholesale')).text.includes('paid purchase'));
+  const credit = await admin.post(`/admin/wholesale/purchases/${p.id}/credit`, { affiliate_id: g.user.affiliate_id });
+  assert.equal(credit.location, '/admin/wholesale/purchases');
+  assert.equal(credits.available(g.user.id), 3500);
+  assert.equal(credits.account(g.user.id).status, 'active');
+  assert.ok(credits.account(g.user.id).attribution_ack_at, 'terms accepted at checkout carry over');
+  assert.equal(db.get('SELECT status FROM credit_purchases WHERE id = ?', p.id).status, 'credited');
+  // Can't be credited twice
+  await admin.post(`/admin/wholesale/purchases/${p.id}/credit`, { affiliate_id: g.user.affiliate_id });
+  assert.equal(credits.available(g.user.id), 3500);
+  // Support can see purchases but not add credits
+  const sup = new Client();
+  await sup.signin('sue@test.local', 'Support-Pass-1');
+  assert.equal((await sup.post(`/admin/wholesale/purchases/${p.id}/credit`, { affiliate_id: g.user.affiliate_id })).status, 403);
+
+  // Full refund in Stripe → refunded, unissued credits written off
+  await signedWebhook({ type: 'charge.refunded', data: { object: { payment_intent: 'pi_gina', refunded: true } } });
+  assert.equal(db.get('SELECT status FROM credit_purchases WHERE id = ?', p.id).status, 'refunded');
+  assert.equal(credits.available(g.user.id), 0);
+  assert.deepEqual(credits.reconcile().problems, []);
 });
