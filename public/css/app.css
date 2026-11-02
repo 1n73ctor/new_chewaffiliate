@@ -821,6 +821,13 @@ progress.progress::-moz-progress-bar, progress.track::-moz-progress-bar { backgr
   .admin-main { padding: 28px 32px 56px; }
 }
 
+@media (max-width: 560px) {
+  .btn-xs { min-height: 38px; }
+}
+@media (max-width: 480px) {
+  .admin-top .role-chip { display: none; }
+}
+
 @media (max-width: 380px) {
   .hero-title { font-size: 1.7rem; }
   .header-actions .btn-cta { padding: 0 0.8rem; font-size: 0.85rem; }
@@ -884,14 +891,22 @@ progress.progress::-moz-progress-bar, progress.track::-moz-progress-bar { backgr
 /* Buy credits */
 .hero-buttons { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
 .buy-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: start; max-width: 1040px; }
-.buy-pkg { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.9rem 1rem; border: 1.5px solid var(--orange-100); background: var(--orange-50); border-radius: 14px; }
+.buy-pkg { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem 1rem; padding: 0.9rem 1rem; border: 1.5px solid var(--orange-100); background: var(--orange-50); border-radius: 14px; }
+.buy-pkg > span:first-child { flex: 1 1 180px; min-width: 0; }
 .buy-pkg .ws-price { font-size: 1.8rem; margin: 0; }
 
 /* Back office */
 .sic-overview .card-head h2 { display: flex; gap: 0.4rem; align-items: center; }
 .sic-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 1rem; }
 .sic-actions .btn { width: 100%; }
-.sic-invite { display: grid; gap: 1rem; align-items: center; border-left: 4px solid var(--orange-500); }
+.sic-invite { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: center; border-left: 4px solid var(--orange-500); }
+.sic-invite .btn, .sic-invite-card .btn, .issue-form .btn, .pkg-card .btn { white-space: normal; text-align: center; }
+.input.input-sm { width: auto; }
+.table .col-account { min-width: 240px; }
+.credit-form { flex-wrap: nowrap; gap: 0.4rem; }
+.credit-form .input { flex: 1 1 auto; min-width: 0; width: 120px; }
+select.input.input-sm { padding-right: 2rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235f6b65' stroke-width='2' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.7rem center; }
+.sic-link-tile select.input-sm { width: 100%; }
 .sic-invite h2 { margin: 0 0 0.35rem; }
 .sic-invite-card { border-left: 4px solid var(--orange-500); }
 .sic-gallery { margin-bottom: 1.5rem; }
@@ -901,10 +916,12 @@ progress.progress::-moz-progress-bar, progress.track::-moz-progress-bar { backgr
 .ad-card h4 { margin: 0; font-size: 0.98rem; }
 .ad-card .caption-box { min-height: 110px; font-size: 0.88rem; }
 .ad-card .chip { justify-self: start; }
-.sic-link-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
-.sic-link-tile { display: grid; gap: 0.4rem; align-content: start; padding: 0.9rem; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-soft); color: var(--ink); text-decoration: none; margin: 0; }
+.sic-link-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.sic-link-tile { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.9rem; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-soft); color: var(--ink); text-decoration: none; margin: 0; }
 .sic-link-tile:hover { border-color: var(--green-200); color: var(--ink); }
-.sic-link-tile .btn { justify-self: start; }
+.sic-link-tile .btn { align-self: flex-start; max-width: 100%; white-space: normal; text-align: left; }
+.sic-link-tile > select, .sic-link-tile > span.btn { margin-top: auto; }
+.sic-link-tile > select + .btn { margin-top: 0; }
 .sic-link-tile select { min-height: 38px; font-size: 0.88rem; }
 .sic-ways { border-left: 4px solid var(--green-700); }
 .sic-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; align-items: end; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 0.9rem; }
@@ -942,7 +959,7 @@ details.request-more[open] { flex-basis: 100%; }
   .steps-3 .step { border: 1px solid var(--line); background: #fff; padding: 1.25rem; }
   .ws-hero-grid { grid-template-columns: 1.4fr 1fr; gap: 48px; }
   .buy-grid { grid-template-columns: 1fr 1fr; gap: 48px; }
-  .sic-invite { grid-template-columns: 1fr auto; }
+  .sic-invite { grid-template-columns: minmax(0, 1fr) auto; }
   .sic-filters { grid-template-columns: repeat(5, minmax(0, 1fr)) auto; }
   .sic-filter-actions { grid-column: auto; }
 }

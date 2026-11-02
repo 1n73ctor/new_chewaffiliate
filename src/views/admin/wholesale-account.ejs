@@ -47,7 +47,7 @@
     <% if (!batches.length) { %><tr><td colspan="8" class="table-empty">No batches yet.</td></tr><% } %>
     <% batches.forEach(function (b) { %>
     <tr><td class="mono"><%= b.ref %></td><td><%= b.source %><%= b.order_ref ? ' · ' + b.order_ref : '' %><% if (b.note) { %><br><span class="fine"><%= b.note %></span><% } %></td><td class="num"><%= u.num(b.credits_total) %></td><td class="num"><%= u.num(b.credits_available) %></td><td class="num"><%= u.num(b.credits_written_off) %></td><td><span class="badge <%= b.status === 'active' ? 'badge-live' : 'badge-red' %>"><%= b.status %></span></td><td class="nowrap"><%= u.fmtDate(b.created_at) %></td>
-      <% if (m) { %><td class="actions"><% if (b.status === 'active') { %><form class="inline-form row" method="post" action="/admin/wholesale/batches/<%= b.id %>/reverse" data-confirm="Reverse this batch? Its unissued credits are written off."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="text" name="reason" placeholder="Reason" required aria-label="Reason"><button class="btn btn-ghost btn-xs" type="submit">Reverse</button></form><% } %></td><% } %></tr>
+      <% if (m) { %><td class="actions"><% if (b.status === 'active') { %><form class="inline-form row" method="post" action="/admin/wholesale/batches/<%= b.id %>/reverse" data-confirm="Reverse this batch? Its unissued credits are written off."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input class="input input-sm" type="text" name="reason" placeholder="Reason" required aria-label="Reason"><button class="btn btn-ghost btn-xs" type="submit">Reverse</button></form><% } %></td><% } %></tr>
     <% }) %>
   </tbody>
 </table></div>
@@ -84,7 +84,7 @@
     <div class="card-head"><h2>Branded site request</h2></div>
     <% if (!a.site_request_status) { %><p class="fine mb-0">No request.</p><% } else { %>
     <dl class="dl"><dt>URL</dt><dd><%= a.site_request_url || '—' %></dd><dt>Note</dt><dd><%= a.site_request_note || '—' %></dd><dt>Status</dt><dd><%= a.site_request_status %> · <%= u.fmtDate(a.site_requested_at) %></dd></dl>
-    <% if (m) { %><form class="row mt-1" method="post" action="/admin/wholesale/accounts/<%= a.user_id %>/site-request"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><select name="status" aria-label="Status"><% ['requested','in_progress','live','declined'].forEach(function (s) { %><option value="<%= s %>" <%= a.site_request_status === s ? 'selected' : '' %>><%= s.replace('_', ' ') %></option><% }) %></select><button class="btn btn-light btn-sm" type="submit">Update</button></form><% } %>
+    <% if (m) { %><form class="row mt-1" method="post" action="/admin/wholesale/accounts/<%= a.user_id %>/site-request"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><select class="input input-sm" name="status" aria-label="Status"><% ['requested','in_progress','live','declined'].forEach(function (s) { %><option value="<%= s %>" <%= a.site_request_status === s ? 'selected' : '' %>><%= s.replace('_', ' ') %></option><% }) %></select><button class="btn btn-light btn-sm" type="submit">Update</button></form><% } %>
     <% } %>
   </section>
 </div>

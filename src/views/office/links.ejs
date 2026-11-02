@@ -31,7 +31,7 @@
       <input type="hidden" name="label" value="<%= d.label %>">
       <strong><%= d.key === 'see-it-cook-it' ? 'App landing page' : d.key === 'wholesale' ? 'Wholesale information page' : 'App download (detects the phone)' %></strong>
       <span class="fine"><%= d.label %></span>
-      <select name="source" aria-label="Where you’ll share it"><option value="">Anywhere</option><% sources.forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }) %></select>
+      <select class="input input-sm" name="source" aria-label="Where you’ll share it"><option value="">Anywhere</option><% sources.forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }) %></select>
       <button class="btn btn-green btn-sm" type="submit"><%- icon('link') %> Get link</button>
     </form>
     <% }) %>
