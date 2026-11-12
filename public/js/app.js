@@ -231,6 +231,21 @@
   });
   document.addEventListener('scroll', hideTip, { passive: true });
 
+  // Buy credits: keep the price summary in step with the chosen package.
+  document.querySelectorAll('[data-price-summary]').forEach(function (box) {
+    var form = box.closest('form');
+    var set = function (f, text) { var el = box.querySelector('[data-f="' + f + '"]'); if (el) el.textContent = text; };
+    form.addEventListener('change', function (e) {
+      if (e.target.name !== 'package_id') return;
+      var d = e.target.dataset;
+      box.hidden = !d.discount;
+      set('list', d.list);
+      set('discount', d.discount);
+      set('code-label', 'Coupon ' + (d.code || ''));
+      set('total', d.total);
+    });
+  });
+
   // Read-only link fields select themselves for easy manual copying.
   document.querySelectorAll('input[data-select]').forEach(function (i) {
     i.addEventListener('focus', function () { i.select(); });

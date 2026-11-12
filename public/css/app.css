@@ -908,7 +908,11 @@ progress.progress::-moz-progress-bar, progress.track::-moz-progress-bar { backgr
 .pkg-price { display: grid; gap: 0.35rem; margin: 0.2rem 0; }
 .buy-pkg-price { display: grid; justify-items: end; gap: 0.3rem; }
 .price-lines { display: grid; grid-template-columns: 1fr auto; gap: 0.35rem 1rem; margin: 0; padding: 0.8rem 1rem; background: var(--bg-soft); border-radius: 12px; font-size: 0.95rem; }
+.price-lines[hidden] { display: none; }
 .price-lines dt { color: var(--ink-2); }
+.default-submit { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.pkg-option { padding: 0.7rem 0.8rem; border: 1.5px solid var(--line); border-radius: 12px; }
+.pkg-option:has(input:checked) { border-color: var(--green-700); background: var(--green-50); }
 .price-lines dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .price-lines .price-discount { color: var(--green-700); font-weight: 700; }
 .price-lines .price-total { font-weight: 800; color: var(--ink); border-top: 1px solid var(--line); padding-top: 0.35rem; }

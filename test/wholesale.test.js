@@ -667,3 +667,44 @@ test('coupons: admin creates codes; buyers see the discount; limits, dates and p
   assert.ok(ws.text.includes('$100.00'));
   db.run('UPDATE credit_packages SET active = 0 WHERE id = ?', mini);
 });
+
+test('coupons for one package: Apply keeps the chosen package; links pick the right one; abandoned checkouts don’t block', async () => {
+  db.run("INSERT INTO credit_packages (name, price_cents, credits, active, sort) VALUES ('Advance Pack', 350000, 24500, 1, 5)");
+  const adv = db.get("SELECT id FROM credit_packages WHERE name = 'Advance Pack'").id;
+  await admin.post('/admin/m/coupons', { code: 'ADV1000', description: 'You save $1000', kind: 'fixed', amount_cents: '1000.00', package_id: String(adv), per_email_limit: '1', active: '1' });
+
+  // A link with the code pre-selects the package it is for and shows the total
+  const v = new Client();
+  const linked = await v.get('/buy-credits?coupon=adv1000');
+  assert.match(linked.text, new RegExp(`value="${adv}" checked`));
+  assert.ok(linked.text.includes('applied — $1,000.00 off the Advance Pack'));
+  assert.ok(/data-f="total">\$2,500\.00/.test(linked.text));
+
+  // Apply keeps the chosen package, name and email
+  const applied = await v.post('/buy-credits', { package_id: String(adv), name: 'Ada Apply', email: 'ada@example.com', coupon: 'ADV1000', apply: '1' });
+  assert.equal(applied.status, 200);
+  assert.match(applied.text, new RegExp(`value="${adv}" checked`));
+  assert.ok(applied.text.includes('value="Ada Apply"') && applied.text.includes('value="ada@example.com"'));
+  // Choosing another package explains which one the code is for
+  const other = await v.post('/buy-credits', { package_id: '1', name: 'Ada Apply', email: 'ada@example.com', coupon: 'ADV1000', apply: '1' });
+  assert.ok(other.text.includes('ADV1000 is for the Advance Pack — choose that package to use it.'));
+  assert.match(other.text, /value="1" checked/);
+  // Remove clears the code
+  const removed = await v.post('/buy-credits', { package_id: String(adv), coupon: 'ADV1000', apply: 'remove' });
+  assert.ok(!removed.text.includes('applied —'));
+
+  // Pay: abandon the checkout, then try again with the same email — still allowed
+  const first = await v.post('/buy-credits', { package_id: String(adv), name: 'Ada Apply', email: 'ada@example.com', terms: '1', coupon: 'ADV1000' });
+  assert.equal(first.status, 303);
+  const second = await v.post('/buy-credits', { package_id: String(adv), name: 'Ada Apply', email: 'ada@example.com', terms: '1', coupon: 'ADV1000' });
+  assert.equal(second.status, 303, 'an unfinished checkout does not use up the per-email limit');
+  const rows = db.all("SELECT price_cents, discount_cents FROM credit_purchases WHERE email = 'ada@example.com'");
+  assert.deepEqual(rows.map((r) => [r.price_cents, r.discount_cents]), [[250000, 100000], [250000, 100000]]);
+  // Once one is paid, the same email can't use it again
+  const paid = db.get("SELECT * FROM credit_purchases WHERE email = 'ada@example.com' ORDER BY id DESC LIMIT 1");
+  await signedWebhook({ type: 'checkout.session.completed', data: { object: { id: paid.stripe_session_id, payment_status: 'paid', client_reference_id: paid.ref, payment_intent: 'pi_ada' } } });
+  const third = await v.post('/buy-credits', { package_id: String(adv), name: 'Ada Apply', email: 'ada@example.com', terms: '1', coupon: 'ADV1000' });
+  assert.equal(third.status, 422);
+  assert.ok(third.text.includes('already used with this email'));
+  db.run('UPDATE credit_packages SET active = 0 WHERE id = ?', adv);
+});

@@ -15,33 +15,50 @@
     <div class="card claim-card">
       <% if (canceled) { %><div class="alert alert-info" role="status"><%- icon('bell') %><div>Payment canceled — nothing was charged.</div></div><% } %>
       <% if (errors._) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div><%= errors._ %></div></div><% } %>
-      <% if (packages.length && !blocker) { %><%- include('../partials/coupon-form', { action: '/buy-credits', coupon: coupon, error: errors.coupon }) %><% } %>
       <% if (!packages.length) { %>
         <p class="mb-0">Packages are being updated. <a href="/wholesale#business-affiliate">Send us an inquiry</a> and we’ll help.</p>
       <% } else { %>
       <form class="form" method="post" action="/buy-credits" novalidate>
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <%# Pressing Enter pays (the first submit button is the default), not "Apply". %>
+        <button class="default-submit" type="submit" tabindex="-1" aria-hidden="true">Pay</button>
         <% if (packages.length === 1) { %>
           <input type="hidden" name="package_id" value="<%= pkg.id %>">
           <div class="buy-pkg"><span><strong><%= pkg.name %></strong><br><span class="fine"><%= u.num(pkg.credits) %> promotional credits · about <%= u.num(Math.floor(pkg.credits / videoCost)) %> videos</span></span><span class="buy-pkg-price"><%- include('../partials/price-tag', { q: pkg.quote, currency: pkg.currency }) %></span></div>
         <% } else { %>
-          <fieldset class="field"><legend class="label">Package</legend>
-            <% packages.forEach(function (p, i) { %><label class="check-row"><input type="radio" name="package_id" value="<%= p.id %>" <%= String(f.package_id || packages[0].id) === String(p.id) ? 'checked' : '' %>><span><strong><%= p.name %></strong> — <% if (p.quote.discountCents) { %><s class="price-was"><%= u.money(p.quote.listCents, p.currency) %></s> <% } %><%= u.money(p.quote.totalCents, p.currency) %><br><span class="fine"><%= u.num(p.credits) %> credits</span><% if (p.quote.discountCents) { %><br><span class="save-chip">You save <%= u.money(p.quote.discountCents, p.currency) %> · <%= p.quote.code %></span><% } %></span></label><% }) %>
+          <fieldset class="field"><legend class="label">Choose a package</legend>
+            <% packages.forEach(function (p) { const q = p.quote; %>
+            <label class="check-row pkg-option"><input type="radio" name="package_id" value="<%= p.id %>" <%= String(f.package_id) === String(p.id) ? 'checked' : '' %>
+                data-list="<%= u.money(q.listCents, p.currency) %>" data-total="<%= u.money(q.totalCents, p.currency) %>" data-discount="<%= q.discountCents ? '−' + u.money(q.discountCents, p.currency) : '' %>" data-code="<%= q.discountCents ? q.code : '' %>">
+              <span><strong><%= p.name %></strong> — <% if (q.discountCents) { %><s class="price-was"><%= u.money(q.listCents, p.currency) %></s> <% } %><strong><%= u.money(q.totalCents, p.currency) %></strong><br><span class="fine"><%= u.num(p.credits) %> credits · about <%= u.num(Math.floor(p.credits / videoCost)) %> videos</span><% if (q.discountCents) { %><br><span class="save-chip">You save <%= u.money(q.discountCents, p.currency) %> · <%= q.code %></span><% } %></span>
+            </label>
+            <% }) %>
           </fieldset>
-        <% } %>
-        <% if (coupon.applied) { const qq = (packages.find(function (p) { return p.quote.coupon; }) || packages[0]).quote; %>
-          <input type="hidden" name="coupon" value="<%= coupon.applied.code %>">
-          <% if (packages.length === 1) { %>
-          <dl class="price-lines">
-            <dt>Package price</dt><dd><%= u.money(qq.listCents, pkg.currency) %></dd>
-            <dt>Coupon <%= qq.code %></dt><dd class="price-discount">−<%= u.money(qq.discountCents, pkg.currency) %></dd>
-            <dt class="price-total">Total today</dt><dd class="price-total"><%= u.money(qq.totalCents, pkg.currency) %></dd>
-          </dl>
-          <% } %>
         <% } %>
         <div class="field <%= errors.name ? 'has-error' : '' %>"><label for="buy-name">Your name</label><input id="buy-name" type="text" name="name" value="<%= f.name || '' %>" autocomplete="name" required><%- err('name') %></div>
         <div class="field <%= errors.email ? 'has-error' : '' %>"><label for="buy-email">Email</label><input id="buy-email" type="email" name="email" value="<%= f.email || '' %>" autocomplete="email" required><p class="hint">We use this to match your payment to your Chew account and send your receipt.</p><%- err('email') %></div>
         <div class="field"><label for="buy-phone">Phone <span class="fine">(optional)</span></label><input id="buy-phone" type="tel" name="phone" value="<%= f.phone || '' %>" autocomplete="tel"></div>
+        <% if (!blocker) { %>
+        <div class="coupon-form">
+          <label for="coupon-code" class="label">Have a coupon code?</label>
+          <div class="coupon-row">
+            <input id="coupon-code" class="input input-sm" type="text" name="coupon" value="<%= f.coupon || '' %>" placeholder="e.g. SAVE20" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40">
+            <button class="btn btn-light btn-sm" type="submit" name="apply" value="1">Apply</button>
+            <% if (f.coupon) { %><button class="btn btn-ghost btn-sm" type="submit" name="apply" value="remove">Remove</button><% } %>
+          </div>
+          <% if (couponMsg && couponMsg.tone === 'ok') { const q = couponMsg.quote; %>
+            <p class="coupon-ok" role="status"><%- icon('check') %><span>Coupon <strong><%= q.code %></strong> applied — <%= q.label %><%= q.forPackage ? ' the ' + q.forPackage : '' %><% if (q.coupon.description) { %>. <%= q.coupon.description %><% } %></span></p>
+          <% } else if (couponMsg) { %>
+            <p class="error-text" role="alert"><%= couponMsg.text %></p>
+          <% } %>
+        </div>
+        <% } %>
+        <% const sq = selectedQuote; const cur = (packages.find(function (p) { return String(p.id) === String(f.package_id); }) || pkg).currency; %>
+        <dl class="price-lines" data-price-summary <%= sq && sq.discountCents ? '' : 'hidden' %>>
+          <dt>Package price</dt><dd data-f="list"><%= sq ? u.money(sq.listCents, cur) : '' %></dd>
+          <dt data-f="code-label">Coupon <%= sq && sq.discountCents ? sq.code : '' %></dt><dd class="price-discount" data-f="discount"><%= sq && sq.discountCents ? '−' + u.money(sq.discountCents, cur) : '' %></dd>
+          <dt class="price-total">Total today</dt><dd class="price-total" data-f="total"><%= sq ? u.money(sq.totalCents, cur) : '' %></dd>
+        </dl>
         <label class="check-row <%= errors.terms ? 'has-error' : '' %>"><input type="checkbox" name="terms" value="1" <%= f.terms ? 'checked' : '' %>><span>I accept the <a href="/wholesale-terms" target="_blank">Wholesale Terms</a> (version <%= termsVersion %>): credits are given to creators for free, never resold, and each creator is assigned to one wholesale affiliate.</span></label>
         <%- err('terms') %>
         <button class="btn btn-cta btn-lg btn-block" type="submit" <%= blocker ? 'disabled' : '' %>><%- icon('lock') %> PAY SECURELY WITH STRIPE</button>

@@ -14,7 +14,7 @@
   <% if (locals.error) { %>
     <p class="error-text" role="alert"><%= locals.error %></p>
   <% } else if (cp.applied) { %>
-    <p class="coupon-ok" role="status"><%- icon('check') %><span>Coupon <strong><%= cp.applied.code %></strong> applied — <%= cp.applied.label %><% if (cp.applied.coupon.description) { %>. <%= cp.applied.coupon.description %><% } %></span></p>
+    <p class="coupon-ok" role="status"><%- icon('check') %><span>Coupon <strong><%= cp.applied.code %></strong> applied — <%= cp.applied.label %><%= cp.applied.forPackage ? ' the ' + cp.applied.forPackage : '' %><% if (cp.applied.coupon.description) { %>. <%= cp.applied.coupon.description %><% } %></span></p>
   <% } else if (err) { %>
     <p class="error-text" role="alert"><%= err %></p>
   <% } %>

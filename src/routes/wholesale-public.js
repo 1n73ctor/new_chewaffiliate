@@ -83,10 +83,25 @@ router.post('/wholesale/inquiry', rateLimit({ windowMs: 3_600_000, max: 6 }), as
 // ---- Buy credits (direct purchase by email) ---------------------------------------------
 function buyPage(res, { form = {}, errors = {}, status = 200, canceled = false } = {}) {
   const priced = wholesale.quotePackages(form.coupon, { email: EMAIL_RE.test(form.email || '') ? form.email : null });
+  const list = priced.packages;
+  // Keep the buyer's package; otherwise pick the one a package-only coupon is for.
+  const selected =
+    list.find((p) => String(p.id) === String(form.package_id)) || list.find((p) => p.quote.coupon && p.quote.coupon.package_id) || list[0] || null;
+  if (selected) form.package_id = String(selected.id);
+  const sq = selected ? selected.quote : null;
+  let couponMsg = null;
+  if (errors.coupon) couponMsg = { tone: 'error', text: errors.coupon };
+  else if (sq && sq.coupon) couponMsg = { tone: 'ok', quote: sq };
+  else if (priced.applied) {
+    const other = list.find((p) => p.quote.coupon);
+    couponMsg = { tone: 'error', text: `${priced.applied.code} is for the ${other.name} — choose that package to use it.` };
+  } else if (priced.error) couponMsg = { tone: 'error', text: priced.error };
   res.status(status).page('public/buy-credits', {
     title: 'Buy See It. Cook It. credits',
     description: 'Buy promotional credits to give to creators for free. Pay securely with Stripe.',
-    packages: priced.packages,
+    packages: list,
+    selectedQuote: sq,
+    couponMsg,
     coupon: priced,
     blocker: wholesale.directPurchaseBlocker(),
     videoCost: credits.videoCost(),
@@ -104,15 +119,23 @@ router.get('/buy-credits', (req, res) => {
   buyPage(res, { canceled: !!req.query.canceled, form: { coupon: code, ...(req.user ? { email: req.user.email, name: `${req.user.first_name} ${req.user.last_name}` } : {}) } });
 });
 
+const buyForm = (b) => ({
+  name: clampStr(b.name, 120),
+  email: clampStr(b.email, 200).toLowerCase(),
+  phone: clampStr(b.phone, 40),
+  package_id: clampStr(b.package_id, 10),
+  terms: b.terms === '1',
+  coupon: b.apply === 'remove' ? '' : wholesale.normCode(b.coupon),
+});
+
+// "Apply" / "Remove" on the coupon field: show the new prices, keep everything typed.
+router.post('/buy-credits', rateLimit({ windowMs: 3_600_000, max: 60, key: (req) => `coupon:${req.ip}` }), (req, res, next) => {
+  if (!req.body.apply) return next();
+  buyPage(res, { form: buyForm(req.body) });
+});
+
 router.post('/buy-credits', rateLimit({ windowMs: 3_600_000, max: 10 }), async (req, res) => {
-  const form = {
-    name: clampStr(req.body.name, 120),
-    email: clampStr(req.body.email, 200).toLowerCase(),
-    phone: clampStr(req.body.phone, 40),
-    package_id: clampStr(req.body.package_id, 10),
-    terms: req.body.terms === '1',
-    coupon: wholesale.normCode(req.body.coupon),
-  };
+  const form = buyForm(req.body);
   const errors = {};
   if (!form.name) errors.name = 'Please enter your name.';
   if (!EMAIL_RE.test(form.email)) errors.email = 'Please enter the email you use (or will use) for your Chew account.';

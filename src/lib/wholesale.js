@@ -47,10 +47,11 @@ function acknowledge(req) {
 const MIN_CHARGE_CENTS = 50; // Stripe's smallest card charge
 const normCode = (c) => String(c || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40);
 
-// Paid uses, plus checkouts started in the last hour (so a limited code can't be
-// oversold by several people paying at once).
+// Total uses: paid, plus checkouts started in the last hour (so a limited code can't be
+// oversold by several people paying at once). Per-email uses: completed payments only,
+// so an abandoned checkout never blocks the same buyer from trying again.
 function couponUses(couponId, email = null) {
-  const recent = "datetime('now', '-1 hour')";
+  const recent = email ? "'9999-12-31'" : "datetime('now', '-1 hour')";
   const orders = db.get(
     `SELECT COUNT(*) AS n FROM package_orders o JOIN users u ON u.id = o.user_id
      WHERE o.coupon_id = ? AND (o.status = 'paid' OR (o.status = 'pending' AND o.created_at >= ${recent}))${email ? ' AND u.email = ?' : ''}`,
@@ -87,7 +88,16 @@ function quote(pkg, code, { email = null } = {}) {
   const discount = Math.min(pkg.price_cents, coupon.kind === 'fixed' ? coupon.amount_cents : Math.round((pkg.price_cents * coupon.percent_bps) / 10000));
   if (discount <= 0) return fail('That coupon doesn’t apply to this package.');
   if (pkg.price_cents - discount < MIN_CHARGE_CENTS) return fail('That coupon can’t be used for this package.');
-  return { listCents: pkg.price_cents, discountCents: discount, totalCents: pkg.price_cents - discount, coupon, code: coupon.code, label: couponLabel(coupon), error: null };
+  return {
+    listCents: pkg.price_cents,
+    discountCents: discount,
+    totalCents: pkg.price_cents - discount,
+    coupon,
+    code: coupon.code,
+    label: couponLabel(coupon),
+    forPackage: coupon.package_id ? pkg.name : null,
+    error: null,
+  };
 }
 
 // Packages priced with a code, for the package pages.
