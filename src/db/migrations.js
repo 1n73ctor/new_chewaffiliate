@@ -765,4 +765,35 @@ module.exports = [
   CREATE INDEX idx_purchases_status ON credit_purchases(status, id);
   CREATE INDEX idx_purchases_email ON credit_purchases(email);
   `,
+
+  /* 7: coupon codes for credit packages. price_cents on orders stays the amount
+        actually charged; list price, discount and code are recorded alongside */ `
+  CREATE TABLE coupons (
+    id              INTEGER PRIMARY KEY,
+    code            TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    description     TEXT,
+    kind            TEXT NOT NULL DEFAULT 'percent',
+    percent_bps     INTEGER NOT NULL DEFAULT 0 CHECK (percent_bps BETWEEN 0 AND 10000),
+    amount_cents    INTEGER NOT NULL DEFAULT 0 CHECK (amount_cents >= 0),
+    package_id      INTEGER REFERENCES credit_packages(id),
+    starts_on       TEXT,
+    ends_on         TEXT,
+    max_redemptions INTEGER,
+    per_email_limit INTEGER,
+    active          INTEGER NOT NULL DEFAULT 1,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  ALTER TABLE package_orders ADD COLUMN list_price_cents INTEGER;
+  ALTER TABLE package_orders ADD COLUMN discount_cents INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE package_orders ADD COLUMN coupon_id INTEGER REFERENCES coupons(id);
+  ALTER TABLE package_orders ADD COLUMN coupon_code TEXT;
+  ALTER TABLE credit_purchases ADD COLUMN list_price_cents INTEGER;
+  ALTER TABLE credit_purchases ADD COLUMN discount_cents INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE credit_purchases ADD COLUMN coupon_id INTEGER REFERENCES coupons(id);
+  ALTER TABLE credit_purchases ADD COLUMN coupon_code TEXT;
+  CREATE INDEX idx_orders_coupon ON package_orders(coupon_id);
+  CREATE INDEX idx_purchases_coupon ON credit_purchases(coupon_id);
+  `,
 ];

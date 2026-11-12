@@ -259,6 +259,43 @@ module.exports = {
     validate: (v) => (!(v.price_cents > 0) ? 'Enter a price.' : !(Number.isInteger(v.credits) && v.credits > 0) ? 'Credits must be a positive whole number.' : null),
     touch: true,
   },
+  coupons: {
+    title: 'See It. Cook It. — Coupons',
+    singular: 'coupon',
+    table: 'coupons',
+    perm: 'wholesale.manage',
+    order: 'active DESC, id DESC',
+    search: ['code', 'description'],
+    columns: ['code', 'kind', 'percent_bps', 'amount_cents', 'package_id', 'ends_on', 'active'],
+    intro: 'Discount codes for credit packages, on the homepage “Buy credits” page and the affiliates’ packages page. Share a link like /buy-credits?coupon=CODE to apply it automatically. Usage is on the Wholesale & credits page. A coupon that has been used can’t be deleted — switch it off instead.',
+    fields: [
+      { name: 'code', label: 'Code', required: true, help: 'Letters, numbers, - and _. Not case-sensitive, e.g. SAVE20.' },
+      { name: 'description', label: 'Note shown when applied (optional)', help: 'e.g. Launch offer — ends Nov 30' },
+      { name: 'kind', label: 'Discount type', type: 'select', required: true, default: 'percent', options: () => [['percent', 'Percentage off'], ['fixed', 'Fixed amount off']] },
+      { name: 'percent_bps', label: 'Percentage off (for “Percentage off”)', type: 'percent' },
+      { name: 'amount_cents', label: 'Amount off (for “Fixed amount off”)', type: 'money' },
+      { name: 'package_id', label: 'Only for this package (leave “—” for all packages)', type: 'select', options: opts('SELECT id AS v, name AS l FROM credit_packages ORDER BY sort, id') },
+      { name: 'starts_on', label: 'Valid from (optional)', type: 'date' },
+      { name: 'ends_on', label: 'Valid until (optional, inclusive)', type: 'date' },
+      { name: 'max_redemptions', label: 'Total uses allowed (blank = unlimited)', type: 'number' },
+      { name: 'per_email_limit', label: 'Uses per buyer email (blank = unlimited)', type: 'number', default: 1 },
+      { name: 'active', label: 'Active', type: 'checkbox', default: 1 },
+    ],
+    validate: (v) => {
+      v.code = String(v.code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40);
+      if (!v.code) return 'Enter a code using letters, numbers, - or _.';
+      if (v.kind === 'percent' && !(v.percent_bps > 0 && v.percent_bps < 10000)) return 'Enter a percentage between 0 and 100 (not 100 — Stripe can’t take a $0 payment).';
+      if (v.kind === 'fixed' && !(v.amount_cents > 0)) return 'Enter the amount off, e.g. 50.00';
+      if (v.kind === 'percent') v.amount_cents = 0;
+      if (v.kind === 'fixed') v.percent_bps = 0;
+      if (v.starts_on && v.ends_on && v.ends_on < v.starts_on) return '“Valid until” must be on or after “Valid from”.';
+      for (const k of ['max_redemptions', 'per_email_limit']) {
+        if (v[k] != null && !(Number.isInteger(v[k]) && v[k] >= 1)) return 'Use limits must be whole numbers of 1 or more (or blank for unlimited).';
+      }
+      return null;
+    },
+    touch: true,
+  },
   promo_copy: {
     title: 'See It. Cook It. — Promo copy & ads',
     singular: 'piece of copy',

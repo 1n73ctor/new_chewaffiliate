@@ -82,10 +82,12 @@ router.post('/wholesale/inquiry', rateLimit({ windowMs: 3_600_000, max: 6 }), as
 
 // ---- Buy credits (direct purchase by email) ---------------------------------------------
 function buyPage(res, { form = {}, errors = {}, status = 200, canceled = false } = {}) {
+  const priced = wholesale.quotePackages(form.coupon, { email: EMAIL_RE.test(form.email || '') ? form.email : null });
   res.status(status).page('public/buy-credits', {
     title: 'Buy See It. Cook It. credits',
     description: 'Buy promotional credits to give to creators for free. Pay securely with Stripe.',
-    packages: wholesale.packages(),
+    packages: priced.packages,
+    coupon: priced,
     blocker: wholesale.directPurchaseBlocker(),
     videoCost: credits.videoCost(),
     termsVersion: wholesale.termsVersion(),
@@ -97,8 +99,9 @@ function buyPage(res, { form = {}, errors = {}, status = 200, canceled = false }
 
 router.get('/buy-credits', (req, res) => {
   // Signed-in affiliates buy from their back office, where credits arrive automatically.
-  if (req.user && req.user.affiliate_id && req.user.status === 'active') return res.redirect('/office/see-it-cook-it/packages');
-  buyPage(res, { canceled: !!req.query.canceled, form: req.user ? { email: req.user.email, name: `${req.user.first_name} ${req.user.last_name}` } : {} });
+  const code = wholesale.normCode(req.query.coupon);
+  if (req.user && req.user.affiliate_id && req.user.status === 'active') return res.redirect(`/office/see-it-cook-it/packages${code ? `?coupon=${encodeURIComponent(code)}` : ''}`);
+  buyPage(res, { canceled: !!req.query.canceled, form: { coupon: code, ...(req.user ? { email: req.user.email, name: `${req.user.first_name} ${req.user.last_name}` } : {}) } });
 });
 
 router.post('/buy-credits', rateLimit({ windowMs: 3_600_000, max: 10 }), async (req, res) => {
@@ -108,6 +111,7 @@ router.post('/buy-credits', rateLimit({ windowMs: 3_600_000, max: 10 }), async (
     phone: clampStr(req.body.phone, 40),
     package_id: clampStr(req.body.package_id, 10),
     terms: req.body.terms === '1',
+    coupon: wholesale.normCode(req.body.coupon),
   };
   const errors = {};
   if (!form.name) errors.name = 'Please enter your name.';
@@ -118,10 +122,10 @@ router.post('/buy-credits', rateLimit({ windowMs: 3_600_000, max: 10 }), async (
   if (Object.keys(errors).length) return buyPage(res, { form, errors, status: 422 });
   let purchase;
   try {
-    purchase = wholesale.createPurchase({ email: form.email, name: form.name, phone: form.phone || null, packageId: form.package_id, ipHash: ipHash(req.ip) });
+    purchase = wholesale.createPurchase({ email: form.email, name: form.name, phone: form.phone || null, packageId: form.package_id, ipHash: ipHash(req.ip), couponCode: form.coupon || null });
   } catch (err) {
     if (!(err instanceof credits.CreditError)) throw err;
-    return buyPage(res, { form, errors: { _: err.message }, status: 422 });
+    return buyPage(res, { form, errors: err.code === 'coupon' ? { coupon: err.message } : { _: err.message }, status: 422 });
   }
   try {
     res.redirect(303, await wholesale.startPurchaseCheckout(purchase));

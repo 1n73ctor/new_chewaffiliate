@@ -50,7 +50,10 @@ function createCheckoutSession({ order, email, successUrl, cancelUrl }) {
           price_data: {
             currency: order.currency.toLowerCase(),
             unit_amount: order.price_cents,
-            product_data: { name: order.package_name, description: `${order.credits.toLocaleString('en-US')} promotional credits for See It. Cook It.` },
+            product_data: {
+              name: order.package_name,
+              description: `${order.credits.toLocaleString('en-US')} promotional credits for See It. Cook It.${order.coupon_code ? ` Coupon ${order.coupon_code} applied.` : ''}`,
+            },
           },
         },
       },

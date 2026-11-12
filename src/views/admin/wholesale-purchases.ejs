@@ -16,7 +16,7 @@
     <tr>
       <td class="mono"><%= p.ref %><br><span class="fine"><%= u.fmtDateTime(p.paid_at || p.created_at) %></span></td>
       <td><strong><%= p.name %></strong><br><span class="fine"><%= p.email %><%= p.phone ? ' · ' + p.phone : '' %></span></td>
-      <td><%= p.package_name %><br><span class="fine"><%= u.num(p.credits) %> credits · <%= u.money(p.price_cents, p.currency) %></span></td>
+      <td><%= p.package_name %><br><span class="fine"><%= u.num(p.credits) %> credits · <%= u.money(p.price_cents, p.currency) %><%= p.discount_cents ? ' (coupon ' + p.coupon_code + ', −' + u.money(p.discount_cents, p.currency) + ')' : '' %></span></td>
       <td><span class="badge <%= p.status === 'credited' ? 'badge-live' : p.status === 'paid' ? 'badge-soon' : p.status === 'refunded' ? 'badge-red' : 'badge-grey' %>"><%= statuses[p.status] || p.status %></span></td>
       <td>
         <% if (p.status === 'credited') { %>

@@ -602,3 +602,68 @@ test('homepage Buy credits: pay by email → admin adds the credits once → ref
   assert.equal(credits.available(g.user.id), 0);
   assert.deepEqual(credits.reconcile().problems, []);
 });
+
+test('coupons: admin creates codes; buyers see the discount; limits, dates and packages are enforced', async () => {
+  // Admin creates coupons (100% off is refused — Stripe can't take $0)
+  const bad = await admin.post('/admin/m/coupons', { code: 'free', kind: 'percent', percent_bps: '100', per_email_limit: '1', active: '1' });
+  assert.equal(bad.status, 422);
+  assert.equal((await admin.post('/admin/m/coupons', { code: 'save20 ', description: 'Launch offer', kind: 'percent', percent_bps: '20', max_redemptions: '2', per_email_limit: '1', active: '1' })).status, 302);
+  assert.equal((await admin.post('/admin/m/coupons', { code: 'TAKE50', kind: 'fixed', amount_cents: '50.00', per_email_limit: '', active: '1' })).status, 302);
+  const today = new Date().toISOString().slice(0, 10);
+  assert.equal((await admin.post('/admin/m/coupons', { code: 'OLD', kind: 'percent', percent_bps: '10', ends_on: '2020-01-01', active: '1' })).status, 302);
+  assert.equal((await admin.post('/admin/m/coupons', { code: 'LATER', kind: 'percent', percent_bps: '10', starts_on: '2099-01-01', active: '1' })).status, 302);
+  db.run("INSERT INTO credit_packages (name, price_cents, credits, active, sort) VALUES ('Mini Pack', 10000, 700, 1, 9)");
+  const mini = db.get("SELECT id FROM credit_packages WHERE name = 'Mini Pack'").id;
+  assert.equal((await admin.post('/admin/m/coupons', { code: 'MINIONLY', kind: 'percent', percent_bps: '10', package_id: String(mini), active: '1' })).status, 302);
+  assert.equal(db.get("SELECT code FROM coupons WHERE code = 'SAVE20'").code, 'SAVE20', 'codes are normalised');
+  assert.ok(today);
+
+  // A visitor opens a coupon link: original price struck through, discounted price shown
+  const v = new Client();
+  const page = await v.get('/buy-credits?coupon=save20');
+  assert.ok(page.text.includes('Coupon <strong>SAVE20</strong> applied — 20% off'));
+  assert.ok(page.text.includes('<s class="price-was"'));
+  assert.ok(page.text.includes('$400.00'));
+  assert.ok(page.text.includes('You save $100.00'));
+  for (const [code, msg] of [['NOPE', 'isn’t valid'], ['OLD', 'has expired'], ['LATER', 'isn’t active yet']]) {
+    assert.ok((await v.get(`/buy-credits?coupon=${code}`)).text.includes(msg), code);
+  }
+  // Pays the discounted amount; the order records list price, discount and code
+  const r = await v.post('/buy-credits', { package_id: '1', name: 'Cody Coupon', email: 'cody@example.com', terms: '1', coupon: 'SAVE20' });
+  assert.equal(r.status, 303);
+  const p = db.get("SELECT * FROM credit_purchases WHERE email = 'cody@example.com'");
+  assert.deepEqual([p.price_cents, p.list_price_cents, p.discount_cents, p.coupon_code], [40000, 50000, 10000, 'SAVE20']);
+  assert.equal(sessions.get(p.stripe_session_id).amount, 40000, 'Stripe charges the discounted amount');
+  await signedWebhook({ type: 'checkout.session.completed', data: { object: { id: p.stripe_session_id, payment_status: 'paid', client_reference_id: p.ref, payment_intent: 'pi_cody' } } });
+  assert.ok(db.get("SELECT 1 FROM outbox WHERE recipient = 'cody@example.com' AND body LIKE '%coupon SAVE20%'"));
+  // Same email can't use it twice (per-email limit 1)
+  const again = await v.post('/buy-credits', { package_id: '1', name: 'Cody Coupon', email: 'CODY@example.com', terms: '1', coupon: 'SAVE20' });
+  assert.equal(again.status, 422);
+  assert.ok(again.text.includes('already used with this email'));
+  // Package-only coupon refuses the other package
+  const wrong = await v.post('/buy-credits', { package_id: '1', name: 'Pat', email: 'pat2@example.com', terms: '1', coupon: 'MINIONLY' });
+  assert.ok(wrong.text.includes('can’t be used for the Wholesale Starter Package'));
+
+  // An affiliate's own checkout takes the code too (and the total limit of 2 is reached)
+  const c = S.a.client;
+  const pk = await c.get('/office/see-it-cook-it/packages?coupon=SAVE20');
+  assert.ok(pk.text.includes('You save $100.00'));
+  const co = await c.post('/office/see-it-cook-it/checkout', { package_id: '1', coupon: 'SAVE20' });
+  assert.equal(co.status, 303);
+  const order = db.get("SELECT * FROM package_orders WHERE coupon_code = 'SAVE20'");
+  assert.deepEqual([order.price_cents, order.discount_cents], [40000, 10000]);
+  const third = await new Client().get('/buy-credits?coupon=SAVE20');
+  assert.ok(third.text.includes('has been fully used'), 'one paid + one checkout in progress = limit of 2');
+  // A bad code at checkout goes back with the reason, no order
+  const before = db.get('SELECT COUNT(*) AS n FROM package_orders').n;
+  const nope = await c.post('/office/see-it-cook-it/checkout', { package_id: '1', coupon: 'NOPE' });
+  assert.equal(nope.location, '/office/see-it-cook-it/packages?coupon=NOPE');
+  assert.equal(db.get('SELECT COUNT(*) AS n FROM package_orders').n, before);
+  // Fixed amount
+  assert.ok((await new Client().get('/buy-credits?coupon=TAKE50')).text.includes('$450.00'));
+  // Admin sees usage
+  const ws = await admin.get('/admin/wholesale');
+  assert.ok(ws.text.includes('SAVE20'));
+  assert.ok(ws.text.includes('$100.00'));
+  db.run('UPDATE credit_packages SET active = 0 WHERE id = ?', mini);
+});

@@ -17,18 +17,21 @@
   <div class="alert alert-warn" role="status"><%- icon('bell') %><div><%= blocker %> <% if (!/acknowledge/i.test(blocker)) { %><a href="/office/see-it-cook-it#package">Request more credits →</a><% } %></div></div>
 <% } %>
 
+<% if (!needsAck && packages.length) { %><div class="card coupon-card mt-1"><%- include('../partials/coupon-form', { action: '/office/see-it-cook-it/packages', coupon: coupon }) %></div><% } %>
+
 <div class="pkg-grid mt-1">
   <% if (!packages.length) { %><div class="empty"><%- icon('gift') %><h3>No packages right now</h3><p>Use “Request more credits” and our team will help.</p></div><% } %>
   <% packages.forEach(function (p) { %>
   <section class="card pkg-card">
     <h2 class="fs-110"><%= p.name %></h2>
-    <p class="ws-price"><%= u.money(p.price_cents, p.currency) %></p>
+    <div class="pkg-price"><%- include('../partials/price-tag', { q: p.quote, currency: p.currency }) %></div>
     <p class="mb-0"><strong><%= u.num(p.credits) %> promotional credits</strong></p>
     <p class="fine">About <%= u.num(Math.floor(p.credits / videoCost)) %> videos at today’s <%= u.num(videoCost) %> credits per video.</p>
     <% if (p.description) { %><p class="fs-sm muted"><%= p.description %></p><% } %>
     <form method="post" action="/office/see-it-cook-it/checkout">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="package_id" value="<%= p.id %>">
+      <% if (p.quote.coupon) { %><input type="hidden" name="coupon" value="<%= p.quote.code %>"><% } %>
       <button class="btn btn-cta btn-block" type="submit" <%= blocker ? 'disabled' : '' %>><%- icon('lock') %> Pay securely with Stripe</button>
     </form>
   </section>
@@ -40,9 +43,9 @@
 <section class="mt-2">
   <h2 class="fs-110">Your orders</h2>
   <div class="table-wrap"><table class="table">
-    <thead><tr><th>Order</th><th>Package</th><th class="num">Credits</th><th class="num">Price</th><th>Status</th><th>Date</th></tr></thead>
+    <thead><tr><th>Order</th><th>Package</th><th class="num">Credits</th><th class="num">Paid</th><th>Status</th><th>Date</th></tr></thead>
     <tbody><% orders.forEach(function (o) { %>
-      <tr><td class="mono"><%= o.ref %></td><td><%= o.package_name %></td><td class="num"><%= u.num(o.credits) %></td><td class="num"><%= u.money(o.price_cents, o.currency) %></td><td><span class="badge <%= o.status === 'paid' ? 'badge-live' : o.status === 'refunded' ? 'badge-red' : 'badge-grey' %>"><%= o.status %></span></td><td class="nowrap"><%= u.fmtDate(o.paid_at || o.created_at) %></td></tr>
+      <tr><td class="mono"><%= o.ref %></td><td><%= o.package_name %></td><td class="num"><%= u.num(o.credits) %></td><td class="num"><%= u.money(o.price_cents, o.currency) %><% if (o.discount_cents) { %><br><span class="fine">−<%= u.money(o.discount_cents, o.currency) %> · <%= o.coupon_code %></span><% } %></td><td><span class="badge <%= o.status === 'paid' ? 'badge-live' : o.status === 'refunded' ? 'badge-red' : 'badge-grey' %>"><%= o.status %></span></td><td class="nowrap"><%= u.fmtDate(o.paid_at || o.created_at) %></td></tr>
     <% }) %></tbody>
   </table></div>
 </section>

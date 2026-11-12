@@ -51,6 +51,7 @@ const NAV = [
       { key: 'wholesale-creators', href: '/admin/wholesale/creators', label: 'Creators & attribution', icon: 'users', perm: 'wholesale.view' },
       { key: 'wholesale-ledger', href: '/admin/wholesale/ledger', label: 'Credit ledger', icon: 'list', perm: 'wholesale.view' },
       { key: 'm-credit_packages', href: '/admin/m/credit_packages', label: 'Credit packages', icon: 'store', perm: 'wholesale.manage' },
+      { key: 'm-coupons', href: '/admin/m/coupons', label: 'Coupons', icon: 'ticket', perm: 'wholesale.manage' },
       { key: 'm-promo_copy', href: '/admin/m/promo_copy', label: 'Promo copy & ads', icon: 'megaphone', perm: 'content.manage' },
       { key: 'm-business_leads', href: '/admin/m/business_leads', label: 'Business inquiries', icon: 'mail', perm: 'leads.manage' },
     ],

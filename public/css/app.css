@@ -895,6 +895,24 @@ progress.progress::-moz-progress-bar, progress.track::-moz-progress-bar { backgr
 .buy-pkg > span:first-child { flex: 1 1 180px; min-width: 0; }
 .buy-pkg .ws-price { font-size: 1.8rem; margin: 0; }
 
+/* Coupons and prices */
+.coupon-form { display: grid; gap: 0.4rem; margin-bottom: 1rem; }
+.coupon-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.coupon-row .input { flex: 1 1 160px; min-width: 0; text-transform: uppercase; }
+.coupon-ok { margin: 0; display: flex; gap: 0.4rem; align-items: flex-start; color: var(--green-800); font-weight: 600; font-size: 0.9rem; }
+.coupon-ok .ico { width: 18px; height: 18px; flex: none; margin-top: 2px; }
+.coupon-card .coupon-form { margin-bottom: 0; max-width: 520px; }
+.price-tag { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; }
+.price-was { color: var(--muted); font-size: 1.05rem; font-weight: 600; }
+.save-chip { display: inline-flex; align-self: flex-start; width: fit-content; font-size: 0.78rem; font-weight: 800; color: var(--green-800); background: var(--green-100); border-radius: 999px; padding: 0.15rem 0.6rem; }
+.pkg-price { display: grid; gap: 0.35rem; margin: 0.2rem 0; }
+.buy-pkg-price { display: grid; justify-items: end; gap: 0.3rem; }
+.price-lines { display: grid; grid-template-columns: 1fr auto; gap: 0.35rem 1rem; margin: 0; padding: 0.8rem 1rem; background: var(--bg-soft); border-radius: 12px; font-size: 0.95rem; }
+.price-lines dt { color: var(--ink-2); }
+.price-lines dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.price-lines .price-discount { color: var(--green-700); font-weight: 700; }
+.price-lines .price-total { font-weight: 800; color: var(--ink); border-top: 1px solid var(--line); padding-top: 0.35rem; }
+
 /* Back office */
 .sic-overview .card-head h2 { display: flex; gap: 0.4rem; align-items: center; }
 .sic-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 1rem; }

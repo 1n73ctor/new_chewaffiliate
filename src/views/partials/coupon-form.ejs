@@ -1,0 +1,21 @@
+<%
+  // locals: action (page URL), coupon (wholesale.quotePackages result), error (optional override), keep (extra hidden fields)
+  const cp = locals.coupon || {};
+  const err = cp.error;
+%>
+<form class="coupon-form" method="get" action="<%= action %>" aria-label="Coupon code">
+  <% Object.entries(locals.keep || {}).forEach(function ([k, v]) { if (v) { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% } }) %>
+  <label for="coupon-code" class="label">Have a coupon code?</label>
+  <div class="coupon-row">
+    <input id="coupon-code" class="input input-sm" type="text" name="coupon" value="<%= cp.code || '' %>" placeholder="e.g. SAVE20" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40">
+    <button class="btn btn-light btn-sm" type="submit">Apply</button>
+    <% if (cp.code) { %><a class="btn btn-ghost btn-sm" href="<%= action %>">Remove</a><% } %>
+  </div>
+  <% if (locals.error) { %>
+    <p class="error-text" role="alert"><%= locals.error %></p>
+  <% } else if (cp.applied) { %>
+    <p class="coupon-ok" role="status"><%- icon('check') %><span>Coupon <strong><%= cp.applied.code %></strong> applied — <%= cp.applied.label %><% if (cp.applied.coupon.description) { %>. <%= cp.applied.coupon.description %><% } %></span></p>
+  <% } else if (err) { %>
+    <p class="error-text" role="alert"><%= err %></p>
+  <% } %>
+</form>

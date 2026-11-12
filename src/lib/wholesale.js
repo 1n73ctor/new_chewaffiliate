@@ -9,7 +9,7 @@ const credits = require('./credits');
 const audit = require('./audit');
 const { sendEmail } = require('./notify');
 const { recordEvent, EVENT_TYPES, SIC_REVENUE_TYPES } = require('./tracking');
-const { money, daysAgo } = require('./util');
+const { money, daysAgo, now } = require('./util');
 
 const SIC_COMMISSION_TYPES = [...SIC_REVENUE_TYPES, 'sic_refund'];
 const IN = (list) => list.map((t) => `'${t}'`).join(',');
@@ -43,19 +43,86 @@ function acknowledge(req) {
   audit(req, 'wholesale.policy_acknowledged', 'user', req.user.id, { version: termsVersion() });
 }
 
-function createOrder(userId, packageId) {
+// ---- Coupons -----------------------------------------------------------------------------
+const MIN_CHARGE_CENTS = 50; // Stripe's smallest card charge
+const normCode = (c) => String(c || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40);
+
+// Paid uses, plus checkouts started in the last hour (so a limited code can't be
+// oversold by several people paying at once).
+function couponUses(couponId, email = null) {
+  const recent = "datetime('now', '-1 hour')";
+  const orders = db.get(
+    `SELECT COUNT(*) AS n FROM package_orders o JOIN users u ON u.id = o.user_id
+     WHERE o.coupon_id = ? AND (o.status = 'paid' OR (o.status = 'pending' AND o.created_at >= ${recent}))${email ? ' AND u.email = ?' : ''}`,
+    couponId,
+    ...(email ? [email] : []),
+  ).n;
+  const purchases = db.get(
+    `SELECT COUNT(*) AS n FROM credit_purchases
+     WHERE coupon_id = ? AND (status IN ('paid', 'credited') OR (status = 'pending' AND created_at >= ${recent}))${email ? ' AND email = ?' : ''}`,
+    couponId,
+    ...(email ? [email] : []),
+  ).n;
+  return orders + purchases;
+}
+
+const couponLabel = (c) => (c.kind === 'fixed' ? `${money(c.amount_cents)} off` : `${c.percent_bps / 100}% off`);
+
+// The price of a package, with an optional coupon code. `error` says why a code doesn't apply.
+function quote(pkg, code, { email = null } = {}) {
+  const base = { listCents: pkg.price_cents, discountCents: 0, totalCents: pkg.price_cents, coupon: null, code: null, label: null, error: null };
+  const c = normCode(code);
+  if (!c) return base;
+  const fail = (error) => ({ ...base, code: c, error });
+  const coupon = db.get('SELECT * FROM coupons WHERE code = ?', c);
+  if (!coupon || !coupon.active) return fail('That coupon code isn’t valid.');
+  const today = now().slice(0, 10);
+  if (coupon.starts_on && today < coupon.starts_on) return fail('That coupon isn’t active yet.');
+  if (coupon.ends_on && today > coupon.ends_on) return fail('That coupon has expired.');
+  if (coupon.package_id && coupon.package_id !== pkg.id) return fail(`That coupon can’t be used for the ${pkg.name}.`);
+  if (coupon.max_redemptions != null && couponUses(coupon.id) >= coupon.max_redemptions) return fail('That coupon has been fully used.');
+  if (email && coupon.per_email_limit != null && couponUses(coupon.id, String(email).toLowerCase()) >= coupon.per_email_limit) {
+    return fail('That coupon was already used with this email.');
+  }
+  const discount = Math.min(pkg.price_cents, coupon.kind === 'fixed' ? coupon.amount_cents : Math.round((pkg.price_cents * coupon.percent_bps) / 10000));
+  if (discount <= 0) return fail('That coupon doesn’t apply to this package.');
+  if (pkg.price_cents - discount < MIN_CHARGE_CENTS) return fail('That coupon can’t be used for this package.');
+  return { listCents: pkg.price_cents, discountCents: discount, totalCents: pkg.price_cents - discount, coupon, code: coupon.code, label: couponLabel(coupon), error: null };
+}
+
+// Packages priced with a code, for the package pages.
+function quotePackages(code, { email = null } = {}) {
+  const list = packages().map((p) => ({ ...p, quote: quote(p, code, { email }) }));
+  const applied = list.find((p) => p.quote.coupon);
+  return { packages: list, code: normCode(code) || null, applied: applied ? applied.quote : null, error: normCode(code) && !applied && list[0] ? list[0].quote.error : null };
+}
+
+function priced(pkg, code, email) {
+  const q = quote(pkg, code, { email });
+  if (q.error) throw new credits.CreditError('coupon', q.error, 400);
+  return q;
+}
+
+function createOrder(userId, packageId, couponCode = null) {
   const pkg = db.get('SELECT * FROM credit_packages WHERE id = ? AND active = 1', Number(packageId) || 0);
   if (!pkg) return null;
+  const user = db.get('SELECT email FROM users WHERE id = ?', userId);
+  const q = priced(pkg, couponCode, user.email);
   const ref = credits.newRef('order', 'package_orders');
   db.run(
-    'INSERT INTO package_orders (ref, user_id, package_id, package_name, price_cents, currency, credits) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    `INSERT INTO package_orders (ref, user_id, package_id, package_name, price_cents, currency, credits, list_price_cents, discount_cents, coupon_id, coupon_code)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ref,
     userId,
     pkg.id,
     pkg.name,
-    pkg.price_cents,
+    q.totalCents,
     pkg.currency,
     pkg.credits,
+    q.listCents,
+    q.discountCents,
+    q.coupon ? q.coupon.id : null,
+    q.code,
   );
   return db.get('SELECT * FROM package_orders WHERE ref = ?', ref);
 }
@@ -124,27 +191,33 @@ function directPurchaseBlocker() {
   return null;
 }
 
-function createPurchase({ email, name, phone = null, packageId, ipHash = null }) {
+function createPurchase({ email, name, phone = null, packageId, ipHash = null, couponCode = null }) {
   const pkg = db.get('SELECT * FROM credit_packages WHERE id = ? AND active = 1', Number(packageId) || 0);
   if (!pkg) throw new credits.CreditError('invalid_request', 'Choose a package.', 400);
   email = String(email || '').trim().toLowerCase();
   if (!EMAIL_RE.test(email)) throw new credits.CreditError('invalid_request', 'Enter a valid email.', 400);
   if (!name) throw new credits.CreditError('invalid_request', 'Enter your name.', 400);
+  const q = priced(pkg, couponCode, email);
   const ref = credits.newRef('purchase', 'credit_purchases');
   db.run(
-    `INSERT INTO credit_purchases (ref, email, name, phone, package_id, package_name, price_cents, currency, credits, terms_version, terms_accepted_at, ip_hash)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)`,
+    `INSERT INTO credit_purchases (ref, email, name, phone, package_id, package_name, price_cents, currency, credits, terms_version, terms_accepted_at, ip_hash,
+                                   list_price_cents, discount_cents, coupon_id, coupon_code)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, ?, ?, ?, ?)`,
     ref,
     email,
     name,
     phone,
     pkg.id,
     pkg.name,
-    pkg.price_cents,
+    q.totalCents,
     pkg.currency,
     pkg.credits,
     termsVersion(),
     ipHash,
+    q.listCents,
+    q.discountCents,
+    q.coupon ? q.coupon.id : null,
+    q.code,
   );
   return db.get('SELECT * FROM credit_purchases WHERE ref = ?', ref);
 }
@@ -180,7 +253,7 @@ function markPurchasePaid(ref, { sessionId = null, paymentIntent = null } = {}) 
     subject: `Payment received — ${p.package_name} (${p.ref})`,
     text: `Hello ${p.name},
 
-Thanks — we received your payment of ${money(p.price_cents, p.currency)} for ${p.package_name} (${p.credits.toLocaleString('en-US')} See It. Cook It. promotional credits). Your reference is ${p.ref}.
+Thanks — we received your payment of ${money(p.price_cents, p.currency)}${p.discount_cents ? ` (coupon ${p.coupon_code}: ${money(p.discount_cents, p.currency)} off)` : ''} for ${p.package_name} (${p.credits.toLocaleString('en-US')} See It. Cook It. promotional credits). Your reference is ${p.ref}.
 
 Our team will add the credits to your Chew affiliate account${account ? '' : ' — if you don’t have one yet, join free with this email address: ' + config.baseUrl + '/join'} and email you when they’re ready.
 
@@ -565,6 +638,11 @@ module.exports = {
   enabled,
   termsVersion,
   packages,
+  quote,
+  quotePackages,
+  couponUses,
+  couponLabel,
+  normCode,
   purchaseBlocker,
   acknowledge,
   createOrder,

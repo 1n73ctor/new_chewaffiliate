@@ -42,6 +42,14 @@ router.get('/wholesale', view, (req, res) => {
     ),
     orders: db.all('SELECT o.*, u.affiliate_id FROM package_orders o JOIN users u ON u.id = o.user_id ORDER BY o.id DESC LIMIT 15'),
     purchasesWaiting: db.get("SELECT COUNT(*) AS n, COALESCE(SUM(credits), 0) AS credits FROM credit_purchases WHERE status = 'paid'"),
+    coupons: db.all(
+      `SELECT c.*, p.name AS package_name,
+         (SELECT COUNT(*) FROM package_orders o WHERE o.coupon_id = c.id AND o.status = 'paid')
+           + (SELECT COUNT(*) FROM credit_purchases x WHERE x.coupon_id = c.id AND x.status IN ('paid', 'credited')) AS uses,
+         (SELECT COALESCE(SUM(discount_cents), 0) FROM package_orders o WHERE o.coupon_id = c.id AND o.status = 'paid')
+           + (SELECT COALESCE(SUM(discount_cents), 0) FROM credit_purchases x WHERE x.coupon_id = c.id AND x.status IN ('paid', 'credited')) AS discount_total
+       FROM coupons c LEFT JOIN credit_packages p ON p.id = c.package_id ORDER BY c.active DESC, c.id DESC LIMIT 50`,
+    ),
     recon: credits.reconcile(),
     stripeReady: stripe.configured(),
     webhookReady: !!require('../../config').stripe.webhookSecret,

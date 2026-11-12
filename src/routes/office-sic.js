@@ -92,10 +92,12 @@ router.post('/see-it-cook-it/acknowledge', (req, res) => {
 // ---- Packages & checkout --------------------------------------------------------------------
 router.get('/see-it-cook-it/packages', (req, res) => {
   const acct = credits.account(req.user.id);
+  const priced = wholesale.quotePackages(req.query.coupon, { email: req.user.email });
   res.page('office/sic-packages', {
     title: 'Credit packages',
     nav: 'app',
-    packages: wholesale.packages(),
+    packages: priced.packages,
+    coupon: priced,
     blocker: wholesale.purchaseBlocker(req.user.id),
     acct,
     needsAck: !acct || !acct.attribution_ack_at || acct.attribution_ack_version !== wholesale.termsVersion(),
@@ -113,12 +115,21 @@ router.post('/see-it-cook-it/checkout', async (req, res, next) => {
     res.flash('error', blocker);
     return res.redirect('/office/see-it-cook-it/packages');
   }
-  const order = wholesale.createOrder(req.user.id, req.body.package_id);
+  const code = wholesale.normCode(req.body.coupon);
+  const back = `/office/see-it-cook-it/packages${code ? `?coupon=${encodeURIComponent(code)}` : ''}`;
+  let order;
+  try {
+    order = wholesale.createOrder(req.user.id, req.body.package_id, code);
+  } catch (err) {
+    if (!(err instanceof credits.CreditError)) throw err;
+    res.flash('error', err.message);
+    return res.redirect(back);
+  }
   if (!order) {
     res.flash('error', 'Choose a package.');
-    return res.redirect('/office/see-it-cook-it/packages');
+    return res.redirect(back);
   }
-  audit(req, 'wholesale.checkout_started', 'package_order', order.id, { ref: order.ref, package: order.package_name });
+  audit(req, 'wholesale.checkout_started', 'package_order', order.id, { ref: order.ref, package: order.package_name, coupon: order.coupon_code || undefined });
   try {
     res.redirect(303, await wholesale.startCheckout(order, req.user));
   } catch (err) {

@@ -1,0 +1,9 @@
+<%
+  // locals: q (wholesale.quote result), currency, big (bool)
+  const q = locals.q; const cur = locals.currency || 'USD';
+%>
+<span class="price-tag">
+  <% if (q.discountCents) { %><s class="price-was" aria-label="Was <%= u.money(q.listCents, cur) %>"><%= u.money(q.listCents, cur) %></s><% } %>
+  <span class="ws-price"><%= u.money(q.totalCents, cur) %></span>
+</span>
+<% if (q.discountCents) { %><span class="save-chip">You save <%= u.money(q.discountCents, cur) %> · <%= q.code %></span><% } %>
