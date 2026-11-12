@@ -84,18 +84,21 @@ router.post('/wholesale/inquiry', rateLimit({ windowMs: 3_600_000, max: 6 }), as
 function buyPage(res, { form = {}, errors = {}, status = 200, canceled = false } = {}) {
   const priced = wholesale.quotePackages(form.coupon, { email: EMAIL_RE.test(form.email || '') ? form.email : null });
   const list = priced.packages;
-  // Keep the buyer's package; otherwise pick the one a package-only coupon is for.
-  const selected =
-    list.find((p) => String(p.id) === String(form.package_id)) || list.find((p) => p.quote.coupon && p.quote.coupon.package_id) || list[0] || null;
+  // The buyer's package, or the first one — a coupon never changes the choice.
+  const selected = list.find((p) => String(p.id) === String(form.package_id)) || list[0] || null;
   if (selected) form.package_id = String(selected.id);
   const sq = selected ? selected.quote : null;
-  let couponMsg = null;
-  if (errors.coupon) couponMsg = { tone: 'error', text: errors.coupon };
-  else if (sq && sq.coupon) couponMsg = { tone: 'ok', quote: sq };
-  else if (priced.applied) {
-    const other = list.find((p) => p.quote.coupon);
-    couponMsg = { tone: 'error', text: `${priced.applied.code} is for the ${other.name} — choose that package to use it.` };
-  } else if (priced.error) couponMsg = { tone: 'error', text: priced.error };
+  // The coupon message for each package, so it can follow the buyer's choice.
+  const msgFor = (p) => {
+    if (p.quote.coupon) {
+      const q = p.quote;
+      return { tone: 'ok', text: `Coupon ${q.code} applied — ${q.label}${q.forPackage ? ` the ${q.forPackage}` : ''}${q.coupon.description ? `. ${q.coupon.description}` : ''}` };
+    }
+    if (priced.code) return { tone: 'error', text: p.quote.error };
+    return null;
+  };
+  for (const p of list) p.couponMsg = msgFor(p);
+  const couponMsg = errors.coupon ? { tone: 'error', text: errors.coupon } : selected ? selected.couponMsg : null;
   res.status(status).page('public/buy-credits', {
     title: 'Buy See It. Cook It. credits',
     description: 'Buy promotional credits to give to creators for free. Pay securely with Stripe.',

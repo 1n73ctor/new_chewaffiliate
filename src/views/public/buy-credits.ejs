@@ -27,10 +27,11 @@
           <div class="buy-pkg"><span><strong><%= pkg.name %></strong><br><span class="fine"><%= u.num(pkg.credits) %> promotional credits · <%= u.packageReach(pkg, videoCost) %></span></span><span class="buy-pkg-price"><%- include('../partials/price-tag', { q: pkg.quote, currency: pkg.currency }) %></span></div>
         <% } else { %>
           <fieldset class="field"><legend class="label">Choose a package</legend>
-            <% packages.forEach(function (p) { const q = p.quote; %>
-            <label class="check-row pkg-option"><input type="radio" name="package_id" value="<%= p.id %>" <%= String(f.package_id) === String(p.id) ? 'checked' : '' %>
-                data-list="<%= u.money(q.listCents, p.currency) %>" data-total="<%= u.money(q.totalCents, p.currency) %>" data-discount="<%= q.discountCents ? '−' + u.money(q.discountCents, p.currency) : '' %>" data-code="<%= q.discountCents ? q.code : '' %>">
-              <span><strong><%= p.name %></strong> — <% if (q.discountCents) { %><s class="price-was"><%= u.money(q.listCents, p.currency) %></s> <% } %><strong><%= u.money(q.totalCents, p.currency) %></strong><br><span class="fine"><%= u.num(p.credits) %> credits · <%= u.packageReach(p, videoCost) %></span><% if (q.discountCents) { %><br><span class="save-chip">You save <%= u.money(q.discountCents, p.currency) %> · <%= q.code %></span><% } %></span>
+            <% packages.forEach(function (p) { const q = p.quote; const picked = String(f.package_id) === String(p.id); const m = p.couponMsg; %>
+            <label class="check-row pkg-option <%= picked ? 'is-picked' : '' %>"><input type="radio" name="package_id" value="<%= p.id %>" <%= picked ? 'checked' : '' %>
+                data-list="<%= u.money(q.listCents, p.currency) %>" data-total="<%= u.money(q.totalCents, p.currency) %>" data-discount="<%= q.discountCents ? '−' + u.money(q.discountCents, p.currency) : '' %>" data-code="<%= q.discountCents ? q.code : '' %>"
+                data-msg="<%= m ? m.text : '' %>" data-msg-tone="<%= m ? m.tone : '' %>">
+              <span><strong><%= p.name %></strong> — <% if (q.discountCents) { %><span class="if-picked"><s class="price-was"><%= u.money(q.listCents, p.currency) %></s> <strong><%= u.money(q.totalCents, p.currency) %></strong></span><strong class="if-not-picked"><%= u.money(q.listCents, p.currency) %></strong><% } else { %><strong><%= u.money(q.listCents, p.currency) %></strong><% } %><br><span class="fine"><%= u.num(p.credits) %> credits · <%= u.packageReach(p, videoCost) %></span><% if (q.discountCents) { %><span class="if-picked"><br><span class="save-chip">You save <%= u.money(q.discountCents, p.currency) %> · <%= q.code %></span></span><% } %></span>
             </label>
             <% }) %>
           </fieldset>
@@ -46,11 +47,7 @@
             <button class="btn btn-light btn-sm" type="submit" name="apply" value="1">Apply</button>
             <% if (f.coupon) { %><button class="btn btn-ghost btn-sm" type="submit" name="apply" value="remove">Remove</button><% } %>
           </div>
-          <% if (couponMsg && couponMsg.tone === 'ok') { const q = couponMsg.quote; %>
-            <p class="coupon-ok" role="status"><%- icon('check') %><span>Coupon <strong><%= q.code %></strong> applied — <%= q.label %><%= q.forPackage ? ' the ' + q.forPackage : '' %><% if (q.coupon.description) { %>. <%= q.coupon.description %><% } %></span></p>
-          <% } else if (couponMsg) { %>
-            <p class="error-text" role="alert"><%= couponMsg.text %></p>
-          <% } %>
+          <p class="coupon-msg tone-<%= couponMsg ? couponMsg.tone : 'none' %>" data-coupon-msg role="status" <%= couponMsg ? '' : 'hidden' %>><%- icon('check', 'tone-ok-ico') %><%- icon('bell', 'tone-info-ico') %><span data-coupon-msg-text><%= couponMsg ? couponMsg.text : '' %></span></p>
         </div>
         <% } %>
         <% const sq = selectedQuote; const cur = (packages.find(function (p) { return String(p.id) === String(f.package_id); }) || pkg).currency; %>

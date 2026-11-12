@@ -235,6 +235,7 @@
   document.querySelectorAll('[data-price-summary]').forEach(function (box) {
     var form = box.closest('form');
     var set = function (f, text) { var el = box.querySelector('[data-f="' + f + '"]'); if (el) el.textContent = text; };
+    var msg = form.querySelector('[data-coupon-msg]');
     form.addEventListener('change', function (e) {
       if (e.target.name !== 'package_id') return;
       var d = e.target.dataset;
@@ -243,6 +244,13 @@
       set('discount', d.discount);
       set('code-label', 'Coupon ' + (d.code || ''));
       set('total', d.total);
+      // Only the chosen package shows its discount.
+      form.querySelectorAll('.pkg-option').forEach(function (l) { l.classList.toggle('is-picked', l.contains(e.target)); });
+      if (msg) {
+        msg.hidden = !d.msg;
+        msg.className = 'coupon-msg tone-' + (d.msgTone || 'none');
+        msg.querySelector('[data-coupon-msg-text]').textContent = d.msg || '';
+      }
     });
   });
 

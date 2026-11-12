@@ -621,7 +621,7 @@ test('coupons: admin creates codes; buyers see the discount; limits, dates and p
   // A visitor opens a coupon link: original price struck through, discounted price shown
   const v = new Client();
   const page = await v.get('/buy-credits?coupon=save20');
-  assert.ok(page.text.includes('Coupon <strong>SAVE20</strong> applied — 20% off'));
+  assert.ok(page.text.includes('Coupon SAVE20 applied — 20% off'));
   assert.ok(page.text.includes('<s class="price-was"'));
   assert.ok(page.text.includes('$400.00'));
   assert.ok(page.text.includes('You save $100.00'));
@@ -642,7 +642,7 @@ test('coupons: admin creates codes; buyers see the discount; limits, dates and p
   assert.ok(again.text.includes('already used with this email'));
   // Package-only coupon refuses the other package
   const wrong = await v.post('/buy-credits', { package_id: '1', name: 'Pat', email: 'pat2@example.com', terms: '1', coupon: 'MINIONLY' });
-  assert.ok(wrong.text.includes('can’t be used for the Wholesale Starter Package'));
+  assert.ok(wrong.text.includes('Coupon MINIONLY isn’t valid for the Wholesale Starter Package.'));
 
   // An affiliate's own checkout takes the code too (and the total limit of 2 is reached)
   const c = S.a.client;
@@ -673,22 +673,29 @@ test('coupons for one package: Apply keeps the chosen package; links pick the ri
   const adv = db.get("SELECT id FROM credit_packages WHERE name = 'Advance Pack'").id;
   await admin.post('/admin/m/coupons', { code: 'ADV1000', description: 'You save $1000', kind: 'fixed', amount_cents: '1000.00', package_id: String(adv), per_email_limit: '1', active: '1' });
 
-  // A link with the code pre-selects the package it is for and shows the total
+  // A coupon link never picks a package for the buyer: the first package stays selected
+  // and the code is reported as not valid for it.
   const v = new Client();
   const linked = await v.get('/buy-credits?coupon=adv1000');
-  assert.match(linked.text, new RegExp(`value="${adv}" checked`));
-  assert.ok(linked.text.includes('applied — $1,000.00 off the Advance Pack'));
-  assert.ok(/data-f="total">\$2,500\.00/.test(linked.text));
+  assert.match(linked.text, /value="1" checked/);
+  assert.ok(linked.text.includes('Coupon ADV1000 isn’t valid for the Wholesale Starter Package.'));
+  assert.ok(linked.text.includes('coupon-msg tone-error'));
 
   // Apply keeps the chosen package, name and email
   const applied = await v.post('/buy-credits', { package_id: String(adv), name: 'Ada Apply', email: 'ada@example.com', coupon: 'ADV1000', apply: '1' });
   assert.equal(applied.status, 200);
   assert.match(applied.text, new RegExp(`value="${adv}" checked`));
   assert.ok(applied.text.includes('value="Ada Apply"') && applied.text.includes('value="ada@example.com"'));
+  assert.ok(applied.text.includes('applied — $1,000.00 off the Advance Pack'));
+  assert.ok(/data-f="total">\$2,500\.00/.test(applied.text));
   // Choosing another package explains which one the code is for
   const other = await v.post('/buy-credits', { package_id: '1', name: 'Ada Apply', email: 'ada@example.com', coupon: 'ADV1000', apply: '1' });
-  assert.ok(other.text.includes('ADV1000 is for the Advance Pack — choose that package to use it.'));
+  // Picking another package: a clear error, prices stay normal, the choice is kept
+  assert.ok(other.text.includes('Coupon ADV1000 isn’t valid for the Wholesale Starter Package.'));
+  assert.ok(other.text.includes('coupon-msg tone-error'));
   assert.match(other.text, /value="1" checked/);
+  assert.match(other.text, /pkg-option is-picked"><input type="radio" name="package_id" value="1"/);
+  assert.match(other.text, new RegExp(`pkg-option "><input type="radio" name="package_id" value="${adv}"`), 'the coupon package is not highlighted as picked');
   // Remove clears the code
   const removed = await v.post('/buy-credits', { package_id: String(adv), coupon: 'ADV1000', apply: 'remove' });
   assert.ok(!removed.text.includes('applied —'));

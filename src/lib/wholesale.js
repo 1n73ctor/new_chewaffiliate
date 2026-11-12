@@ -80,7 +80,7 @@ function quote(pkg, code, { email = null } = {}) {
   const today = now().slice(0, 10);
   if (coupon.starts_on && today < coupon.starts_on) return fail('That coupon isn’t active yet.');
   if (coupon.ends_on && today > coupon.ends_on) return fail('That coupon has expired.');
-  if (coupon.package_id && coupon.package_id !== pkg.id) return fail(`That coupon can’t be used for the ${pkg.name}.`);
+  if (coupon.package_id && coupon.package_id !== pkg.id) return fail(`Coupon ${coupon.code} isn’t valid for the ${pkg.name}.`);
   if (coupon.max_redemptions != null && couponUses(coupon.id) >= coupon.max_redemptions) return fail('That coupon has been fully used.');
   if (email && coupon.per_email_limit != null && couponUses(coupon.id, String(email).toLowerCase()) >= coupon.per_email_limit) {
     return fail('That coupon was already used with this email.');

@@ -913,7 +913,16 @@ progress.progress::-moz-progress-bar, progress.track::-moz-progress-bar { backgr
 .price-lines dt { color: var(--ink-2); }
 .default-submit { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .pkg-option { padding: 0.7rem 0.8rem; border: 1.5px solid var(--line); border-radius: 12px; }
-.pkg-option:has(input:checked) { border-color: var(--green-700); background: var(--green-50); }
+.pkg-option.is-picked, .pkg-option:has(input:checked) { border-color: var(--green-700); background: var(--green-50); }
+.pkg-option:not(.is-picked) .if-picked, .pkg-option.is-picked .if-not-picked { display: none; }
+.coupon-msg { margin: 0; display: flex; gap: 0.4rem; align-items: flex-start; font-size: 0.9rem; font-weight: 600; }
+.coupon-msg[hidden] { display: none; }
+.coupon-msg .ico { width: 18px; height: 18px; flex: none; margin-top: 2px; display: none; }
+.coupon-msg.tone-ok { color: var(--green-800); }
+.coupon-msg.tone-ok .tone-ok-ico { display: block; }
+.coupon-msg.tone-info { color: var(--ink-2); background: var(--orange-50); border: 1px solid var(--orange-100); border-radius: 10px; padding: 0.5rem 0.7rem; font-weight: 500; }
+.coupon-msg.tone-info .tone-info-ico { display: block; color: var(--orange-700); }
+.coupon-msg.tone-error { color: var(--red); }
 .price-lines dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .price-lines .price-discount { color: var(--green-700); font-weight: 700; }
 .price-lines .price-total { font-weight: 800; color: var(--ink); border-top: 1px solid var(--line); padding-top: 0.35rem; }
