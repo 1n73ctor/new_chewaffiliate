@@ -26,7 +26,7 @@
     <h2 class="fs-110"><%= p.name %></h2>
     <div class="pkg-price"><%- include('../partials/price-tag', { q: p.quote, currency: p.currency }) %></div>
     <p class="mb-0"><strong><%= u.num(p.credits) %> promotional credits</strong></p>
-    <p class="fine">About <%= u.num(Math.floor(p.credits / videoCost)) %> videos at today’s <%= u.num(videoCost) %> credits per video.</p>
+    <p class="fine"><% if (p.target_subscribers) { %><%= u.packageReach(p, videoCost).replace(/^./, (c) => c.toUpperCase()) %>.<% } else { %>About <%= u.num(Math.floor(p.credits / videoCost)) %> videos at today’s <%= u.num(videoCost) %> credits per video.<% } %></p>
     <% if (p.description) { %><p class="fs-sm muted"><%= p.description %></p><% } %>
     <form method="post" action="/office/see-it-cook-it/checkout">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">

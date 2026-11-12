@@ -899,6 +899,7 @@ progress.progress::-moz-progress-bar, progress.track::-moz-progress-bar { backgr
 .coupon-form { display: grid; gap: 0.4rem; margin-bottom: 1rem; }
 .coupon-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .coupon-row .input { flex: 1 1 160px; min-width: 0; text-transform: uppercase; }
+.coupon-row .input::placeholder { text-transform: none; }
 .coupon-ok { margin: 0; display: flex; gap: 0.4rem; align-items: flex-start; color: var(--green-800); font-weight: 600; font-size: 0.9rem; }
 .coupon-ok .ico { width: 18px; height: 18px; flex: none; margin-top: 2px; }
 .coupon-card .coupon-form { margin-bottom: 0; max-width: 520px; }

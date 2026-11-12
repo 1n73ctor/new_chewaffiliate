@@ -24,13 +24,13 @@
         <button class="default-submit" type="submit" tabindex="-1" aria-hidden="true">Pay</button>
         <% if (packages.length === 1) { %>
           <input type="hidden" name="package_id" value="<%= pkg.id %>">
-          <div class="buy-pkg"><span><strong><%= pkg.name %></strong><br><span class="fine"><%= u.num(pkg.credits) %> promotional credits · about <%= u.num(Math.floor(pkg.credits / videoCost)) %> videos</span></span><span class="buy-pkg-price"><%- include('../partials/price-tag', { q: pkg.quote, currency: pkg.currency }) %></span></div>
+          <div class="buy-pkg"><span><strong><%= pkg.name %></strong><br><span class="fine"><%= u.num(pkg.credits) %> promotional credits · <%= u.packageReach(pkg, videoCost) %></span></span><span class="buy-pkg-price"><%- include('../partials/price-tag', { q: pkg.quote, currency: pkg.currency }) %></span></div>
         <% } else { %>
           <fieldset class="field"><legend class="label">Choose a package</legend>
             <% packages.forEach(function (p) { const q = p.quote; %>
             <label class="check-row pkg-option"><input type="radio" name="package_id" value="<%= p.id %>" <%= String(f.package_id) === String(p.id) ? 'checked' : '' %>
                 data-list="<%= u.money(q.listCents, p.currency) %>" data-total="<%= u.money(q.totalCents, p.currency) %>" data-discount="<%= q.discountCents ? '−' + u.money(q.discountCents, p.currency) : '' %>" data-code="<%= q.discountCents ? q.code : '' %>">
-              <span><strong><%= p.name %></strong> — <% if (q.discountCents) { %><s class="price-was"><%= u.money(q.listCents, p.currency) %></s> <% } %><strong><%= u.money(q.totalCents, p.currency) %></strong><br><span class="fine"><%= u.num(p.credits) %> credits · about <%= u.num(Math.floor(p.credits / videoCost)) %> videos</span><% if (q.discountCents) { %><br><span class="save-chip">You save <%= u.money(q.discountCents, p.currency) %> · <%= q.code %></span><% } %></span>
+              <span><strong><%= p.name %></strong> — <% if (q.discountCents) { %><s class="price-was"><%= u.money(q.listCents, p.currency) %></s> <% } %><strong><%= u.money(q.totalCents, p.currency) %></strong><br><span class="fine"><%= u.num(p.credits) %> credits · <%= u.packageReach(p, videoCost) %></span><% if (q.discountCents) { %><br><span class="save-chip">You save <%= u.money(q.discountCents, p.currency) %> · <%= q.code %></span><% } %></span>
             </label>
             <% }) %>
           </fieldset>

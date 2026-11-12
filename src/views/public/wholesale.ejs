@@ -18,7 +18,7 @@
       <% if (pkg) { %>
       <p class="label-sm">Starter package</p>
       <p class="ws-price"><%= u.money(pkg.price_cents, pkg.currency) %></p>
-      <p class="mb-0"><strong><%= u.num(pkg.credits) %> promotional credits</strong> to give to creators for free.</p>
+      <p class="mb-0"><strong><%= u.num(pkg.credits) %> promotional credits</strong> to give to creators for free<%= pkg.target_subscribers ? ' · ' + u.packageReach(pkg, videoCost) : '' %>.</p>
       <p class="fine mt-050 mb-0">Current video generation uses <%= u.num(videoCost) %> credits per completed video.</p>
       <% } else { %>
       <p class="mb-0">Packages are being updated — send us an inquiry below.</p>

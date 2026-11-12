@@ -708,3 +708,15 @@ test('coupons for one package: Apply keeps the chosen package; links pick the ri
   assert.ok(third.text.includes('already used with this email'));
   db.run('UPDATE credit_packages SET active = 0 WHERE id = ?', adv);
 });
+
+test('packages show target subscribers instead of the video count when set', async () => {
+  assert.ok((await new Client().get('/buy-credits')).text.includes('about 8 videos'), 'falls back to the video count');
+  const r = await admin.post('/admin/m/credit_packages/1', { name: 'Wholesale Starter Package', price_cents: '500.00', currency: 'USD', credits: '3500', target_subscribers: '10', sort: '1', active: '1' });
+  assert.equal(r.status, 302);
+  const page = await new Client().get('/buy-credits');
+  assert.ok(page.text.includes('10 target subscribers'));
+  assert.ok(!page.text.includes('about 8 videos'));
+  assert.ok((await S.a.client.get('/office/see-it-cook-it/packages')).text.includes('10 target subscribers.'));
+  assert.ok((await new Client().get('/wholesale')).text.includes('10 target subscribers'));
+  assert.equal((await admin.post('/admin/m/credit_packages/1', { name: 'Wholesale Starter Package', price_cents: '500.00', currency: 'USD', credits: '3500', target_subscribers: '-3', active: '1' })).status, 422);
+});

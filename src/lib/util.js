@@ -187,6 +187,13 @@ function paginate(total, page, perPage = 25) {
 
 const clampStr = (s, max) => String(s ?? '').trim().slice(0, max);
 
+// What a credit package is for, in one short phrase: its target subscribers when the
+// admin set one, otherwise roughly how many videos its credits cover.
+function packageReach(pkg, videoCost) {
+  if (pkg.target_subscribers) return `${num(pkg.target_subscribers)} target subscriber${pkg.target_subscribers === 1 ? '' : 's'}`;
+  return `about ${num(Math.floor(pkg.credits / Math.max(1, videoCost)))} videos`;
+}
+
 module.exports = {
   now,
   addMinutes,
@@ -213,4 +220,5 @@ module.exports = {
   safeNext,
   paginate,
   clampStr,
+  packageReach,
 };

@@ -245,7 +245,7 @@ module.exports = {
     table: 'credit_packages',
     perm: 'wholesale.manage',
     order: 'active DESC, sort, id',
-    columns: ['name', 'price_cents', 'credits', 'active', 'sort'],
+    columns: ['name', 'price_cents', 'credits', 'target_subscribers', 'active', 'sort'],
     intro: 'Packages wholesale affiliates can buy with Stripe. Changing a package affects future purchases only; credits already bought stay as they are.',
     fields: [
       { name: 'name', label: 'Name', required: true },
@@ -253,10 +253,18 @@ module.exports = {
       { name: 'price_cents', label: 'Price', type: 'money', required: true },
       { name: 'currency', label: 'Currency', default: 'USD' },
       { name: 'credits', label: 'Promotional credits included', type: 'number', required: true },
+      { name: 'target_subscribers', label: 'Target subscribers (optional)', type: 'number', help: 'Shown on the package as “10 target subscribers”. Leave blank to show roughly how many videos the credits cover instead.' },
       { name: 'sort', label: 'Sort order', type: 'number' },
       { name: 'active', label: 'On sale', type: 'checkbox', default: 1 },
     ],
-    validate: (v) => (!(v.price_cents > 0) ? 'Enter a price.' : !(Number.isInteger(v.credits) && v.credits > 0) ? 'Credits must be a positive whole number.' : null),
+    validate: (v) =>
+      !(v.price_cents > 0)
+        ? 'Enter a price.'
+        : !(Number.isInteger(v.credits) && v.credits > 0)
+          ? 'Credits must be a positive whole number.'
+          : v.target_subscribers != null && !(Number.isInteger(v.target_subscribers) && v.target_subscribers > 0)
+            ? 'Target subscribers must be a whole number above 0 (or blank).'
+            : null,
     touch: true,
   },
   coupons: {

@@ -796,4 +796,8 @@ module.exports = [
   CREATE INDEX idx_orders_coupon ON package_orders(coupon_id);
   CREATE INDEX idx_purchases_coupon ON credit_purchases(coupon_id);
   `,
+
+  /* 8: optional "target subscribers" shown on a credit package instead of the video count */ `
+  ALTER TABLE credit_packages ADD COLUMN target_subscribers INTEGER;
+  `,
 ];
