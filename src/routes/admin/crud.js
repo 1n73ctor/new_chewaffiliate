@@ -209,9 +209,30 @@ router.post('/:res/:id(\\d+)/inline', resource, (req, res) => {
 router.post('/:res/:id(\\d+)/delete', resource, (req, res) => {
   const r = req.resource;
   try {
-    db.run(`DELETE FROM ${r.table} WHERE id = ?`, req.params.id);
-    audit(req, `${r.key}.delete`, r.table, req.params.id);
-    res.flash('success', `Deleted ${r.singular}.`);
+    // Rows that exist only to describe this one go with it. A coupon tied to a
+    // single credit package is meaningless once the package is gone, and its
+    // foreign key would otherwise block the delete outright.
+    const swept = {};
+    const kept = {};
+    db.tx(() => {
+      for (const c of r.cascade || []) {
+        // Anything already bound to a sale is retired rather than removed, so the
+        // order rows keep pointing at something real; the rest is swept up.
+        if (c.retire) {
+          const k = db.run(c.retire, req.params.id).changes;
+          if (k) kept[c.label] = k;
+        }
+        const n = db.run(`DELETE FROM ${c.table} WHERE ${c.column} = ?`, req.params.id).changes;
+        if (n) swept[c.label] = n;
+      }
+      db.run(`DELETE FROM ${r.table} WHERE id = ?`, req.params.id);
+    });
+    const count = (o) => Object.entries(o).map(([label, n]) => `${n} ${label}${n > 1 ? 's' : ''}`).join(' and ');
+    audit(req, `${r.key}.delete`, r.table, req.params.id, { deleted: swept, retired: kept });
+    res.flash('success', `Deleted ${r.singular}${Object.keys(swept).length ? ` and its ${count(swept)}` : ''}.`);
+    if (Object.keys(kept).length) {
+      res.flash('error', `${count(kept)} had already been used, so ${Object.values(kept)[0] > 1 ? 'they were' : 'it was'} switched off and kept for the record instead of deleted.`);
+    }
   } catch (err) {
     if (!String(err.message).includes('FOREIGN KEY')) throw err;
     res.flash('error', `This ${r.singular} is still in use, so it can’t be deleted. Deactivate or unpublish it instead.`);

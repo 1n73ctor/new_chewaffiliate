@@ -774,3 +774,45 @@ test('a coupon can upgrade the package: lower price, more credits, a higher targ
 
   db.run('UPDATE credit_packages SET active = 0 WHERE id = ?', pro);
 });
+
+test('deleting a credit package sweeps up its unused coupons, retires the used ones, and keeps past sales', async () => {
+  db.run("INSERT INTO credit_packages (name, price_cents, credits, target_subscribers, active, sort) VALUES ('Doomed Pack', 20000, 900, '2-4+', 1, 7)");
+  const doomed = db.get("SELECT id FROM credit_packages WHERE name = 'Doomed Pack'").id;
+  // One code nobody ever used, one that gets redeemed.
+  await admin.post('/admin/m/coupons', { code: 'DOOMUNUSED', kind: 'fixed', amount_cents: '20.00', package_id: String(doomed), active: '1' });
+  await admin.post('/admin/m/coupons', { code: 'DOOM50', kind: 'fixed', amount_cents: '50.00', package_id: String(doomed), credits: '1500', target_subscribers: '5-9+', active: '1' });
+  const used = db.get("SELECT id FROM coupons WHERE code = 'DOOM50'").id;
+
+  const v = new Client();
+  await v.get('/buy-credits');
+  await v.post('/buy-credits', { package_id: String(doomed), name: 'Dee Doom', email: 'dee-doom@example.com', terms: '1', coupon: 'DOOM50' });
+  const before = db.get("SELECT * FROM credit_purchases WHERE email = 'dee-doom@example.com'");
+  assert.equal(before.credits, 1500, 'bought on the coupon’s upgraded credits');
+  assert.equal(before.coupon_id, used);
+
+  // This used to fail outright with "This package is still in use".
+  const r = await admin.post(`/admin/m/credit_packages/${doomed}/delete`, {});
+  assert.equal(r.status, 302);
+  assert.equal(db.get('SELECT COUNT(*) AS n FROM credit_packages WHERE id = ?', doomed).n, 0, 'the package is gone');
+  assert.equal(db.get("SELECT COUNT(*) AS n FROM coupons WHERE code = 'DOOMUNUSED'").n, 0, 'the unused coupon went with it');
+
+  // The redeemed one survives, switched off and no longer tied to any package,
+  // so it can never be applied to a different one.
+  const kept = db.get("SELECT * FROM coupons WHERE code = 'DOOM50'");
+  assert.ok(kept, 'the used coupon is kept');
+  assert.equal(kept.active, 0, 'and switched off');
+  assert.equal(kept.package_id, null);
+
+  // The sale survives with its own copy of what was bought.
+  const after = db.get("SELECT * FROM credit_purchases WHERE email = 'dee-doom@example.com'");
+  assert.equal(after.package_name, 'Doomed Pack');
+  assert.equal(after.coupon_code, 'DOOM50');
+  assert.equal(after.credits, 1500);
+  assert.equal(after.package_id, null, 'package_id is cleared, not the row');
+  assert.equal(after.coupon_id, used, 'still points at the retired coupon');
+  assert.deepEqual(db.raw.pragma('foreign_key_check'), [], 'no dangling references');
+
+  // A switched-off coupon cannot be used again.
+  const w = new Client();
+  assert.ok((await w.get('/buy-credits?coupon=DOOM50')).text.includes('isn’t valid'));
+});

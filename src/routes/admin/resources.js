@@ -247,7 +247,20 @@ module.exports = {
     perm: 'wholesale.manage',
     order: 'active DESC, sort, id',
     columns: ['name', 'price_cents', 'credits', 'target_subscribers', 'active', 'sort'],
-    intro: 'Packages wholesale affiliates can buy with Stripe. Changing a package affects future purchases only; credits already bought stay as they are.',
+    intro: 'Packages wholesale affiliates can buy with Stripe. Changing a package affects future purchases only; credits already bought stay as they are. Deleting one also deletes any coupon written just for it; past orders keep their own record of what was bought.',
+    // A coupon scoped to one package cannot outlive it: left with package_id cleared
+    // it would silently apply to every package instead. One that has been redeemed
+    // is part of a sale's record and cannot be deleted, so it is switched off first
+    // and the sweep below then skips it.
+    cascade: [{
+      table: 'coupons',
+      column: 'package_id',
+      label: 'coupon',
+      retire: `UPDATE coupons SET active = 0, package_id = NULL, updated_at = datetime('now')
+                WHERE package_id = ?
+                  AND id IN (SELECT coupon_id FROM credit_purchases WHERE coupon_id IS NOT NULL
+                             UNION SELECT coupon_id FROM package_orders WHERE coupon_id IS NOT NULL)`,
+    }],
     fields: [
       { name: 'name', label: 'Name', required: true },
       { name: 'description', label: 'Description', type: 'textarea' },

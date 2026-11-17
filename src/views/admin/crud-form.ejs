@@ -31,6 +31,6 @@
   </form>
   <% if (row.id) { %>
   <hr>
-  <form method="post" action="/admin/m/<%= r.key %>/<%= row.id %>/delete" data-confirm="Delete this <%= r.singular %>? This can’t be undone."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-danger btn-sm" type="submit"><%- icon('trash') %> Delete <%= r.singular %></button></form>
+  <form method="post" action="/admin/m/<%= r.key %>/<%= row.id %>/delete" data-confirm="Delete this <%= r.singular %>?<% if (r.cascade) { %> Any <%= r.cascade.map(function (c) { return c.label; }).join(' and ') %> written just for it goes too.<% } %> This can’t be undone."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-danger btn-sm" type="submit"><%- icon('trash') %> Delete <%= r.singular %></button></form>
   <% } %>
 </div>
