@@ -5,9 +5,10 @@
   <% if (sponsor) { %>
   <div class="sponsor-note"><%- icon('users') %><span>You were invited by <strong><%= sponsor.name %></strong> · <span class="mono"><%= sponsor.affiliate_id %></span></span></div>
   <% } %>
-  <% if (Object.keys(errors).length) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div>Please check the highlighted fields.</div></div><% } %>
+  <% if (Object.keys(errors).length) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div><%= errors._ || 'Please check the highlighted fields.' %></div></div><% } %>
   <form class="form" method="post" action="/join" novalidate>
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <%- include('../partials/bot-guard') %>
     <div class="form-row two">
       <div class="<%= cls('first_name') %>"><label for="first_name">First name</label><input id="first_name" type="text" name="first_name" autocomplete="given-name" value="<%= form.first_name || '' %>" required><%- err('first_name') %></div>
       <div class="<%= cls('last_name') %>"><label for="last_name">Last name</label><input id="last_name" type="text" name="last_name" autocomplete="family-name" value="<%= form.last_name || '' %>" required><%- err('last_name') %></div>

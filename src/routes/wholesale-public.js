@@ -7,6 +7,7 @@ const db = require('../db');
 const config = require('../config');
 const settings = require('../lib/settings');
 const rateLimit = require('../lib/rateLimit');
+const botGuard = require('../lib/botGuard');
 const credits = require('../lib/credits');
 const wholesale = require('../lib/wholesale');
 const { sendEmail } = require('../lib/notify');
@@ -44,6 +45,8 @@ router.post('/wholesale/inquiry', rateLimit({ windowMs: 3_600_000, max: 6 }), as
     page: ['home', 'wholesale'].includes(b.page) ? b.page : 'wholesale',
   };
   const errors = {};
+  const bot = botGuard.check(req);
+  if (bot) errors._ = 'That form was submitted too quickly to be genuine. Please try again.';
   if (!form.name) errors.name = 'Please enter your name.';
   if (!EMAIL_RE.test(form.email)) errors.email = 'Please enter a valid email.';
   if (form.phone.replace(/\D/g, '').length < 7) errors.phone = 'Please enter a phone number.';

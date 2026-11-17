@@ -17,6 +17,7 @@ const STRIPE_PORT = PORT + 1000;
 const BASE = `http://127.0.0.1:${PORT}`;
 Object.assign(process.env, {
   NODE_ENV: 'test',
+  BOT_MIN_SECONDS: '0',
   PORT: String(PORT),
   BASE_URL: BASE,
   DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'chew-ws-test-')),
@@ -29,6 +30,7 @@ Object.assign(process.env, {
   STRIPE_API_BASE: `http://127.0.0.1:${STRIPE_PORT}`,
 });
 
+const botGuard = require('../src/lib/botGuard');
 const createApp = require('../src/app');
 const db = require('../src/db');
 const credits = require('../src/lib/credits');
@@ -58,6 +60,7 @@ class Client {
     if (form) {
       const params = new URLSearchParams(form);
       if (!params.has('_csrf')) params.set('_csrf', this.csrf());
+      if (!params.has('form_ts')) params.set('form_ts', botGuard.token());
       h['content-type'] = 'application/x-www-form-urlencoded';
       body = params.toString();
     }
@@ -852,4 +855,43 @@ test('a used coupon can be deleted: the link is cut, every sale and its record s
   const re = await admin.post('/admin/m/coupons', { code: 'BYE75', kind: 'fixed', amount_cents: '10.00', active: '1' });
   assert.equal(re.status, 302);
   db.run('UPDATE credit_packages SET active = 0 WHERE id = ?', gone);
+});
+
+test('bot guard: the decoy field, a missing stamp and a forged stamp are all refused', async () => {
+  const lead = { name: 'Real Person', email: 'real@example.com', phone: '555 555 0199',
+                 company: 'Real Co', audience: 'Food channel, 40k subscribers', volume: 'Up to 25 creators a month', consent: '1' };
+  const count = () => db.get('SELECT COUNT(*) AS n FROM business_leads').n;
+
+  // The form carries both fields.
+  const page = await new Client().get('/wholesale');
+  assert.match(page.text, /name="website_url"/, 'decoy present');
+  assert.match(page.text, /name="form_ts" value="\d+\.[A-Za-z0-9_-]+"/, 'signed stamp present');
+  assert.match(page.text, /class="hp-field"/, 'decoy is hidden by a class, not an inline style');
+
+  const before = count();
+
+  // 1. a script that fills every input it finds
+  const c1 = new Client(); await c1.get('/wholesale');
+  const trapped = await c1.post('/wholesale/inquiry', { ...lead, website_url: 'http://spam.example' });
+  assert.equal(trapped.status, 422);
+  assert.equal(count(), before, 'nothing stored');
+
+  // 2. a script that posts straight to the endpoint without loading the form
+  const c2 = new Client(); await c2.get('/wholesale');
+  const bare = await c2.post('/wholesale/inquiry', { ...lead, form_ts: '' });
+  assert.equal(bare.status, 422);
+  assert.equal(count(), before, 'nothing stored');
+
+  // 3. a stamp back-dated by hand to beat the dwell time
+  const c3 = new Client(); await c3.get('/wholesale');
+  const forged = await c3.post('/wholesale/inquiry', { ...lead, form_ts: `${Date.now() - 60_000}.AAAAAAAAAAAAAAAAAAAAAAAA` });
+  assert.equal(forged.status, 422);
+  assert.equal(count(), before, 'nothing stored');
+
+  // 4. a person, with the fields the form actually rendered
+  const c4 = new Client(); await c4.get('/wholesale');
+  const ok = await c4.post('/wholesale/inquiry', lead);
+  assert.ok([302, 303].includes(ok.status), 'a person gets through: ' + ok.status);
+  assert.equal(count(), before + 1, 'the real inquiry is stored');
+  db.run("DELETE FROM business_leads WHERE email = 'real@example.com'");
 });

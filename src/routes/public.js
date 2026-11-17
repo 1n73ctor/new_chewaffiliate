@@ -3,6 +3,7 @@ const router = require('express').Router();
 const db = require('../db');
 const settings = require('../lib/settings');
 const rateLimit = require('../lib/rateLimit');
+const botGuard = require('../lib/botGuard');
 const { sendEmail } = require('../lib/notify');
 const { PATHWAY_STATUSES, LEGAL_PAGES, TICKET_TOPICS } = require('../lib/constants');
 const { clampStr } = require('../lib/util');
@@ -123,6 +124,8 @@ router.post('/help/contact', rateLimit({ windowMs: 3_600_000, max: 8 }), async (
     form.email ||= req.user.email;
   }
   const errors = {};
+  const bot = botGuard.check(req);
+  if (bot) errors._ = 'That form was submitted too quickly to be genuine. Please try again.';
   if (!form.name) errors.name = 'Please enter your name.';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Please enter a valid email.';
   if (!form.subject) errors.subject = 'Please add a subject.';

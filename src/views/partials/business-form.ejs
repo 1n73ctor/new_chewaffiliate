@@ -5,6 +5,8 @@
 %>
 <form class="form biz-form" method="post" action="/wholesale/inquiry" novalidate>
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <%- include('bot-guard') %>
+  <% if (errs._) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div><%= errs._ %></div></div><% } %>
   <input type="hidden" name="page" value="<%= locals.page || 'wholesale' %>">
   <div class="form-row two">
     <div class="field <%= errs.name ? 'has-error' : '' %>"><label for="biz-name">Name</label><input id="biz-name" type="text" name="name" value="<%= f.name || '' %>" autocomplete="name" required><%- err('name') %></div>

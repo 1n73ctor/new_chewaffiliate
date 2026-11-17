@@ -10,6 +10,7 @@ const path = require('path');
 const PORT = 4100 + Math.floor(Math.random() * 800);
 const BASE = `http://127.0.0.1:${PORT}`;
 process.env.NODE_ENV = 'test';
+process.env.BOT_MIN_SECONDS = '0';
 process.env.PORT = String(PORT);
 process.env.BASE_URL = BASE;
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'chew-test-'));
@@ -18,6 +19,7 @@ process.env.ADMIN_PASSWORD = 'Admin-Pass-123';
 process.env.RATE_LIMIT_FACTOR = '100';
 process.env.TRUST_PROXY = '1'; // lets tests simulate visitor IPs with X-Forwarded-For
 
+const botGuard = require('../src/lib/botGuard');
 const createApp = require('../src/app');
 const db = require('../src/db');
 
@@ -47,6 +49,7 @@ class Client {
     if (form) {
       const params = new URLSearchParams(form);
       if (!params.has('_csrf')) params.set('_csrf', this.csrf());
+      if (!params.has('form_ts')) params.set('form_ts', botGuard.token());
       h['content-type'] = 'application/x-www-form-urlencoded';
       payload = params.toString();
     }

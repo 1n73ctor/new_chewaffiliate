@@ -21,6 +21,8 @@
       <p class="muted">We reply by email. Include your Affiliate ID if you have one.</p>
       <form class="form" method="post" action="/help/contact" novalidate>
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <%- include('../partials/bot-guard') %>
+        <% if (errors._) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div><%= errors._ %></div></div><% } %>
         <div class="form-row two">
           <div class="field <%= errors.name ? 'has-error' : '' %>"><label for="c-name">Name</label><input id="c-name" type="text" name="name" autocomplete="name" value="<%= form.name || (user ? user.first_name + ' ' + user.last_name : '') %>" required><% if (errors.name) { %><p class="error"><%= errors.name %></p><% } %></div>
           <div class="field <%= errors.email ? 'has-error' : '' %>"><label for="c-email">Email</label><input id="c-email" type="email" name="email" autocomplete="email" value="<%= form.email || (user ? user.email : '') %>" required><% if (errors.email) { %><p class="error"><%= errors.email %></p><% } %></div>

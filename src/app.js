@@ -7,6 +7,7 @@ const compression = require('compression');
 const cookieParser = require('cookie-parser');
 
 const config = require('./config');
+const botGuard = require('./lib/botGuard');
 const db = require('./db');
 const settings = require('./lib/settings');
 const auth = require('./lib/auth');
@@ -115,6 +116,7 @@ function createApp() {
     };
     Object.assign(res.locals, {
       site: settings.all(),
+      botToken: botGuard.token(),
       icon,
       u: util,
       C: constants,

@@ -8,6 +8,7 @@ const db = require('../db');
 const config = require('../config');
 const settings = require('../lib/settings');
 const rateLimit = require('../lib/rateLimit');
+const botGuard = require('../lib/botGuard');
 const qr = require('../lib/qr');
 const { sendEmail, sendSms, smsAvailable } = require('../lib/notify');
 const { createSession, destroySession, hashPassword, passwordProblem, validName, nextSignupStep } = require('../lib/auth');
@@ -104,6 +105,8 @@ router.post('/', rateLimit({ windowMs: 3_600_000, max: 15, message: 'Too many si
   };
   const attr = readAttribution(req);
   const errors = {};
+  const bot = botGuard.check(req);
+  if (bot) errors._ = 'That form was submitted too quickly to be genuine. Please try again.';
   if (!form.first_name) errors.first_name = 'Enter your first name.';
   else if (!validName(form.first_name)) errors.first_name = 'Use letters only (spaces, hyphens and apostrophes are fine).';
   if (!form.last_name) errors.last_name = 'Enter your last name.';

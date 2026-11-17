@@ -999,3 +999,13 @@ details.request-more[open] { flex-basis: 100%; }
   .stats-5 { grid-template-columns: repeat(5, 1fr); }
   .stats-6 { grid-template-columns: repeat(6, 1fr); }
 }
+
+/* Decoy field for the bot guard: off-canvas rather than display:none, which some
+   scripts skip. A person never sees or tabs into it. */
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

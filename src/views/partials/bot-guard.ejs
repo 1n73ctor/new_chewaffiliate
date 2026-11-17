@@ -1,0 +1,7 @@
+<%# Decoy field plus a signed timestamp. Hidden by .hp-field in app.css, never by
+    an inline style, because the CSP forbids those. %>
+<div class="hp-field" aria-hidden="true">
+  <label for="website_url">Leave this field empty</label>
+  <input type="text" id="website_url" name="website_url" tabindex="-1" autocomplete="off">
+</div>
+<input type="hidden" name="form_ts" value="<%= botToken %>">
