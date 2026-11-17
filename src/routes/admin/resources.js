@@ -4,6 +4,7 @@
 const db = require('../../db');
 const { PATHWAY_STATUSES, LEAD_STATUSES, PROMO_KINDS, TRAINING_TRACKS } = require('../../lib/constants');
 const { EVENT_TYPES } = require('../../lib/tracking');
+const { parseTargetSubscribers } = require('../../lib/util');
 
 const opts = (sql) => () => db.all(sql).map((r) => [String(r.v), r.l]);
 const yesNo = [
@@ -253,18 +254,21 @@ module.exports = {
       { name: 'price_cents', label: 'Price', type: 'money', required: true },
       { name: 'currency', label: 'Currency', default: 'USD' },
       { name: 'credits', label: 'Promotional credits included', type: 'number', required: true },
-      { name: 'target_subscribers', label: 'Target subscribers (optional)', type: 'number', help: 'Shown on the package as “10 target subscribers”. Leave blank to show roughly how many videos the credits cover instead.' },
+      { name: 'target_subscribers', label: 'Target subscribers (optional)', help: 'A count or a range: 10, 3-6 or 3-6+. Shown on the package as “3-6+ target subscribers”. Leave blank to show roughly how many videos the credits cover instead.' },
       { name: 'sort', label: 'Sort order', type: 'number' },
       { name: 'active', label: 'On sale', type: 'checkbox', default: 1 },
     ],
-    validate: (v) =>
-      !(v.price_cents > 0)
-        ? 'Enter a price.'
-        : !(Number.isInteger(v.credits) && v.credits > 0)
-          ? 'Credits must be a positive whole number.'
-          : v.target_subscribers != null && !(Number.isInteger(v.target_subscribers) && v.target_subscribers > 0)
-            ? 'Target subscribers must be a whole number above 0 (or blank).'
-            : null,
+    validate: (v) => {
+      if (!(v.price_cents > 0)) return 'Enter a price.';
+      if (!(Number.isInteger(v.credits) && v.credits > 0)) return 'Credits must be a positive whole number.';
+      if (v.target_subscribers != null) {
+        // A count or a range, so the package can read "3-6+ target subscribers".
+        const t = parseTargetSubscribers(v.target_subscribers);
+        if (t.error) return t.error;
+        v.target_subscribers = t.value;
+      }
+      return null;
+    },
     touch: true,
   },
   coupons: {
@@ -274,7 +278,7 @@ module.exports = {
     perm: 'wholesale.manage',
     order: 'active DESC, id DESC',
     search: ['code', 'description'],
-    columns: ['code', 'kind', 'percent_bps', 'amount_cents', 'package_id', 'ends_on', 'active'],
+    columns: ['code', 'kind', 'percent_bps', 'amount_cents', 'package_id', 'credits', 'target_subscribers', 'ends_on', 'active'],
     intro: 'Discount codes for credit packages, on the homepage “Buy credits” page and the affiliates’ packages page. Share a link like /buy-credits?coupon=CODE to apply it automatically. Usage is on the Wholesale & credits page. A coupon that has been used can’t be deleted — switch it off instead.',
     fields: [
       { name: 'code', label: 'Code', required: true, help: 'Letters, numbers, - and _. Not case-sensitive, e.g. SAVE20.' },
@@ -283,6 +287,8 @@ module.exports = {
       { name: 'percent_bps', label: 'Percentage off (for “Percentage off”)', type: 'percent' },
       { name: 'amount_cents', label: 'Amount off (for “Fixed amount off”)', type: 'money' },
       { name: 'package_id', label: 'Only for this package (leave “—” for all packages)', type: 'select', options: opts('SELECT id AS v, name AS l FROM credit_packages ORDER BY sort, id') },
+      { name: 'credits', label: 'Promotional credits with this coupon (optional)', type: 'number', help: 'Leave blank to keep the package’s own credits. Set it to hand over more — e.g. 1000 on a package that normally includes 560.' },
+      { name: 'target_subscribers', label: 'Target subscribers with this coupon (optional)', help: 'A count or a range: 100+, or 6-12+. Leave blank to keep the package’s own.' },
       { name: 'starts_on', label: 'Valid from (optional)', type: 'date' },
       { name: 'ends_on', label: 'Valid until (optional, inclusive)', type: 'date' },
       { name: 'max_redemptions', label: 'Total uses allowed (blank = unlimited)', type: 'number' },
@@ -299,6 +305,14 @@ module.exports = {
       if (v.starts_on && v.ends_on && v.ends_on < v.starts_on) return '“Valid until” must be on or after “Valid from”.';
       for (const k of ['max_redemptions', 'per_email_limit']) {
         if (v[k] != null && !(Number.isInteger(v[k]) && v[k] >= 1)) return 'Use limits must be whole numbers of 1 or more (or blank for unlimited).';
+      }
+      if (v.credits != null && !(Number.isInteger(v.credits) && v.credits > 0)) {
+        return 'Credits with this coupon must be a whole number above 0 (or blank to keep the package’s own).';
+      }
+      if (v.target_subscribers != null) {
+        const t = parseTargetSubscribers(v.target_subscribers);
+        if (t.error) return t.error;
+        v.target_subscribers = t.value;
       }
       return null;
     },

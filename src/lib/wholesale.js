@@ -71,7 +71,9 @@ const couponLabel = (c) => (c.kind === 'fixed' ? `${money(c.amount_cents)} off` 
 
 // The price of a package, with an optional coupon code. `error` says why a code doesn't apply.
 function quote(pkg, code, { email = null } = {}) {
-  const base = { listCents: pkg.price_cents, discountCents: 0, totalCents: pkg.price_cents, coupon: null, code: null, label: null, error: null };
+  const base = { listCents: pkg.price_cents, discountCents: 0, totalCents: pkg.price_cents,
+    credits: pkg.credits, targetSubscribers: pkg.target_subscribers, upgraded: false,
+    coupon: null, code: null, label: null, error: null };
   const c = normCode(code);
   if (!c) return base;
   const fail = (error) => ({ ...base, code: c, error });
@@ -92,6 +94,11 @@ function quote(pkg, code, { email = null } = {}) {
     listCents: pkg.price_cents,
     discountCents: discount,
     totalCents: pkg.price_cents - discount,
+    // A coupon may also upgrade what the package includes, so a promotion can hand
+    // over more credits and a higher target than the package normally carries.
+    credits: coupon.credits != null ? coupon.credits : pkg.credits,
+    targetSubscribers: coupon.target_subscribers != null ? coupon.target_subscribers : pkg.target_subscribers,
+    upgraded: coupon.credits != null || coupon.target_subscribers != null,
     coupon,
     code: coupon.code,
     label: couponLabel(coupon),
@@ -128,7 +135,7 @@ function createOrder(userId, packageId, couponCode = null) {
     pkg.name,
     q.totalCents,
     pkg.currency,
-    pkg.credits,
+    q.credits,
     q.listCents,
     q.discountCents,
     q.coupon ? q.coupon.id : null,
@@ -221,7 +228,7 @@ function createPurchase({ email, name, phone = null, packageId, ipHash = null, c
     pkg.name,
     q.totalCents,
     pkg.currency,
-    pkg.credits,
+    q.credits,
     termsVersion(),
     ipHash,
     q.listCents,

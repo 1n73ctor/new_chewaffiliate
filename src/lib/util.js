@@ -187,11 +187,27 @@ function paginate(total, page, perPage = 25) {
 
 const clampStr = (s, max) => String(s ?? '').trim().slice(0, max);
 
+// "Target subscribers" is a count or a range an admin types: 10, 10+, 3-6, 3-6+.
+// Returns the tidied value, or an error message to show on the form.
+function parseTargetSubscribers(raw) {
+  const t = String(raw).replace(/\s+/g, '').replace(/[\u2013\u2014]/g, '-');
+  const m = /^(\d{1,9})(?:-(\d{1,9}))?\+?$/.exec(t);
+  if (!m) return { error: 'Target subscribers can be a count or a range, like 10, 3-6 or 3-6+ (or blank).' };
+  if (Number(m[1]) < 1) return { error: 'Target subscribers must start above 0.' };
+  if (m[2] && Number(m[2]) < Number(m[1])) return { error: 'The end of the range must not be below the start, e.g. 3-6.' };
+  return { value: t };
+}
+
 // What a credit package is for, in one short phrase: its target subscribers when the
-// admin set one, otherwise roughly how many videos its credits cover.
-function packageReach(pkg, videoCost) {
-  if (pkg.target_subscribers) return `${num(pkg.target_subscribers)} target subscriber${pkg.target_subscribers === 1 ? '' : 's'}`;
-  return `about ${num(Math.floor(pkg.credits / Math.max(1, videoCost)))} videos`;
+// admin set one, otherwise roughly how many videos its credits cover. `over` is a
+// quote, so an applied coupon's upgraded credits and target beat the package's own.
+function packageReach(pkg, videoCost, over = null) {
+  const target = over && over.targetSubscribers != null ? over.targetSubscribers : pkg.target_subscribers;
+  const included = over && over.credits != null ? over.credits : pkg.credits;
+  // The target can be a count or a range an admin typed, such as 3-6+, so format
+  // each number inside it and leave the dash and the plus where they are.
+  if (target) return `${String(target).replace(/\d+/g, (d) => num(Number(d)))} target subscriber${String(target) === '1' ? '' : 's'}`;
+  return `about ${num(Math.floor(included / Math.max(1, videoCost)))} videos`;
 }
 
 module.exports = {
@@ -221,4 +237,5 @@ module.exports = {
   paginate,
   clampStr,
   packageReach,
+  parseTargetSubscribers,
 };

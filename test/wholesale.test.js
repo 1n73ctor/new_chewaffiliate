@@ -726,4 +726,51 @@ test('packages show target subscribers instead of the video count when set', asy
   assert.ok((await S.a.client.get('/office/see-it-cook-it/packages')).text.includes('10 target subscribers.'));
   assert.ok((await new Client().get('/wholesale')).text.includes('10 target subscribers'));
   assert.equal((await admin.post('/admin/m/credit_packages/1', { name: 'Wholesale Starter Package', price_cents: '500.00', currency: 'USD', credits: '3500', target_subscribers: '-3', active: '1' })).status, 422);
+
+  // A range is kept as typed, tidied of spaces, and shown on every page.
+  const ranged = await admin.post('/admin/m/credit_packages/1', { name: 'Wholesale Starter Package', price_cents: '500.00', currency: 'USD', credits: '3500', target_subscribers: ' 3 - 6 + ', sort: '1', active: '1' });
+  assert.equal(ranged.status, 302);
+  assert.equal(db.get('SELECT target_subscribers FROM credit_packages WHERE id = 1').target_subscribers, '3-6+');
+  assert.ok((await new Client().get('/buy-credits')).text.includes('3-6+ target subscribers'));
+  assert.ok((await S.a.client.get('/office/see-it-cook-it/packages')).text.includes('3-6+ target subscribers.'));
+  assert.ok((await new Client().get('/wholesale')).text.includes('3-6+ target subscribers'));
+  assert.equal((await admin.post('/admin/m/credit_packages/1', { name: 'Wholesale Starter Package', price_cents: '500.00', currency: 'USD', credits: '3500', target_subscribers: '6-3', active: '1' })).status, 422, 'a backwards range is rejected');
+});
+
+test('a coupon can upgrade the package: lower price, more credits, a higher target — and the purchase banks the upgrade', async () => {
+  db.run("INSERT INTO credit_packages (name, price_cents, credits, target_subscribers, active, sort) VALUES ('Pro Pack', 649900, 25000, '75+', 1, 6)");
+  const pro = db.get("SELECT id FROM credit_packages WHERE name = 'Pro Pack'").id;
+  const made = await admin.post('/admin/m/coupons', {
+    code: 'PRO1500', description: 'Launch offer', kind: 'fixed', amount_cents: '1500.00',
+    package_id: String(pro), credits: '40000', target_subscribers: ' 100 + ', per_email_limit: '1', active: '1',
+  });
+  assert.equal(made.status, 302);
+  assert.equal(db.get("SELECT target_subscribers FROM coupons WHERE code = 'PRO1500'").target_subscribers, '100+', 'spaces tidied');
+
+  // Without the code, the package reads as itself.
+  assert.ok((await new Client().get('/buy-credits')).text.includes('25,000 credits · 75+ target subscribers'));
+
+  // With it, the price drops and what you get goes up.
+  const v = new Client();
+  await v.get('/buy-credits');
+  const applied = await v.post('/buy-credits', { package_id: String(pro), name: 'Ada Pro', email: 'ada-pro@example.com', coupon: 'PRO1500', apply: '1' });
+  assert.equal(applied.status, 200);
+  assert.ok(applied.text.includes('40,000 credits · 100+ target subscribers'), 'the upgrade is shown');
+  assert.ok(/data-f="total">\$4,999\.00/.test(applied.text), '6499 - 1500 = 4999');
+
+  // The purchase banks the coupon's credits, not the package's own.
+  const r = await v.post('/buy-credits', { package_id: String(pro), name: 'Ada Pro', email: 'ada-pro@example.com', terms: '1', coupon: 'PRO1500' });
+  assert.equal(r.status, 303);
+  const p = db.get("SELECT * FROM credit_purchases WHERE email = 'ada-pro@example.com'");
+  assert.deepEqual([p.credits, p.price_cents, p.list_price_cents, p.discount_cents, p.coupon_code], [40000, 499900, 649900, 150000, 'PRO1500']);
+  assert.equal(sessions.get(p.stripe_session_id).amount, 499900, 'Stripe charges the discounted amount');
+
+  // A coupon with no upgrade still hands over the package's own credits.
+  await admin.post('/admin/m/coupons', { code: 'PLAIN100', kind: 'fixed', amount_cents: '100.00', package_id: String(pro), active: '1' });
+  const w = new Client();
+  await w.get('/buy-credits');
+  await w.post('/buy-credits', { package_id: String(pro), name: 'Bo Plain', email: 'bo-plain@example.com', terms: '1', coupon: 'PLAIN100' });
+  assert.equal(db.get("SELECT credits FROM credit_purchases WHERE email = 'bo-plain@example.com'").credits, 25000);
+
+  db.run('UPDATE credit_packages SET active = 0 WHERE id = ?', pro);
 });

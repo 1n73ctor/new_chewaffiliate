@@ -800,4 +800,9 @@ module.exports = [
   /* 8: optional "target subscribers" shown on a credit package instead of the video count */ `
   ALTER TABLE credit_packages ADD COLUMN target_subscribers INTEGER;
   `,
+
+  /* 9: a coupon can also upgrade what the package includes - more credits, a higher target */ `
+  ALTER TABLE coupons ADD COLUMN credits INTEGER;
+  ALTER TABLE coupons ADD COLUMN target_subscribers TEXT;
+  `,
 ];
