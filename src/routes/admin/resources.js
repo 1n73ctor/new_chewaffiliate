@@ -292,7 +292,7 @@ module.exports = {
     order: 'active DESC, id DESC',
     search: ['code', 'description'],
     columns: ['code', 'kind', 'percent_bps', 'amount_cents', 'package_id', 'credits', 'target_subscribers', 'ends_on', 'active'],
-    intro: 'Discount codes for credit packages, on the homepage “Buy credits” page and the affiliates’ packages page. Share a link like /buy-credits?coupon=CODE to apply it automatically. Usage is on the Wholesale & credits page. A coupon that has been used can’t be deleted — switch it off instead.',
+    intro: 'Discount codes for credit packages, on the homepage “Buy credits” page and the affiliates’ packages page. Share a link like /buy-credits?coupon=CODE to apply it automatically. Usage is on the Wholesale & credits page. Deleting a used coupon keeps every sale made with it — each one already stores the code and the discount — but you lose the usage total on the Wholesale & credits page, so switch it off instead if you still want to report on it.',
     fields: [
       { name: 'code', label: 'Code', required: true, help: 'Letters, numbers, - and _. Not case-sensitive, e.g. SAVE20.' },
       { name: 'description', label: 'Note shown when applied (optional)', help: 'e.g. Launch offer — ends Nov 30' },
@@ -307,6 +307,12 @@ module.exports = {
       { name: 'max_redemptions', label: 'Total uses allowed (blank = unlimited)', type: 'number' },
       { name: 'per_email_limit', label: 'Uses per buyer email (blank = unlimited)', type: 'number', default: 1 },
       { name: 'active', label: 'Active', type: 'checkbox', default: 1 },
+    ],
+    // A sale outlives the code it used: cut the link, never the row. Each order and
+    // purchase already stores coupon_code and discount_cents for the record.
+    cascade: [
+      { table: 'package_orders', column: 'coupon_id', label: 'order', detach: true },
+      { table: 'credit_purchases', column: 'coupon_id', label: 'purchase', detach: true },
     ],
     validate: (v) => {
       v.code = String(v.code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40);

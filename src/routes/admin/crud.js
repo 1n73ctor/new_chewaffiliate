@@ -214,8 +214,17 @@ router.post('/:res/:id(\\d+)/delete', resource, (req, res) => {
     // foreign key would otherwise block the delete outright.
     const swept = {};
     const kept = {};
+    const loosed = {};
     db.tx(() => {
       for (const c of r.cascade || []) {
+        // `detach` is for rows that must outlive this one - a sale is never deleted
+        // because the code it used was. The link is cut; the row keeps its own copy
+        // of what happened (coupon_code, discount_cents, package_name).
+        if (c.detach) {
+          const n = db.run(`UPDATE ${c.table} SET ${c.column} = NULL WHERE ${c.column} = ?`, req.params.id).changes;
+          if (n) loosed[c.label] = n;
+          continue;
+        }
         // Anything already bound to a sale is retired rather than removed, so the
         // order rows keep pointing at something real; the rest is swept up.
         if (c.retire) {
@@ -228,8 +237,9 @@ router.post('/:res/:id(\\d+)/delete', resource, (req, res) => {
       db.run(`DELETE FROM ${r.table} WHERE id = ?`, req.params.id);
     });
     const count = (o) => Object.entries(o).map(([label, n]) => `${n} ${label}${n > 1 ? 's' : ''}`).join(' and ');
-    audit(req, `${r.key}.delete`, r.table, req.params.id, { deleted: swept, retired: kept });
-    res.flash('success', `Deleted ${r.singular}${Object.keys(swept).length ? ` and its ${count(swept)}` : ''}.`);
+    audit(req, `${r.key}.delete`, r.table, req.params.id, { deleted: swept, retired: kept, detached: loosed });
+    const freed = Object.keys(loosed).length ? ` ${count(loosed)} kept their own record of it.` : '';
+    res.flash('success', `Deleted ${r.singular}${Object.keys(swept).length ? ` and its ${count(swept)}` : ''}.${freed}`);
     if (Object.keys(kept).length) {
       res.flash('error', `${count(kept)} had already been used, so ${Object.values(kept)[0] > 1 ? 'they were' : 'it was'} switched off and kept for the record instead of deleted.`);
     }

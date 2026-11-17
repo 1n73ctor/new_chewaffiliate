@@ -816,3 +816,40 @@ test('deleting a credit package sweeps up its unused coupons, retires the used o
   const w = new Client();
   assert.ok((await w.get('/buy-credits?coupon=DOOM50')).text.includes('isn’t valid'));
 });
+
+test('a used coupon can be deleted: the link is cut, every sale and its record survive', async () => {
+  db.run("INSERT INTO credit_packages (name, price_cents, credits, active, sort) VALUES ('Gone Pack', 30000, 1200, 1, 8)");
+  const gone = db.get("SELECT id FROM credit_packages WHERE name = 'Gone Pack'").id;
+  await admin.post('/admin/m/coupons', { code: 'BYE75', kind: 'fixed', amount_cents: '75.00', package_id: String(gone), active: '1' });
+  const bye = db.get("SELECT id FROM coupons WHERE code = 'BYE75'").id;
+
+  const v = new Client();
+  await v.get('/buy-credits');
+  await v.post('/buy-credits', { package_id: String(gone), name: 'Cy Bye', email: 'cy-bye@example.com', terms: '1', coupon: 'BYE75' });
+  const sale = db.get("SELECT * FROM credit_purchases WHERE email = 'cy-bye@example.com'");
+  assert.equal(sale.coupon_id, bye);
+  assert.equal(sale.discount_cents, 7500);
+  const salesBefore = db.get('SELECT COUNT(*) AS n FROM credit_purchases').n;
+  const ordersBefore = db.get('SELECT COUNT(*) AS n FROM package_orders').n;
+
+  // This used to be refused outright with "still in use".
+  const r = await admin.post(`/admin/m/coupons/${bye}/delete`, {});
+  assert.equal(r.status, 302);
+  assert.equal(db.get("SELECT COUNT(*) AS n FROM coupons WHERE code = 'BYE75'").n, 0, 'the coupon is gone');
+
+  // Nothing was deleted along with it.
+  assert.equal(db.get('SELECT COUNT(*) AS n FROM credit_purchases').n, salesBefore, 'no sale was deleted');
+  assert.equal(db.get('SELECT COUNT(*) AS n FROM package_orders').n, ordersBefore, 'no order was deleted');
+
+  const after = db.get("SELECT * FROM credit_purchases WHERE email = 'cy-bye@example.com'");
+  assert.equal(after.coupon_id, null, 'the link is cut');
+  assert.equal(after.coupon_code, 'BYE75', 'the code is still on the sale');
+  assert.equal(after.discount_cents, 7500, 'and so is the discount');
+  assert.equal(after.price_cents, sale.price_cents);
+  assert.deepEqual(db.raw.pragma('foreign_key_check'), [], 'no dangling references');
+
+  // The code is free to be used again as a new coupon.
+  const re = await admin.post('/admin/m/coupons', { code: 'BYE75', kind: 'fixed', amount_cents: '10.00', active: '1' });
+  assert.equal(re.status, 302);
+  db.run('UPDATE credit_packages SET active = 0 WHERE id = ?', gone);
+});
