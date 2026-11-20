@@ -1009,3 +1009,13 @@ details.request-more[open] { flex-basis: 100%; }
   height: 1px;
   overflow: hidden;
 }
+
+/* ---------- Custom package (private allocation meeting) ---------- */
+.private-wrap { max-width: 1040px; margin-top: 28px; }
+.private-card { display: grid; gap: 0.6rem; align-content: start; border: 1.5px solid var(--green-100); border-top: 4px solid var(--green-700); background: linear-gradient(180deg, var(--green-50) 0%, #fff 70%); }
+.private-card .eyebrow { justify-self: start; }
+.private-card .private-title { font-size: 1.35rem; margin: 0; }
+.private-card .private-text { margin: 0; }
+.private-card .private-price { margin: 0; }
+.private-card .btn { white-space: normal; text-align: center; }
+.pkg-grid .private-card .private-title { font-size: 1.1rem; }

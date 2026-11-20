@@ -367,7 +367,7 @@ module.exports = {
     filters: ['status'],
     inline: 'status',
     columns: ['name', 'company', 'volume', 'lead_source', 'page', 'status'],
-    intro: '“Become a Business Affiliate” submissions from the homepage and the wholesale page.',
+    intro: '“Become a Business Affiliate” submissions from the homepage and the wholesale page, and Custom package private meeting requests (submitted from “private-allocation”).',
     fields: [
       { name: 'name', label: 'Name', required: true },
       { name: 'email', label: 'Email', required: true },

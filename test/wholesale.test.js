@@ -895,3 +895,35 @@ test('bot guard: the decoy field, a missing stamp and a forged stamp are all ref
   assert.equal(count(), before + 1, 'the real inquiry is stored');
   db.run("DELETE FROM business_leads WHERE email = 'real@example.com'");
 });
+
+test('custom package: the card links to a private meeting request that reaches the inquiries list', async () => {
+  const buy = await new Client().get('/buy-credits');
+  assert.ok(buy.text.includes('Custom package'), 'card on Buy credits');
+  assert.ok(buy.text.includes('first 25,000 See It. Cook It. app subscribers'));
+  assert.ok(buy.text.includes('href="/private-allocation"'));
+  assert.ok((await new Client().get('/wholesale')).text.includes('href="/private-allocation"'), 'card on Wholesale');
+
+  const v = new Client();
+  const page = await v.get('/private-allocation');
+  assert.equal(page.status, 200);
+  assert.match(page.text, /name="form_ts"/, 'bot guard on the form');
+  const bad = await v.post('/private-allocation', { name: 'Pat', email: 'nope', phone: '', size: '' });
+  assert.equal(bad.status, 422);
+  for (const s of ['Please enter a valid email.', 'Choose an option.', 'Please agree so we can contact you.']) assert.ok(bad.text.includes(s), s);
+  const ok = await v.post('/private-allocation', { name: 'Pat Big', email: 'pat@example.com', phone: '+1 555 555 0111', size: 'More than 10,000 subscribers', when: 'Tuesdays', notes: 'Large network', consent: '1' });
+  assert.equal(ok.status, 200);
+  assert.ok(ok.text.includes('your request is in'));
+  const lead = db.get("SELECT * FROM business_leads WHERE email = 'pat@example.com'");
+  assert.equal(lead.page, 'private-allocation');
+  assert.equal(lead.volume, 'More than 10,000 subscribers');
+  assert.ok(lead.audience.includes('Best times: Tuesdays'));
+  assert.ok(db.get("SELECT 1 FROM outbox WHERE subject LIKE 'Private allocation meeting request%'"));
+
+  // Admin can switch it off; the card and the page disappear.
+  const settings = require('../src/lib/settings');
+  settings.set('sic_private_enabled', '0', null);
+  assert.ok(!(await new Client().get('/buy-credits')).text.includes('/private-allocation'));
+  assert.equal((await new Client().get('/private-allocation')).status, 404);
+  settings.set('sic_private_enabled', '1', null);
+  db.run("DELETE FROM business_leads WHERE email = 'pat@example.com'");
+});

@@ -83,6 +83,78 @@ router.post('/wholesale/inquiry', rateLimit({ windowMs: 3_600_000, max: 6 }), as
   res.redirect(form.page === 'home' ? '/#business-affiliate' : '/wholesale#business-affiliate');
 });
 
+// ---- Custom package: private allocation meeting request ----------------------------------
+// Stored with the business inquiries (page = 'private-allocation') so sales works one list.
+const ALLOCATION_SIZES = ['Up to 500 subscribers', '500–2,500 subscribers', '2,500–10,000 subscribers', 'More than 10,000 subscribers', 'Not sure yet'];
+const privateOn = () => settings.get('sic_private_enabled') === '1';
+
+function privatePage(res, { form = {}, errors = {}, status = 200 } = {}) {
+  res.status(status).page('public/private-allocation', {
+    title: 'Request a private meeting',
+    description: 'Request a private meeting with a Chew Network representative about a custom See It. Cook It. subscriber allocation.',
+    sizes: ALLOCATION_SIZES,
+    form,
+    errors,
+  });
+}
+
+router.get('/private-allocation', (req, res, next) => {
+  if (!privateOn()) return next();
+  privatePage(res, { form: req.user ? { email: req.user.email, name: `${req.user.first_name} ${req.user.last_name}` } : {} });
+});
+
+router.post('/private-allocation', rateLimit({ windowMs: 3_600_000, max: 6 }), async (req, res, next) => {
+  if (!privateOn()) return next();
+  const b = req.body;
+  const form = {
+    name: clampStr(b.name, 120),
+    email: clampStr(b.email, 200).toLowerCase(),
+    phone: clampStr(b.phone, 40),
+    company: clampStr(b.company, 160),
+    size: ALLOCATION_SIZES.includes(b.size) ? b.size : '',
+    when: clampStr(b.when, 200),
+    notes: clampStr(b.notes, 1000),
+    consent: b.consent === '1',
+  };
+  const errors = {};
+  if (botGuard.check(req)) errors._ = 'That form was submitted too quickly to be genuine. Please try again.';
+  if (!form.name) errors.name = 'Please enter your name.';
+  if (!EMAIL_RE.test(form.email)) errors.email = 'Please enter a valid email.';
+  if (form.phone.replace(/\D/g, '').length < 7) errors.phone = 'Please enter a phone number.';
+  if (!form.size) errors.size = 'Choose an option.';
+  if (!form.consent) errors.consent = 'Please agree so we can contact you.';
+  if (Object.keys(errors).length) return privatePage(res, { form, errors, status: 422 });
+
+  const attr = readAttribution(req);
+  const details = [`Private allocation meeting request.`, form.when && `Best times: ${form.when}`, form.notes && `Notes: ${form.notes}`].filter(Boolean).join('\n');
+  const { lastInsertRowid: id } = db.run(
+    `INSERT INTO business_leads (name, email, phone, company, audience, volume, consent_at, lead_source, page, affiliate_user_id, user_id)
+     VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?, 'private-allocation', ?, ?)`,
+    form.name,
+    form.email,
+    form.phone,
+    form.company || null,
+    details,
+    form.size,
+    attr ? 'affiliate referral' : 'direct',
+    attr ? attr.affiliate.id : null,
+    req.user ? req.user.id : null,
+  );
+  const to = settings.get('sales_email') || settings.get('support_email');
+  if (to) {
+    await sendEmail({
+      to,
+      subject: `Private allocation meeting request #${id}`,
+      text: `${form.name} asked for a private meeting about a custom subscriber allocation (${form.size}).\n\nOpen it in the admin: ${config.baseUrl}/admin/m/business_leads/${id}`,
+    });
+  }
+  res.page('public/message', {
+    title: 'Request received',
+    heading: 'Thanks — your request is in',
+    message: 'A Chew Network representative will contact you by email or phone to arrange your private meeting.',
+  });
+});
+
 // ---- Buy credits (direct purchase by email) ---------------------------------------------
 function buyPage(res, { form = {}, errors = {}, status = 200, canceled = false } = {}) {
   const priced = wholesale.quotePackages(form.coupon, { email: EMAIL_RE.test(form.email || '') ? form.email : null });

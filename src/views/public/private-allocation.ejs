@@ -1,0 +1,38 @@
+<% const f = form || {}; const err = (k) => errors[k] ? `<p class="error">${u.esc(errors[k])}</p>` : ''; %>
+<section class="section buy-page">
+  <div class="wrap buy-grid">
+    <div class="buy-copy">
+      <p class="eyebrow eyebrow-orange">See It. Cook It. · Custom package</p>
+      <h1 class="claim-title"><%= site.sic_private_title %></h1>
+      <p class="lead"><%= site.sic_private_text %></p>
+      <ol class="claim-steps">
+        <li><strong>Send your request</strong> — tell us how to reach you and what you’d like to explore.</li>
+        <li><strong>We contact you</strong> to arrange a private meeting with a Chew Network representative.</li>
+        <li><strong>Talk through the options</strong> — allocation size, pricing and participation terms.</li>
+      </ol>
+      <p class="fine">Nothing is charged by sending this form. Allocations are targets, not a promise of a number of subscribers, sales or earnings — see the <a href="/earnings-disclosure">Earnings Disclosure</a> and <a href="/docs/chew-wholesale-affiliate-agreement.pdf" target="_blank" rel="noopener">Your Earnings Blueprint</a>.</p>
+    </div>
+    <div class="card claim-card">
+      <form class="form" method="post" action="/private-allocation" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <%- include('../partials/bot-guard') %>
+        <% if (errors._) { %><div class="alert alert-error" role="alert"><%- icon('x') %><div><%= errors._ %></div></div><% } %>
+        <div class="form-row two">
+          <div class="field <%= errors.name ? 'has-error' : '' %>"><label for="pa-name">Name</label><input id="pa-name" type="text" name="name" value="<%= f.name || '' %>" autocomplete="name" required><%- err('name') %></div>
+          <div class="field <%= errors.email ? 'has-error' : '' %>"><label for="pa-email">Email</label><input id="pa-email" type="email" name="email" value="<%= f.email || '' %>" autocomplete="email" required><%- err('email') %></div>
+        </div>
+        <div class="form-row two">
+          <div class="field <%= errors.phone ? 'has-error' : '' %>"><label for="pa-phone">Phone</label><input id="pa-phone" type="tel" name="phone" value="<%= f.phone || '' %>" autocomplete="tel" required><%- err('phone') %></div>
+          <div class="field"><label for="pa-company">Company <span class="fine">(optional)</span></label><input id="pa-company" type="text" name="company" value="<%= f.company || '' %>" autocomplete="organization"></div>
+        </div>
+        <div class="field <%= errors.size ? 'has-error' : '' %>"><label for="pa-size">Allocation you’d like to explore</label>
+          <select id="pa-size" name="size" required><option value="">Choose one</option><% sizes.forEach(function (s) { %><option value="<%= s %>" <%= f.size === s ? 'selected' : '' %>><%= s %></option><% }) %></select><%- err('size') %></div>
+        <div class="field"><label for="pa-when">Best days and times for a meeting <span class="fine">(optional)</span></label><input id="pa-when" type="text" name="when" value="<%= f.when || '' %>" placeholder="e.g. Weekdays after 2 pm Eastern" maxlength="200"></div>
+        <div class="field"><label for="pa-notes">Anything you’d like us to know <span class="fine">(optional)</span></label><textarea id="pa-notes" name="notes" rows="3" maxlength="1000"><%= f.notes || '' %></textarea></div>
+        <label class="check-row <%= errors.consent ? 'has-error' : '' %>"><input type="checkbox" name="consent" value="1" <%= f.consent ? 'checked' : '' %>><span>Chew Network may contact me by email or phone to arrange this meeting. See the <a href="/privacy">Privacy Policy</a>.</span></label>
+        <%- err('consent') %>
+        <button class="btn btn-green btn-lg btn-block" type="submit">REQUEST A PRIVATE MEETING <%- icon('arrow') %></button>
+      </form>
+    </div>
+  </div>
+</section>

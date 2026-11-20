@@ -1,0 +1,11 @@
+<%# The "Custom package" card: no price, leads to the private meeting request. %>
+<% if (site.sic_private_enabled === '1') { %>
+<section class="card private-card <%= locals.extraClass || '' %>">
+  <p class="eyebrow eyebrow-orange mb-0">Custom package</p>
+  <h2 class="private-title"><%= site.sic_private_title %></h2>
+  <p class="private-text"><%= site.sic_private_text %></p>
+  <p class="private-price"><strong>Price on request</strong> · <span class="fine">discussed in a private meeting</span></p>
+  <div><a class="btn btn-green" href="/private-allocation">REQUEST A PRIVATE MEETING <%- icon('arrow') %></a></div>
+  <p class="fine mb-0">Allocations are targets, not a promise of a number of subscribers, sales or earnings.</p>
+</section>
+<% } %>

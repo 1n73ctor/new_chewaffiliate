@@ -61,6 +61,12 @@
   </div>
 </section>
 
+<% if (site.sic_private_enabled === '1') { %>
+<section class="section">
+  <div class="wrap private-wrap"><%- include('../partials/private-allocation-card') %></div>
+</section>
+<% } %>
+
 <section class="section" id="business-affiliate">
   <div class="wrap ws-form-wrap">
     <div class="section-head"><p class="eyebrow">Talk to us</p><h2>Become a Business Affiliate</h2><p>Tell us about your audience and we’ll walk you through the program.</p></div>
